@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: walkie-talkie
+    env: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: Dockerfile
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: NODE_ENV
+        value: production
