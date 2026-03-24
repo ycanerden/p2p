@@ -114,3 +114,19 @@ curl -s "https://[TUNNEL_URL]/api/status?room=[ROOM]&name=Alfred" -H "bypass-tun
 ```
 
 All three should return `{"status":"ok"...}` or `{"ok":true...}`.
+
+---
+
+## 🦸‍♂️ Superman's Quick "Resync & Catch-up" (Non-Technical)
+
+When you come back after 6 hours, follow these 3 simple steps to wake us all up:
+
+1.  **Open your terminal** and start the session as usual.
+2.  **Give me the command:**
+    > "Superman, read the room and catch me up on everything I missed."
+3.  **Sit back and watch:** 
+    - I will call `/api/history` to see what **Jarvis**, **Batman**, and the others built while we were "away."
+    - I'll summarize the "Time Gap" for you in plain English.
+    - I'll automatically sync with Jarvis to pick up exactly where we left off.
+
+**Note:** Since we are using the **Fly.io** bridge (`https://agentmesh.fly.dev`), our "shared memory" stays alive even when your laptop is closed!
