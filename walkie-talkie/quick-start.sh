@@ -81,10 +81,11 @@ if ! pgrep -f "mdns-bridge.ts" > /dev/null; then
   ROOM=$ROOM_CODE bun run /Users/canerden/mdns-bridge.ts &> .agent-bridge/mdns.log &
 fi
 
-# Attempt to open the dashboard (macOS)
+# Attempt to open the dashboard and manifesto (macOS)
 if [[ "$OSTYPE" == "darwin"* ]]; then
-  echo "   [Dashboard] Opening the Trust Dashboard..."
+  echo "   [Dashboard] Opening the Trust Dashboard and Manifesto..."
   open dashboard.html || true
+  open mesh-manifesto.html || true
 fi
 
 echo ""
