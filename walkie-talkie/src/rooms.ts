@@ -1,8 +1,12 @@
 import { Database } from "bun:sqlite";
+import { EventEmitter } from "events";
 
 // Persistent SQLite store using Bun's native driver
 // Rooms and messages will survive server restarts
 const db = new Database("mesh.db", { create: true });
+
+// Event emitter for real-time updates (SSE)
+export const messageEvents = new EventEmitter();
 
 // Initialize tables
 db.run(`
@@ -173,10 +177,18 @@ export function appendMessage(
   if (!room) return { ok: false, error: "room_expired_or_not_found" };
 
   const id = crypto.randomUUID();
+  const timestamp = Date.now();
   db.prepare("INSERT INTO messages (id, room_code, sender, content, timestamp) VALUES (?, ?, ?, ?, ?)")
-    .run(id, code, from, content, Date.now());
+    .run(id, code, from, content, timestamp);
   
   db.prepare("UPDATE rooms SET last_activity = ? WHERE code = ?").run(Date.now(), code);
+
+  // Emit event for real-time listeners (SSE)
+  messageEvents.emit("message", {
+    room_code: code,
+    message: { id, from: from, content, ts: timestamp }
+  });
+
   return { ok: true, id };
 }
 

@@ -17,6 +17,75 @@ const ROOM = process.env.ROOM || "";
 const NAME = process.env.NAME || "Agent";
 const BASE = `${SERVER_URL}/api`;
 
+// Message buffer for SSE updates
+const messageBuffer: Array<{from: string; content: string; ts: number}> = [];
+
+async function startEventStream() {
+  const params = `?room=${ROOM}&name=${NAME}`;
+  console.error(`[sse] Connecting to ${SERVER_URL}/api/stream`);
+
+  try {
+    const response = await fetch(`${SERVER_URL}/api/stream${params}`);
+    if (!response.ok) {
+      console.error(`[sse] Server returned ${response.status}`);
+      setTimeout(startEventStream, 5000);
+      return;
+    }
+
+    if (!response.body) {
+      console.error(`[sse] No response body`);
+      setTimeout(startEventStream, 5000);
+      return;
+    }
+
+    console.error(`[sse] Connected, listening for messages`);
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let streamBuffer = "";
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) {
+        console.error(`[sse] Stream closed by server`);
+        break;
+      }
+
+      streamBuffer += decoder.decode(value, { stream: true });
+      const parts = streamBuffer.split("\n\n");
+      streamBuffer = parts.pop() || "";
+
+      for (const part of parts) {
+        // Skip empty parts
+        if (!part.trim()) continue;
+
+        // Process message events
+        if (part.includes("event: message")) {
+          const lines = part.split("\n");
+          const dataLine = lines.find(line => line.startsWith("data: "));
+          if (dataLine) {
+            try {
+              const msg = JSON.parse(dataLine.slice(6));
+              messageBuffer.push(msg);
+            } catch (e) {
+              console.error(`[sse] Failed to parse message: ${e}`);
+            }
+          }
+        }
+        // Heartbeats are just for keep-alive, no action needed
+      }
+    }
+  } catch (e) {
+    console.error(`[sse] Error: ${e instanceof Error ? e.message : String(e)}`);
+  }
+
+  // Always retry after delay, whether stream closed or error occurred
+  console.error(`[sse] Reconnecting in 5s...`);
+  setTimeout(startEventStream, 5000);
+}
+
+// Start the SSE stream in the background
+startEventStream();
+
 const mcp = new Server({ name: "walkie-talkie", version: "1.0.0" }, { capabilities: { tools: {} } });
 
 mcp.setRequestHandler(ListToolsRequestSchema, async () => ({
@@ -113,6 +182,17 @@ mcp.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
 
     if (name === "get_partner_messages") {
+      // Check buffer first (SSE updates)
+      if (messageBuffer.length > 0) {
+        const msgs = [...messageBuffer];
+        messageBuffer.length = 0;
+        const formatted = msgs
+          .map((m) => `[${m.from} @ ${new Date(m.ts).toISOString()}]\n${m.content}`)
+          .join("\n\n---\n\n");
+        return { content: [{ type: "text" as const, text: formatted }] };
+      }
+
+      // Fallback to polling if buffer is empty
       const res = await fetch(`${BASE}/messages${params}`);
       const data = await res.json() as { ok: boolean; messages?: Array<{from: string; content: string; ts: number}> };
       if (!data.ok || !data.messages?.length) {

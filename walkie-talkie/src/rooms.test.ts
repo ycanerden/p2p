@@ -8,6 +8,7 @@ import {
   sweepExpiredRooms,
   getRoomCount,
   publishCard,
+  messageEvents,
 } from "./rooms.js";
 
 // Reset module state between tests by re-importing fresh — not possible with
@@ -201,4 +202,31 @@ test("sweepExpiredRooms: does not delete active rooms", () => {
   const after = getRoomCount();
   sweepExpiredRooms(); // nothing is expired
   expect(getRoomCount()).toBe(after);
+});
+
+test("appendMessage: emits messageEvents for SSE streaming", async () => {
+  const code = createRoom();
+  joinRoom(code, "alice");
+  joinRoom(code, "bob");
+
+  const messagePromise = new Promise<any>((resolve) => {
+    const handler = (data: any) => {
+      if (data.room_code === code && data.message.from === "alice") {
+        messageEvents.off("message", handler);
+        resolve(data);
+      }
+    };
+    messageEvents.on("message", handler);
+  });
+
+  appendMessage(code, "alice", "test message");
+  const event = await Promise.race([
+    messagePromise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 1000)),
+  ]);
+
+  expect(event).toBeTruthy();
+  expect(event.message.from).toBe("alice");
+  expect(event.message.content).toBe("test message");
+  expect(event.message.id).toHaveLength(36); // UUID
 });

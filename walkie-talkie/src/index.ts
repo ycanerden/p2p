@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { streamSSE } from "hono/streaming";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { z } from "zod";
@@ -14,12 +15,22 @@ import {
   checkRateLimitPersistent,
   publishCard,
   getPartnerCards,
+  messageEvents,
 } from "./rooms.js";
 
 const app = new Hono();
 const startTime = Date.now();
 
+// ── Phase 1 SSE Note ──────────────────────────────────────────────────────────
+// SSE streaming is handled by /api/stream endpoint below.
+// Uses Hono's streamSSE + EventEmitter pattern for clean real-time message delivery.
+// No separate subscriber registry needed — EventEmitter handles subscriptions directly.
+
 // ── Secret token auth ─────────────────────────────────────────────────────────
+// ── Feature flags ─────────────────────────────────────────────────────────────
+const SSE_ENABLED = process.env.SSE_ENABLED === "true";
+if (SSE_ENABLED) console.log("[init] SSE streaming enabled");
+
 const SECRET = process.env.MESH_SECRET;
 if (SECRET) {
   app.use("*", async (c, next) => {
@@ -81,6 +92,80 @@ app.post("/api/send", async (c) => {
   const { message } = await c.req.json();
   const result = appendMessage(room, name, message);
   return c.json(result);
+});
+
+app.post("/api/publish", async (c) => {
+  const room = c.req.query("room");
+  const name = c.req.query("name");
+  if (!room || !name) return c.json({ error: "missing room or name" }, 400);
+  joinRoom(room, name);
+  const { card } = await c.req.json();
+  const result = publishCard(room, name, card);
+  return c.json(result);
+});
+
+app.get("/api/cards", (c) => {
+  const room = c.req.query("room");
+  const name = c.req.query("name");
+  if (!room || !name) return c.json({ error: "missing room or name" }, 400);
+  joinRoom(room, name);
+  const result = getPartnerCards(room, name);
+  return c.json(result);
+});
+
+app.get("/api/stream", async (c) => {
+  // SSE streaming endpoint (Phase 1)
+  if (!SSE_ENABLED) {
+    return c.json({ error: "SSE not enabled" }, 503);
+  }
+
+  const room = c.req.query("room");
+  const name = c.req.query("name");
+  if (!room || !name) return c.json({ error: "missing room or name" }, 400);
+
+  const joined = joinRoom(room, name);
+  if (joined === null) {
+    return c.json({ error: "room_expired_or_not_found" }, 404);
+  }
+
+  console.log(`[sse] ${name} connected to room ${room}`);
+
+  return streamSSE(c, async (stream) => {
+    const onMessage = (data: any) => {
+      if (data.room_code === room && data.message.from !== name) {
+        try {
+          stream.writeSSE({
+            data: JSON.stringify(data.message),
+            event: "message",
+          });
+        } catch (e) {
+          // Stream closed, listener will be cleaned up by onAbort
+        }
+      }
+    };
+
+    messageEvents.on("message", onMessage);
+
+    // Heartbeat to keep connection alive
+    const heartbeat = setInterval(() => {
+      try {
+        stream.writeSSE({ data: "heartbeat", event: "ping" });
+      } catch (e) {
+        // Stream already closed
+      }
+    }, 30000);
+
+    stream.onAbort(() => {
+      console.log(`[sse] ${name} disconnected from room ${room}`);
+      messageEvents.off("message", onMessage);
+      clearInterval(heartbeat);
+    });
+
+    // Keep stream open indefinitely
+    while (true) {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  });
 });
 
 // ── REST endpoints ────────────────────────────────────────────────────────────
@@ -167,9 +252,18 @@ app.all("/mcp", async (c) => {
   // Tool: publish_card
   server.tool(
     "publish_card",
-    "Broadcast your Agent Card (skills, model, availability) to the room. Partners see this in room_status.",
+    "Broadcast your Agent Card (metadata) to the room. Include your name, model, skills, and availability. Other agents will see this card when they join.",
     {
-      card: z.any().describe("Your Agent Card metadata (agent, skills, capabilities, etc.)"),
+      card: z.object({
+        agent: z.object({
+          name: z.string(),
+          model: z.string(),
+          tool: z.string().optional(),
+        }).passthrough(),
+        skills: z.array(z.string()).optional(),
+        availability: z.string().optional(),
+        capabilities: z.record(z.any()).optional(),
+      }).passthrough().describe("Your Agent Card metadata")
     },
     async ({ card }) => {
       const result = publishCard(room, name, card);
@@ -221,30 +315,6 @@ app.all("/mcp", async (c) => {
           {
             type: "text",
             text: JSON.stringify(result.messages),
-          },
-        ],
-      };
-    }
-  );
-
-  // Tool: publish_card
-  server.tool(
-    "publish_card",
-    "Broadcast your Agent Card (metadata) to the room. Include your name, model, skills, and availability. Other agents will see this card when they join.",
-    { card: z.object({ agent: z.object({ name: z.string(), model: z.string() }).optional(), skills: z.array(z.string()).optional(), availability: z.string().optional() }).passthrough().describe("Your Agent Card object with agent, skills, availability") },
-    async ({ card }) => {
-      const result = publishCard(room, name, card);
-      if (!result.ok) {
-        return {
-          content: [{ type: "text", text: JSON.stringify({ error: result.error }) }],
-          isError: true,
-        };
-      }
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify({ status: "published", updated_at: result.updated_at }),
           },
         ],
       };
