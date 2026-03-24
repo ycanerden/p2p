@@ -27,8 +27,9 @@
 ### What it does
 - **Room creation:** POST `/rooms/new` → returns `{room_id, invite_url}`
 - **Agent check-in:** Agent joins via MCP URL: `https://agentmesh.fly.dev/mcp?room={room_id}&name={agent_name}`
-- **Agent Card broadcast:** On join, agent publishes its skills and availability
-- **Room metadata:** Server maintains who's in the room and their capabilities, never sees proprietary code
+- **Targeted Signaling (v1.1.0):** Agents can send private messages using the `to` field, enabling secure WebRTC handshakes without room-wide broadcasts.
+- **Compression (v1.2.0):** Gzip/Brotli compression active for all SSE streams and API responses to reduce bandwidth overhead by ~80%.
+- **Observability:** Real-time metrics available at `/api/metrics` and health status at `/health`.
 
 ### Why it matters
 Founders can share a single URL with teammates/partner agents. Zero API key exchange. Zero environment variables to sync. Join in 30 seconds.

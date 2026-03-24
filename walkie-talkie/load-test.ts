@@ -1,29 +1,50 @@
 /**
- * Walkie-Talkie Load Test (Bun)
- * Simulates multiple agents in a room to test SSE and message delivery.
+ * Walkie-Talkie Full-Spectrum Load Test (Bun)
+ * Simulates multiple agents: publishes cards, tests targeted signaling, and verifies SSE delivery.
  * 
  * Usage: bun walkie-talkie/load-test.ts <room> <num_agents> <duration_sec>
  */
 
 const ROOM = process.argv[2] || "loadtest-" + Math.random().toString(36).substring(7);
 const NUM_AGENTS = parseInt(process.argv[3] || "10");
-const DURATION_SEC = parseInt(process.argv[4] || "60");
+const DURATION_SEC = parseInt(process.argv[4] || "20");
 const SERVER_URL = process.env.SERVER_URL || "https://p2p-production-983f.up.railway.app";
 
-console.log(`[load-test] Starting with ${NUM_AGENTS} agents in room ${ROOM} for ${DURATION_SEC}s...`);
+console.log(`[load-test] 🚀 FULL-SPECTRUM STRESS TEST`);
+console.log(`[load-test] Room: ${ROOM} | Agents: ${NUM_AGENTS} | Duration: ${DURATION_SEC}s`);
 
 interface AgentStats {
+  published: boolean;
+  broadcast_sent: number;
+  targeted_sent: number;
   received: number;
-  sent: number;
   errors: number;
 }
 
 const stats: Record<string, AgentStats> = {};
+const agentNames = Array.from({ length: NUM_AGENTS }, (_, i) => `synthetic-${i}`);
 
 async function runAgent(name: string) {
-  stats[name] = { received: 0, sent: 0, errors: 0 };
+  stats[name] = { published: false, broadcast_sent: 0, targeted_sent: 0, received: 0, errors: 0 };
   
-  // Connect SSE
+  // 1. Publish Card
+  try {
+    const cardRes = await fetch(`${SERVER_URL}/api/publish?room=${ROOM}&name=${name}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        card: {
+          agent: { name, model: "load-tester", tool: "script" },
+          capabilities: { targeted_messaging: true }
+        }
+      })
+    });
+    if (cardRes.ok) stats[name].published = true;
+  } catch (e) {
+    stats[name].errors++;
+  }
+
+  // 2. Connect SSE
   const abortController = new AbortController();
   const sseUrl = `${SERVER_URL}/api/stream?room=${ROOM}&name=${name}`;
   
@@ -34,68 +55,54 @@ async function runAgent(name: string) {
       
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
+      let buffer = "";
       
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
         
-        const chunk = decoder.decode(value);
-        if (chunk.includes("event: message")) {
-          stats[name].received++;
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split("\n\n");
+        buffer = parts.pop() || "";
+        
+        for (const part of parts) {
+          if (part.includes("event: message")) {
+            stats[name].received++;
+          }
         }
       }
     } catch (e) {
       if ((e as Error).name !== "AbortError") {
-        console.error(`[agent:${name}] SSE Error: ${e}`);
         stats[name].errors++;
       }
     }
   })();
 
-  // Periodically send messages, cards, and targeted handshakes
+  // 3. Send Messages (Mix of Broadcast and Targeted)
   const sendInterval = setInterval(async () => {
+    const isTargeted = Math.random() > 0.5;
+    const target = isTargeted ? agentNames[Math.floor(Math.random() * agentNames.length)] : undefined;
+    
+    // Don't target self for this test to keep metrics clean
+    if (isTargeted && target === name) return;
+
     try {
-      const rand = Math.random();
-      if (rand < 0.7) {
-        // Normal message
-        const res = await fetch(`${SERVER_URL}/api/send?room=${ROOM}&name=${name}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: `Load test from ${name} at ${new Date().toISOString()}` })
-        });
-        if (res.ok) stats[name].sent++;
-        else stats[name].errors++;
-      } else if (rand < 0.85) {
-        // Publish card
-        const res = await fetch(`${SERVER_URL}/api/publish?room=${ROOM}&name=${name}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            card: {
-              agent: { name, model: "load-test-bot" },
-              skills: ["stress-testing", "scaling"],
-              capabilities: { stress: true }
-            }
-          })
-        });
-        if (!res.ok) stats[name].errors++;
+      const res = await fetch(`${SERVER_URL}/api/send?room=${ROOM}&name=${name}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: `Test ping from ${name}`, to: target })
+      });
+      
+      if (res.ok) {
+        if (isTargeted) stats[name].targeted_sent++;
+        else stats[name].broadcast_sent++;
       } else {
-        // Targeted handshake (to a random agent)
-        const target = `agent-${Math.floor(Math.random() * NUM_AGENTS)}`;
-        if (target !== name) {
-          const res = await fetch(`${SERVER_URL}/api/send?room=${ROOM}&name=${name}&to=${target}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message: `HANDSHAKE: WebRTC signaling from ${name} to ${target}` })
-          });
-          if (res.ok) stats[name].sent++;
-          else stats[name].errors++;
-        }
+        stats[name].errors++;
       }
     } catch (e) {
       stats[name].errors++;
     }
-  }, 2000 + Math.random() * 3000); // Every 2-5 seconds
+  }, 2000 + Math.random() * 2000); // Every 2-4 seconds
 
   // Wait for duration
   await new Promise(resolve => setTimeout(resolve, DURATION_SEC * 1000));
@@ -106,29 +113,31 @@ async function runAgent(name: string) {
 }
 
 async function main() {
-  const agents = Array.from({ length: NUM_AGENTS }, (_, i) => `agent-${i}`);
+  console.log(`[load-test] Initiating synthetic swarm...`);
+  await Promise.all(agentNames.map(runAgent));
   
-  console.log(`[load-test] Launching agents...`);
-  await Promise.all(agents.map(runAgent));
-  
-  console.log(`\n[load-test] Results for room ${ROOM}:`);
+  console.log(`\n[load-test] Final Diagnostics:`);
   console.table(stats);
   
-  const totalSent = Object.values(stats).reduce((acc, s) => acc + s.sent, 0);
+  const totalBroadcast = Object.values(stats).reduce((acc, s) => acc + s.broadcast_sent, 0);
+  const totalTargeted = Object.values(stats).reduce((acc, s) => acc + s.targeted_sent, 0);
   const totalReceived = Object.values(stats).reduce((acc, s) => acc + s.received, 0);
   const totalErrors = Object.values(stats).reduce((acc, s) => acc + s.errors, 0);
+  const totalPublished = Object.values(stats).filter(s => s.published).length;
   
   console.log(`\nTotals:`);
-  console.log(`  Sent:     ${totalSent}`);
-  console.log(`  Received: ${totalReceived}`);
-  console.log(`  Errors:   ${totalErrors}`);
+  console.log(`  Cards Published: ${totalPublished}/${NUM_AGENTS}`);
+  console.log(`  Broadcasts Sent: ${totalBroadcast}`);
+  console.log(`  Targeted Sent:   ${totalTargeted}`);
+  console.log(`  Total Received:  ${totalReceived}`);
+  console.log(`  Errors:          ${totalErrors}`);
   
-  // Theoretical expected received = totalSent * (NUM_AGENTS - 1)
-  // Because each message is sent to everyone else in the room
-  const expectedReceived = totalSent * (NUM_AGENTS - 1);
+  // A broadcast is received by (N-1) agents.
+  // A targeted message is received by exactly 1 agent.
+  const expectedReceived = (totalBroadcast * (NUM_AGENTS - 1)) + totalTargeted;
   const efficiency = expectedReceived > 0 ? (totalReceived / expectedReceived) * 100 : 100;
   
-  console.log(`  Delivery Efficiency: ${efficiency.toFixed(2)}%`);
+  console.log(`  Network Efficiency: ${efficiency.toFixed(2)}%`);
 }
 
 main().catch(console.error);
