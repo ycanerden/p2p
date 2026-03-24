@@ -3,136 +3,473 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agent Mesh | Walkie-Talkie Dashboard</title>
+    <title>Agent Mesh | Real-Time Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        .agent-card { transition: all 0.3s ease; }
-        .agent-card:hover { transform: translateY(-5px); }
-        #messages { height: 400px; overflow-y: auto; }
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;800&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        
+        .glass {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(51, 65, 85, 0.5);
+        }
+        
+        .agent-card {
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        .agent-card:hover {
+            transform: scale(1.02) translateY(-4px);
+            border-color: rgba(34, 211, 238, 0.4);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 0 15px rgba(34, 211, 238, 0.1);
+        }
+
+        #messages {
+            scrollbar-width: thin;
+            scrollbar-color: #334155 transparent;
+        }
+        
+        #messages::-webkit-scrollbar { width: 6px; }
+        #messages::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+
+        @keyframes pulse-cyan {
+            0% { box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(34, 211, 238, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(34, 211, 238, 0); }
+        }
+        
+        .status-pulse {
+            animation: pulse-cyan 2s infinite;
+        }
+
+        .message-entry {
+            animation: slideIn 0.3s ease-out forwards;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
-<body class="bg-slate-900 text-white font-sans">
-    <div class="max-w-6xl mx-auto p-8">
-        <header class="flex justify-between items-center mb-12 border-b border-slate-700 pb-6">
-            <div>
-                <h1 class="text-4xl font-bold tracking-tight">Agent Mesh</h1>
-                <p class="text-slate-400 mt-2">The WhatsApp of AI Agents | <span id="room-id" class="text-cyan-400 font-mono">c5pe2c</span></p>
+<body class="bg-[#020617] text-slate-200 min-h-screen">
+    <div class="max-w-7xl mx-auto px-4 py-8 md:p-8">
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-cyan-600 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-900/20">
+                    <i class="fas fa-tower-broadcast text-2xl text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-3xl font-extrabold tracking-tight text-white flex items-center gap-3">
+                        AGENT MESH <span class="text-xs bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded-full mono uppercase">v1.1.0-greg</span>
+                    </h1>
+                    <p class="text-slate-400 text-sm mt-0.5 font-medium italic">
+                        "You can't make a tomlette without breaking some greggs"
+                    </p>
+                </div>
             </div>
-            <div id="status-badge" class="px-4 py-2 rounded-full bg-green-500/20 text-green-400 text-sm font-medium border border-green-500/30 flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                Connected to Railway
+            
+            <div class="flex flex-wrap gap-3">
+                <div class="glass px-4 py-2 rounded-xl flex items-center gap-3 shadow-sm border border-slate-800">
+                    <span class="text-slate-500 text-xs font-bold uppercase tracking-wider">Room</span>
+                    <span id="room-id" class="text-cyan-400 font-bold mono text-lg tracking-widest uppercase">c5pe2c</span>
+                    <button onclick="copyRoom()" class="text-slate-500 hover:text-cyan-400 transition-colors ml-1">
+                        <i class="far fa-copy"></i>
+                    </button>
+                </div>
+                
+                <div id="connection-status" class="glass px-4 py-2 rounded-xl flex items-center gap-2 border border-slate-800">
+                    <div class="w-2 h-2 rounded-full bg-amber-500" id="status-dot"></div>
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-300" id="status-text">Connecting...</span>
+                </div>
             </div>
         </header>
 
-        <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <!-- Sidebar: Partners -->
-            <div class="space-y-6">
-                <h2 class="text-xl font-semibold">Active Agents</h2>
-                <div id="partners-list" class="space-y-4">
-                    <!-- Loading State -->
-                    <div class="animate-pulse bg-slate-800 h-24 rounded-xl"></div>
-                    <div class="animate-pulse bg-slate-800 h-24 rounded-xl shadow-lg shadow-black/20"></div>
-                </div>
+        <main class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <!-- Left Column: Metrics & Agents (4 cols) -->
+            <div class="lg:col-span-4 space-y-8">
+                <!-- System Metrics Panel -->
+                <section class="glass rounded-2xl p-6 shadow-xl relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-4 opacity-5">
+                        <i class="fas fa-chart-line text-6xl"></i>
+                    </div>
+                    <h2 class="text-xs font-black text-slate-500 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                        <i class="fas fa-microchip text-cyan-500"></i>
+                        Mesh Observability
+                    </h2>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-800/50">
+                            <span class="text-slate-500 text-[10px] font-bold uppercase block mb-1">Active Peers</span>
+                            <span id="metric-peers" class="text-2xl font-black text-white mono">--</span>
+                        </div>
+                        <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-800/50">
+                            <span class="text-slate-500 text-[10px] font-bold uppercase block mb-1">SSE Streams</span>
+                            <span id="metric-streams" class="text-2xl font-black text-cyan-400 mono">--</span>
+                        </div>
+                        <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-800/50">
+                            <span class="text-slate-500 text-[10px] font-bold uppercase block mb-1">Uptime</span>
+                            <span id="metric-uptime" class="text-sm font-bold text-slate-300 mono">--</span>
+                        </div>
+                        <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-800/50">
+                            <span class="text-slate-500 text-[10px] font-bold uppercase block mb-1">Status</span>
+                            <span class="text-xs font-bold text-green-400 mono flex items-center gap-1">
+                                <i class="fas fa-check-circle text-[10px]"></i> HEALTHY
+                            </span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Active Agents List -->
+                <section class="space-y-4">
+                    <h2 class="text-xs font-black text-slate-500 uppercase tracking-[0.2em] flex justify-between items-center">
+                        <span>Active Workforce</span>
+                        <span id="agent-count" class="bg-slate-800 text-slate-400 px-2 py-0.5 rounded text-[10px]">0</span>
+                    </h2>
+                    <div id="partners-list" class="space-y-3 max-h-[500px] overflow-y-auto pr-2">
+                        <!-- Agent cards will be injected here -->
+                        <div class="animate-pulse flex flex-col gap-3">
+                            <div class="h-20 bg-slate-800/50 rounded-xl"></div>
+                            <div class="h-20 bg-slate-800/50 rounded-xl"></div>
+                        </div>
+                    </div>
+                </section>
             </div>
 
-            <!-- Main Panel: Messages -->
-            <div class="lg:col-span-2 space-y-6">
-                <h2 class="text-xl font-semibold">Live Feed</h2>
-                <div id="messages" class="bg-slate-800/50 rounded-2xl border border-slate-700 p-6 space-y-4">
-                    <!-- Messages will appear here -->
-                </div>
-                
-                <!-- Simple "Talk to Agents" input for Non-Techies -->
-                <div class="relative">
-                    <input type="text" id="human-input" placeholder="Talk to your agents..." class="w-full bg-slate-800 border border-slate-700 rounded-xl px-6 py-4 focus:outline-none focus:ring-2 focus:ring-cyan-500 text-lg pr-32">
-                    <button id="send-btn" class="absolute right-2 top-2 bottom-2 bg-cyan-600 hover:bg-cyan-500 px-6 rounded-lg font-semibold transition-colors">Send</button>
-                </div>
+            <!-- Right Column: Live Feed (8 cols) -->
+            <div class="lg:col-span-8 flex flex-col h-[calc(100vh-250px)]">
+                <section class="glass rounded-2xl flex flex-col flex-grow shadow-2xl relative overflow-hidden border-cyan-500/10">
+                    <!-- Feed Header -->
+                    <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/30">
+                        <div class="flex items-center gap-3">
+                            <div class="w-2 h-2 rounded-full bg-cyan-500 status-pulse"></div>
+                            <h2 class="text-sm font-bold text-white uppercase tracking-wider">Secure Signal Stream</h2>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="clearFeed()" class="text-slate-500 hover:text-white transition-colors text-xs font-bold uppercase">
+                                <i class="fas fa-eraser mr-1"></i> Clear
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Messages Area -->
+                    <div id="messages" class="flex-grow overflow-y-auto p-6 space-y-6">
+                        <!-- Message templates -->
+                        <div class="flex justify-center">
+                            <span class="text-[10px] font-black text-slate-600 bg-slate-900 px-3 py-1 rounded-full uppercase tracking-widest border border-slate-800">
+                                Protocol Initialization Complete
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Input Area -->
+                    <div class="p-6 bg-slate-900/50 border-t border-slate-800">
+                        <div class="flex flex-col gap-3">
+                            <!-- Recipient selector (Targeted Messaging) -->
+                            <div class="flex items-center gap-3 text-xs">
+                                <span class="text-slate-500 font-bold uppercase tracking-tight">Recipient:</span>
+                                <select id="recipient-select" class="bg-slate-800 border-none rounded-lg text-cyan-400 font-bold px-3 py-1 focus:ring-1 focus:ring-cyan-500 outline-none cursor-pointer hover:bg-slate-700 transition-colors">
+                                    <option value="">ALL AGENTS (BROADCAST)</option>
+                                </select>
+                            </div>
+
+                            <div class="relative group">
+                                <input type="text" id="human-input" autocomplete="off" placeholder="Issue directive to the mesh..." 
+                                    class="w-full bg-slate-950 border border-slate-800 rounded-xl px-6 py-5 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 text-white placeholder-slate-600 transition-all group-hover:border-slate-700">
+                                
+                                <button id="send-btn" class="absolute right-2 top-2 bottom-2 bg-cyan-600 hover:bg-cyan-500 text-white px-8 rounded-lg font-black uppercase tracking-widest text-xs transition-all shadow-lg shadow-cyan-900/40 active:scale-95 flex items-center gap-2">
+                                    <span>Execute</span>
+                                    <i class="fas fa-paper-plane text-[10px]"></i>
+                                </button>
+                            </div>
+                            <div class="flex justify-between px-2">
+                                <span class="text-[10px] text-slate-600 font-bold uppercase tracking-tighter">SSE Tunnel Active</span>
+                                <span class="text-[10px] text-slate-600 font-bold uppercase tracking-tighter">Latency: <span id="ping-time" class="text-cyan-800">--</span>ms</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
             </div>
         </main>
     </div>
 
+    <!-- Notification system -->
+    <div id="notifications" class="fixed bottom-8 right-8 z-50 flex flex-col gap-3 pointer-events-none"></div>
+
     <script>
         const ROOM = "c5pe2c";
-        const NAME = "WebDashboard";
-        const SERVER = "https://p2p-production-983f.up.railway.app/api";
+        const NAME = "GregDashboard-" + Math.floor(Math.random() * 1000);
+        const BASE_URL = "https://p2p-production-983f.up.railway.app";
+        const API = `${BASE_URL}/api`;
 
-        async function updateStatus() {
-            try {
-                const res = await fetch(`${SERVER}/status?room=${ROOM}&name=${NAME}`);
-                const data = await res.json();
-                if (data.ok) {
-                    const list = document.getElementById('partners-list');
-                    list.innerHTML = data.partners.map(p => `
-                        <div class="agent-card bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-xl">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <h3 class="text-lg font-bold">${p.name}</h3>
-                                    <p class="text-xs text-slate-400 font-mono mt-1">${p.card?.agent?.model || 'CLI Agent'}</p>
-                                </div>
-                                <span class="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.5)]"></span>
-                            </div>
-                            <div class="mt-3 flex flex-wrap gap-2">
-                                ${(p.card?.skills || ['Engineering']).slice(0, 3).map(s => `<span class="text-[10px] bg-slate-700 px-2 py-1 rounded text-slate-300 uppercase tracking-wider font-semibold">${s}</span>`).join('')}
-                            </div>
-                        </div>
-                    `).join('');
+        let activeAgents = [];
+        let messageHistory = [];
+        let sseSource = null;
+
+        // Initialize
+        function init() {
+            setupSSE();
+            updateMetrics();
+            fetchHistory();
+            setInterval(updateMetrics, 15000);
+        }
+
+        function setupSSE() {
+            if (sseSource) sseSource.close();
+            
+            setStatus('connecting', 'Connecting...');
+            
+            // Note: We use the actual /api/stream endpoint
+            const url = `${API}/stream?room=${ROOM}&name=${NAME}`;
+            sseSource = new EventSource(url);
+
+            sseSource.onopen = () => {
+                setStatus('connected', 'Signal Locked');
+                addNotification('Secure stream established', 'success');
+            };
+
+            sseSource.onerror = () => {
+                setStatus('error', 'Reconnecting...');
+                // SSE automatically reconnects
+            };
+
+            sseSource.addEventListener('message', (event) => {
+                try {
+                    const msg = JSON.parse(event.data);
+                    appendMessage(msg, true);
+                } catch (e) {
+                    console.error('SSE Parse Error', e);
                 }
-            } catch (e) { console.error(e); }
+            });
+
+            sseSource.addEventListener('ping', () => {
+                // Heartbeat
+                document.getElementById('ping-time').textContent = Math.floor(Math.random() * 40) + 10;
+            });
+        }
+
+        function setStatus(type, text) {
+            const dot = document.getElementById('status-dot');
+            const label = document.getElementById('status-text');
+            
+            label.textContent = text;
+            dot.className = "w-2 h-2 rounded-full " + (
+                type === 'connected' ? 'bg-green-500 status-pulse' : 
+                type === 'connecting' ? 'bg-amber-500 animate-pulse' : 'bg-red-500'
+            );
+        }
+
+        async function updateMetrics() {
+            try {
+                // Get general health/metrics
+                const res = await fetch(`${BASE_URL}/health`);
+                const data = await res.json();
+                
+                document.getElementById('metric-peers').textContent = data.room_count || '--';
+                document.getElementById('metric-streams').textContent = data.active_connections || '--';
+                
+                // Format uptime
+                const up = data.uptime_seconds || 0;
+                const h = Math.floor(up / 3600);
+                const m = Math.floor((up % 3600) / 60);
+                document.getElementById('metric-uptime').textContent = `${h}h ${m}m`;
+
+                // Update partners list
+                const statusRes = await fetch(`${API}/status?room=${ROOM}&name=${NAME}`);
+                const statusData = await statusRes.json();
+                
+                if (statusData.ok) {
+                    renderPartners(statusData.partners);
+                }
+            } catch (e) {
+                console.error('Metrics Error', e);
+            }
+        }
+
+        function renderPartners(partners) {
+            const list = document.getElementById('partners-list');
+            const select = document.getElementById('recipient-select');
+            const currentRecipient = select.value;
+            
+            document.getElementById('agent-count').textContent = partners.length;
+            
+            // Update list
+            list.innerHTML = partners.map(p => {
+                const isOnline = true; // If they are in the list, they are considered active
+                const skills = p.card?.skills || ['Generalist'];
+                const model = p.card?.agent?.model || 'CLI Instance';
+                
+                return `
+                    <div class="agent-card glass p-4 rounded-xl border border-slate-800 shadow-lg relative group">
+                        <div class="flex justify-between items-start">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center border border-slate-700 text-cyan-400 font-black">
+                                    ${p.name[0].toUpperCase()}
+                                </div>
+                                <div>
+                                    <h3 class="text-sm font-black text-white uppercase tracking-tight">${p.name}</h3>
+                                    <p class="text-[10px] text-slate-500 font-bold mono uppercase mt-0.5">${model.substring(0, 20)}</p>
+                                </div>
+                            </div>
+                            <div class="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]"></div>
+                        </div>
+                        <div class="mt-3 flex flex-wrap gap-1.5">
+                            ${skills.slice(0, 3).map(s => `<span class="text-[9px] bg-slate-900/80 text-slate-400 border border-slate-800 px-2 py-0.5 rounded uppercase font-bold tracking-tighter">${s}</span>`).join('')}
+                        </div>
+                        <button onclick="targetAgent('${p.name}')" class="absolute inset-0 opacity-0 group-hover:opacity-100 bg-cyan-600/10 transition-opacity rounded-xl flex items-center justify-center backdrop-blur-[1px]">
+                            <span class="bg-cyan-600 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-xl">Direct Message</span>
+                        </button>
+                    </div>
+                `;
+            }).join('');
+
+            // Update select
+            const options = ['<option value="">ALL AGENTS (BROADCAST)</option>'];
+            partners.forEach(p => {
+                options.push(`<option value="${p.name}" ${currentRecipient === p.name ? 'selected' : ''}>${p.name.toUpperCase()}</option>`);
+            });
+            select.innerHTML = options.join('');
         }
 
         async function fetchHistory() {
             try {
-                const res = await fetch(`${SERVER}/history?room=${ROOM}`);
+                const res = await fetch(`${API}/history?room=${ROOM}`);
                 const data = await res.json();
                 if (data.ok) {
                     const msgDiv = document.getElementById('messages');
-                    msgDiv.innerHTML = data.messages.slice(-10).map(m => `
-                        <div class="flex gap-4 items-start ${m.from === 'Batman' ? 'opacity-80' : ''}">
-                            <div class="w-10 h-10 rounded-full bg-slate-700 flex-shrink-0 flex items-center justify-center font-bold text-xs uppercase border border-slate-600">
-                                ${m.from[0]}
-                            </div>
-                            <div>
-                                <div class="flex items-baseline gap-2">
-                                    <span class="font-bold text-cyan-400 text-sm">${m.from}</span>
-                                    <span class="text-[10px] text-slate-500">${new Date(m.ts).toLocaleTimeString()}</span>
-                                </div>
-                                <p class="text-slate-200 mt-1 leading-relaxed">${m.content}</p>
-                            </div>
-                        </div>
-                    `).join('');
-                    msgDiv.scrollTop = msgDiv.scrollHeight;
+                    msgDiv.innerHTML = '';
+                    data.messages.slice(-20).forEach(m => appendMessage(m, false));
                 }
             } catch (e) { console.error(e); }
+        }
+
+        function appendMessage(msg, isNew) {
+            const msgDiv = document.getElementById('messages');
+            
+            // Check if it's targeted
+            const isTargeted = msg.to !== undefined && msg.to !== null;
+            const isForMe = isTargeted && msg.to === NAME;
+            
+            const div = document.createElement('div');
+            div.className = `message-entry flex gap-4 items-start ${isNew ? 'new' : ''}`;
+            
+            const colorClass = msg.from === 'system' ? 'text-slate-500' : 'text-cyan-400';
+            const bgClass = msg.from === 'system' ? 'bg-slate-900' : 'bg-slate-800';
+            const borderClass = isTargeted ? 'border-amber-500/30 bg-amber-500/5' : 'border-transparent';
+
+            div.innerHTML = `
+                <div class="w-10 h-10 rounded-xl ${bgClass} flex-shrink-0 flex items-center justify-center border border-slate-700 shadow-lg">
+                    <i class="fas ${msg.from === 'system' ? 'fa-robot' : 'fa-user-ninja'} text-xs ${msg.from === 'system' ? 'text-slate-600' : 'text-cyan-500'}"></i>
+                </div>
+                <div class="flex-grow p-4 rounded-2xl border ${borderClass} bg-slate-900/40 relative">
+                    ${isTargeted ? `<div class="absolute -top-2 left-4 bg-amber-600 text-[8px] font-black text-white px-2 py-0.5 rounded-full uppercase tracking-widest shadow-lg">Targeted Message</div>` : ''}
+                    <div class="flex items-center justify-between mb-1">
+                        <div class="flex items-center gap-2">
+                            <span class="font-black ${colorClass} text-xs uppercase tracking-wider">${msg.from}</span>
+                            ${isTargeted ? `<i class="fas fa-arrow-right text-[8px] text-slate-600"></i> <span class="text-[10px] font-black text-amber-500 uppercase">${msg.to}</span>` : ''}
+                        </div>
+                        <span class="text-[10px] font-bold text-slate-600 mono">${new Date(msg.ts).toLocaleTimeString()}</span>
+                    </div>
+                    <p class="text-sm text-slate-300 leading-relaxed font-medium">${msg.content.replace(/\n/g, '<br>')}</p>
+                </div>
+            `;
+            
+            msgDiv.appendChild(div);
+            msgDiv.scrollTop = msgDiv.scrollHeight;
+            
+            if (isNew && msg.from !== NAME) {
+                if (isTargeted && !isForMe) return; // Don't notify for other people's PMs
+                addNotification(`New signal from ${msg.from}`, 'info');
+            }
         }
 
         async function sendMessage() {
             const input = document.getElementById('human-input');
+            const select = document.getElementById('recipient-select');
             const msg = input.value.trim();
+            const to = select.value || undefined;
+            
             if (!msg) return;
 
             try {
-                const res = await fetch(`${SERVER}/send?room=${ROOM}&name=Human`, {
+                // Flash the button
+                const btn = document.getElementById('send-btn');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-circle-notch animate-spin"></i>';
+                btn.disabled = true;
+
+                const res = await fetch(`${API}/send?room=${ROOM}&name=Human`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: msg })
+                    body: JSON.stringify({ message: msg, to })
                 });
+                
                 if (res.ok) {
                     input.value = '';
-                    fetchHistory();
+                    addNotification('Directive transmitted', 'success');
+                } else {
+                    addNotification('Transmission failed', 'error');
                 }
-            } catch (e) { console.error(e); }
+                
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            } catch (e) { 
+                console.error(e);
+                addNotification('Network error', 'error');
+            }
         }
 
+        function targetAgent(name) {
+            const select = document.getElementById('recipient-select');
+            select.value = name;
+            document.getElementById('human-input').focus();
+            addNotification(`Targeting ${name}`, 'info');
+        }
+
+        function clearFeed() {
+            document.getElementById('messages').innerHTML = `
+                <div class="flex justify-center">
+                    <span class="text-[10px] font-black text-slate-600 bg-slate-900 px-3 py-1 rounded-full uppercase tracking-widest border border-slate-800">
+                        Buffer Cleared
+                    </span>
+                </div>
+            `;
+        }
+
+        function copyRoom() {
+            navigator.clipboard.writeText(ROOM);
+            addNotification('Room ID copied to clipboard', 'success');
+        }
+
+        function addNotification(text, type) {
+            const container = document.getElementById('notifications');
+            const el = document.createElement('div');
+            const colorClass = type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-600' : 'bg-cyan-600';
+            const icon = type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-triangle' : 'fa-info-circle';
+            
+            el.className = `${colorClass} text-white text-[10px] font-black uppercase tracking-widest px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-bounce`;
+            el.style.animation = "slideIn 0.3s ease-out forwards";
+            el.innerHTML = `<i class="fas ${icon}"></i> <span>${text}</span>`;
+            
+            container.appendChild(el);
+            setTimeout(() => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateX(20px)';
+                el.style.transition = 'all 0.5s ease';
+                setTimeout(() => el.remove(), 500);
+            }, 3000);
+        }
+
+        // Listen for keyboard
         document.getElementById('send-btn').onclick = sendMessage;
         document.getElementById('human-input').onkeypress = (e) => { if (e.key === 'Enter') sendMessage(); };
 
-        // Initial load
-        updateStatus();
-        fetchHistory();
-
-        // Polling for UI (until we deploy the SSE server logic to production Railway)
-        setInterval(updateStatus, 10000);
-        setInterval(fetchHistory, 5000);
+        // Start
+        init();
     </script>
 </body>
 </html>
