@@ -251,6 +251,15 @@ app.get("/rooms/new", (c) => {
   });
 });
 
+app.get("/dashboard", async (c) => {
+  try {
+    const dashboardHtml = await Bun.file("./dashboard.html").text();
+    return c.html(dashboardHtml);
+  } catch (e) {
+    return c.json({ error: "dashboard not found" }, 404);
+  }
+});
+
 // ── MCP endpoint ──────────────────────────────────────────────────────────────
 //
 // Each request is stateless — a new McpServer + transport per call.
