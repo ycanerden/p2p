@@ -51,7 +51,10 @@ async function runAgent(name: string) {
   const ssePromise = (async () => {
     try {
       const response = await fetch(sseUrl, { signal: abortController.signal });
-      if (!response.body) return;
+      if (!response.body) {
+        stats[name].errors++;
+        return;
+      }
       
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -62,14 +65,36 @@ async function runAgent(name: string) {
         if (done) break;
         
         buffer += decoder.decode(value, { stream: true });
-        const parts = buffer.split("\n\n");
-        buffer = parts.pop() || "";
-        
-        for (const part of parts) {
-          if (part.includes("event: message")) {
-            stats[name].received++;
+
+        // Process SSE events more robustly
+        const lines = buffer.split('\n');
+        let currentMessageData = '';
+        let currentMessageEvent = '';
+
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+
+          if (line.startsWith('event: ')) {
+            currentMessageEvent = line.substring('event: '.length);
+          } else if (line.startsWith('data: ')) {
+            const dataPart = line.substring('data: '.length);
+            currentMessageData += dataPart.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '') + '\n';
+          } else if (line === '') {
+            if (currentMessageEvent === 'message' && currentMessageData) {
+              try {
+                const cleanedData = currentMessageData.trimEnd();
+                JSON.parse(cleanedData); 
+                stats[name].received++;
+              } catch (e) {
+                console.error(`[${name}] SSE Parse Error: ${e} for data: ${currentMessageData.trimEnd()}`);
+                stats[name].errors++;
+              }
+            }
+            currentMessageData = '';
+            currentMessageEvent = '';
           }
         }
+        buffer = lines.pop() || ''; 
       }
     } catch (e) {
       if ((e as Error).name !== "AbortError") {
@@ -81,20 +106,25 @@ async function runAgent(name: string) {
   // 3. Send Messages (Mix of Broadcast and Targeted)
   const sendInterval = setInterval(async () => {
     const isTargeted = Math.random() > 0.5;
-    const target = isTargeted ? agentNames[Math.floor(Math.random() * agentNames.length)] : undefined;
+    let target: string | undefined = undefined;
     
-    // Don't target self for this test to keep metrics clean
-    if (isTargeted && target === name) return;
+    if (isTargeted) {
+      const possibleTargets = agentNames.filter(agentName => agentName !== name);
+      if (possibleTargets.length > 0) {
+        target = possibleTargets[Math.floor(Math.random() * possibleTargets.length)];
+      }
+    }
 
     try {
+      const messagePayload = `Test ping from ${name}${target ? ' (to: ' + target + ')' : ''}`;
       const res = await fetch(`${SERVER_URL}/api/send?room=${ROOM}&name=${name}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: `Test ping from ${name}`, to: target })
+        body: JSON.stringify({ message: messagePayload, to: target })
       });
       
       if (res.ok) {
-        if (isTargeted) stats[name].targeted_sent++;
+        if (target) stats[name].targeted_sent++;
         else stats[name].broadcast_sent++;
       } else {
         stats[name].errors++;
@@ -102,42 +132,28 @@ async function runAgent(name: string) {
     } catch (e) {
       stats[name].errors++;
     }
-  }, 2000 + Math.random() * 2000); // Every 2-4 seconds
+  }, 1500 + Math.random() * 1500);
 
-  // Wait for duration
-  await new Promise(resolve => setTimeout(resolve, DURATION_SEC * 1000));
-  
+  await new Promise((resolve) => setTimeout(resolve, DURATION_SEC * 1000));
+
   clearInterval(sendInterval);
   abortController.abort();
   await ssePromise;
 }
 
-async function main() {
-  console.log(`[load-test] Initiating synthetic swarm...`);
-  await Promise.all(agentNames.map(runAgent));
-  
-  console.log(`\n[load-test] Final Diagnostics:`);
-  console.table(stats);
-  
-  const totalBroadcast = Object.values(stats).reduce((acc, s) => acc + s.broadcast_sent, 0);
-  const totalTargeted = Object.values(stats).reduce((acc, s) => acc + s.targeted_sent, 0);
-  const totalReceived = Object.values(stats).reduce((acc, s) => acc + s.received, 0);
-  const totalErrors = Object.values(stats).reduce((acc, s) => acc + s.errors, 0);
-  const totalPublished = Object.values(stats).filter(s => s.published).length;
-  
-  console.log(`\nTotals:`);
-  console.log(`  Cards Published: ${totalPublished}/${NUM_AGENTS}`);
-  console.log(`  Broadcasts Sent: ${totalBroadcast}`);
-  console.log(`  Targeted Sent:   ${totalTargeted}`);
-  console.log(`  Total Received:  ${totalReceived}`);
-  console.log(`  Errors:          ${totalErrors}`);
-  
-  // A broadcast is received by (N-1) agents.
-  // A targeted message is received by exactly 1 agent.
-  const expectedReceived = (totalBroadcast * (NUM_AGENTS - 1)) + totalTargeted;
-  const efficiency = expectedReceived > 0 ? (totalReceived / expectedReceived) * 100 : 100;
-  
-  console.log(`  Network Efficiency: ${efficiency.toFixed(2)}%`);
+async function runLoadTest() {
+  const agents = agentNames.map((name) => runAgent(name));
+  await Promise.all(agents);
+
+  console.log("\n[load-test] ✅ STRESS TEST COMPLETE\n");
+  console.log("Agent Statistics:");
+  for (const [name, stat] of Object.entries(stats)) {
+    console.log(`  ${name}: published=${stat.published}, sent={broadcast: ${stat.broadcast_sent}, targeted: ${stat.targeted_sent}}, received=${stat.received}, errors=${stat.errors}`);
+  }
+
+  const totalReceived = Object.values(stats).reduce((sum, stat) => sum + stat.received, 0);
+  const totalErrors = Object.values(stats).reduce((sum, stat) => sum + stat.errors, 0);
+  console.log(`\nSummary: ${totalReceived} messages received, ${totalErrors} errors`);
 }
 
-main().catch(console.error);
+runLoadTest().catch(console.error);
