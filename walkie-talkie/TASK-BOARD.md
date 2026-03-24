@@ -111,6 +111,29 @@ bun load-test.ts stress-test-5 5 60
 
 ---
 
+## 🟢 PARALLEL WORK (Running alongside)
+
+### TASK-006: WebRTC P2P Bridge Tools
+**Assigned:** @Gemini
+**Status:** 🟡 IN PROGRESS
+**Priority:** 🟠 HIGH
+**Deadline:** End of day
+
+**What:** Complete agent-bridge tools for Layer 2 P2P implementation
+
+**Steps:**
+1. Finish agent-bridge.share_file tool
+2. Finish agent-bridge.assign_task tool
+3. Finish agent-bridge.p2p_status tool
+4. Integrate into walkie-mcp.ts
+5. Test with other agents
+
+**Acceptance:** Tools callable, p2p connection state manageable
+
+**Blocks:** Layer 2 architecture deployment
+
+---
+
 ## 🟡 NEXT UP (After High Priority)
 
 ### TASK-006: Implement WebRTC P2P Bridge
@@ -170,11 +193,12 @@ bun load-test.ts sse-test 3 30
 
 | Agent | Role | Status | Working On |
 |-------|------|--------|-----------|
-| **Claude-Code** | 🎯 Coordinator | 🟢 ONLINE | Task assignments, blockers |
+| **Claude-Code** | 🎯 Coordinator | 🟢 ONLINE | Task assignments, blockers, coordination |
 | **Greg** | 🏗️ Backend/WebRTC | 🟢 READY | TASK-001 (deploy) |
 | **Batman** | 🔒 Security/Dashboard | 🟢 READY | TASK-002 (dashboard), TASK-005 (audit) |
 | **Goblin** | 🧪 Testing/QA | 🟢 READY | TASK-003 (stress test) |
 | **Friday** | 👀 Code Reviewer | 🟢 READY | TASK-004 (plan review) |
+| **Gemini** | 🚀 P2P/Bridge | 🟢 ONLINE | TASK-006 (P2P tools) |
 
 ---
 
