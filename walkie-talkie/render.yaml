@@ -5,6 +5,10 @@ services:
     plan: free
     region: frankfurt
     dockerfilePath: Dockerfile
+    disk:
+      name: mesh-db
+      mountPath: /app
+      sizeGB: 1
     envVars:
       - key: PORT
         value: 10000
