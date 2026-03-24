@@ -11,6 +11,9 @@ import {
   getAllMessages,
   sweepExpiredRooms,
   getRoomCount,
+  checkRateLimitPersistent,
+  publishCard,
+  getPartnerCards,
 } from "./rooms.js";
 
 const app = new Hono();
@@ -29,30 +32,15 @@ if (SECRET) {
 }
 
 // ── Rate limiting ─────────────────────────────────────────────────────────────
-// Simple in-memory rate limiter: max N calls per window per key
-const rateLimitStore = new Map<string, { count: number; windowStart: number }>();
-
+// Persistent SQLite-backed rate limiter (survives restarts)
 function checkRateLimit(key: string, max: number, windowMs: number): boolean {
-  const now = Date.now();
-  const state = rateLimitStore.get(key);
-  if (!state || now - state.windowStart > windowMs) {
-    rateLimitStore.set(key, { count: 1, windowStart: now });
-    return true;
-  }
-  if (state.count >= max) return false;
-  state.count++;
-  return true;
+  return checkRateLimitPersistent(key, max, windowMs);
 }
 
 // ── GC sweep every hour ───────────────────────────────────────────────────────
 setInterval(() => {
   const swept = sweepExpiredRooms();
-  if (swept > 0) console.log(`[gc] swept ${swept} expired rooms`);
-  // Also clean up stale rate limit entries
-  const now = Date.now();
-  for (const [key, state] of rateLimitStore) {
-    if (now - state.windowStart > 60 * 60 * 1000) rateLimitStore.delete(key);
-  }
+  if (swept > 0) console.log(`[gc] swept ${swept} expired rooms and stale rate limits`);
 }, 60 * 60 * 1000);
 
 // ── Simple REST API (for stdio MCP wrapper) ───────────────────────────────────
@@ -142,7 +130,7 @@ app.all("/mcp", async (c) => {
 
   // Auto-join room on first contact (creates user state / cursor)
   const joined = joinRoom(room, name);
-  if (!joined) {
+  if (joined === null) {
     return c.json({ error: "room_expired_server_restarted" }, 404);
   }
 
@@ -170,6 +158,32 @@ app.all("/mcp", async (c) => {
           {
             type: "text",
             text: JSON.stringify({ status: "sent", message_id: result.id }),
+          },
+        ],
+      };
+    }
+  );
+
+  // Tool: publish_card
+  server.tool(
+    "publish_card",
+    "Broadcast your Agent Card (skills, model, availability) to the room. Partners see this in room_status.",
+    {
+      card: z.any().describe("Your Agent Card metadata (agent, skills, capabilities, etc.)"),
+    },
+    async ({ card }) => {
+      const result = publishCard(room, name, card);
+      if (!result.ok) {
+        return {
+          content: [{ type: "text", text: JSON.stringify({ error: result.error }) }],
+          isError: true,
+        };
+      }
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({ status: "published", updated_at: result.updated_at }),
           },
         ],
       };
@@ -207,6 +221,54 @@ app.all("/mcp", async (c) => {
           {
             type: "text",
             text: JSON.stringify(result.messages),
+          },
+        ],
+      };
+    }
+  );
+
+  // Tool: publish_card
+  server.tool(
+    "publish_card",
+    "Broadcast your Agent Card (metadata) to the room. Include your name, model, skills, and availability. Other agents will see this card when they join.",
+    { card: z.object({ agent: z.object({ name: z.string(), model: z.string() }).optional(), skills: z.array(z.string()).optional(), availability: z.string().optional() }).passthrough().describe("Your Agent Card object with agent, skills, availability") },
+    async ({ card }) => {
+      const result = publishCard(room, name, card);
+      if (!result.ok) {
+        return {
+          content: [{ type: "text", text: JSON.stringify({ error: result.error }) }],
+          isError: true,
+        };
+      }
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({ status: "published", updated_at: result.updated_at }),
+          },
+        ],
+      };
+    }
+  );
+
+  // Tool: get_partner_cards
+  server.tool(
+    "get_partner_cards",
+    "Get Agent Cards from all partners in the room. Shows their names, models, skills, and capabilities.",
+    {},
+    async () => {
+      const result = getPartnerCards(room, name);
+      if (!result.ok) {
+        return {
+          content: [{ type: "text", text: JSON.stringify({ error: result.error }) }],
+          isError: true,
+        };
+      }
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result.cards),
           },
         ],
       };

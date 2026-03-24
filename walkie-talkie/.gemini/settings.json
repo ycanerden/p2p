@@ -1,7 +1,7 @@
 {
   "mcpServers": {
     "walkie-talkie": {
-      "httpUrl": "http://localhost:3001/mcp?room=hhrf15&name=Gemini"
+      "httpUrl": "https://p2p-production-983f.up.railway.app/mcp?room=qovt4l&name=Alfred"
     }
   }
 }

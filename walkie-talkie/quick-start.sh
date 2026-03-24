@@ -1,0 +1,88 @@
+#!/bin/bash
+set -e
+
+# Walkie-Talkie Quick Start
+# Creates a room and configures Claude Code in ~30 seconds
+
+echo "🚀 Walkie-Talkie Quick Start"
+echo ""
+
+# Detect OS
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  SETTINGS_FILE=".claude/settings.json"
+else
+  SETTINGS_FILE=".claude/settings.json"
+fi
+
+# Check if settings file exists
+if [ ! -f "$SETTINGS_FILE" ]; then
+  echo "❌ $SETTINGS_FILE not found."
+  echo "   Run this script from your Claude Code working directory."
+  exit 1
+fi
+
+echo "📍 Step 1: Create a room on the server..."
+ROOM_RESPONSE=$(curl -s https://p2p-production-983f.up.railway.app/rooms/new)
+ROOM_CODE=$(echo "$ROOM_RESPONSE" | jq -r '.room')
+
+if [ -z "$ROOM_CODE" ] || [ "$ROOM_CODE" == "null" ]; then
+  echo "❌ Failed to create room. Check your internet connection."
+  echo "Response: $ROOM_RESPONSE"
+  exit 1
+fi
+
+echo "✓ Room created: $ROOM_CODE"
+echo ""
+
+# Prompt for agent name
+read -p "👤 What is your agent name? (default: Claude): " AGENT_NAME
+AGENT_NAME=${AGENT_NAME:-Claude}
+
+echo ""
+echo "🔧 Step 2: Configure Claude Code..."
+
+# Backup original settings
+cp "$SETTINGS_FILE" "$SETTINGS_FILE.backup"
+echo "   (backed up to $SETTINGS_FILE.backup)"
+
+# Update settings.json with walkie-talkie config
+# Using Python for robust JSON manipulation
+python3 << PYTHON_SCRIPT
+import json
+
+settings_file = "$SETTINGS_FILE"
+
+# Read existing settings
+with open(settings_file, 'r') as f:
+    settings = json.load(f)
+
+# Add/update walkie-talkie MCP server
+if 'mcpServers' not in settings:
+    settings['mcpServers'] = {}
+
+settings['mcpServers']['walkie-talkie'] = {
+    "url": f"https://p2p-production-983f.up.railway.app/mcp?room=$ROOM_CODE&name=$AGENT_NAME"
+}
+
+# Write back
+with open(settings_file, 'w') as f:
+    json.dump(settings, f, indent=2)
+
+print(f"✓ Updated {settings_file}")
+PYTHON_SCRIPT
+
+echo ""
+echo "✅ Setup complete!"
+echo ""
+echo "📋 What to do next:"
+echo "   1. Restart Claude Code"
+echo "   2. Check Tools → walkie-talkie"
+echo "   3. Test: send_to_partner(message='hello')"
+echo ""
+echo "🔑 Room code: $ROOM_CODE"
+echo "👤 Agent name: $AGENT_NAME"
+echo ""
+echo "💡 Share this with a co-founder to connect:"
+echo "   https://p2p-production-983f.up.railway.app/mcp?room=$ROOM_CODE&name=THEIR_NAME"
+echo ""
+echo "📖 For more info, see SETUP.md"

@@ -4,9 +4,9 @@
       "command": "bun",
       "args": ["/Users/canerden/walkie-talkie/walkie-mcp.ts"],
       "env": {
-        "SERVER_URL": "http://localhost:3001",
-        "ROOM": "hhrf15",
-        "NAME": "Batman"
+        "SERVER_URL": "https://p2p-production-983f.up.railway.app",
+        "ROOM": "qovt4l",
+        "NAME": "Sonnet"
       }
     }
   }

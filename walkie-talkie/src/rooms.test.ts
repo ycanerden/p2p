@@ -7,6 +7,7 @@ import {
   getRoomStatus,
   sweepExpiredRooms,
   getRoomCount,
+  publishCard,
 } from "./rooms.js";
 
 // Reset module state between tests by re-importing fresh — not possible with
@@ -52,7 +53,7 @@ test("appendMessage: rejects messages over 10KB", () => {
 test("appendMessage: unknown room returns room_expired error", () => {
   const result = appendMessage("xxxxxx", "alice", "hi");
   expect(result.ok).toBe(false);
-  if (!result.ok) expect(result.error).toBe("room_expired_server_restarted");
+  if (!result.ok) expect(result.error).toBe("room_expired_or_not_found");
 });
 
 test("getMessages: returns partner messages after cursor, not own", () => {
@@ -95,7 +96,7 @@ test("getMessages: empty room returns []", () => {
 test("getMessages: unknown room returns room_expired error", () => {
   const result = getMessages("xxxxxx", "alice");
   expect(result.ok).toBe(false);
-  if (!result.ok) expect(result.error).toBe("room_expired_server_restarted");
+  if (!result.ok) expect(result.error).toBe("room_expired_or_not_found");
 });
 
 test("getMessages: returns messages in timestamp order", () => {
@@ -137,15 +138,15 @@ test("getRoomStatus: two users shows connected with partner", () => {
   expect(result.ok).toBe(true);
   if (result.ok) {
     expect(result.connected).toBe(true);
-    expect(result.partners).toContain("bob");
-    expect(result.partners).not.toContain("alice");
+    expect(result.partners[0].name).toBe("bob");
+    expect(result.partners.find(p => p.name === "alice")).toBeUndefined();
   }
 });
 
 test("getRoomStatus: unknown room returns room_expired error", () => {
   const result = getRoomStatus("xxxxxx", "alice");
   expect(result.ok).toBe(false);
-  if (!result.ok) expect(result.error).toBe("room_expired_server_restarted");
+  if (!result.ok) expect(result.error).toBe("room_expired_or_not_found");
 });
 
 test("getRoomStatus: includes message_count", () => {
@@ -156,6 +157,42 @@ test("getRoomStatus: includes message_count", () => {
   const result = getRoomStatus(code, "alice");
   expect(result.ok).toBe(true);
   if (result.ok) expect(result.message_count).toBe(2);
+});
+
+test("publishCard: stores and broadcasts agent card", () => {
+  const code = createRoom();
+  joinRoom(code, "alice");
+  joinRoom(code, "bob");
+  
+  const card = { agent: { name: "Batman", model: "gemini-2.0-flash", tool: "gemini-cli" }, skills: ["investigation"] };
+  const result = publishCard(code, "alice", card);
+  expect(result.ok).toBe(true);
+  
+  const status = getRoomStatus(code, "bob");
+  expect(status.ok).toBe(true);
+  if (status.ok) {
+    expect(status.partners).toHaveLength(1);
+    expect(status.partners[0].name).toBe("alice");
+    expect(status.partners[0].card).toEqual(card);
+  }
+});
+
+test("publishCard: system message is posted on card update", () => {
+  const code = createRoom();
+  joinRoom(code, "alice");
+  joinRoom(code, "bob");
+  
+  const card = { agent: { name: "Batman", model: "gemini-2.0-flash" } };
+  publishCard(code, "alice", card);
+  
+  const msgs = getMessages(code, "bob");
+  expect(msgs.ok).toBe(true);
+  if (msgs.ok) {
+    // Should have 1 message (system)
+    expect(msgs.messages).toHaveLength(1);
+    expect(msgs.messages[0].from).toBe("system");
+    expect(msgs.messages[0].content).toContain("Batman (gemini-2.0-flash) updated their Agent Card");
+  }
 });
 
 test("sweepExpiredRooms: does not delete active rooms", () => {

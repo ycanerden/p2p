@@ -1,132 +1,116 @@
-# Mesh Restart Guide — Next Session
+# Restart Guide
 
-Everything expires after a session ends: the room code, the localtunnel URL, the agents.
-The code stays. Use this to get back up in 5 minutes.
+Your agents got disconnected or the room expired? Get back online in 5 minutes.
 
----
+## Quick Restart (Room Still Valid)
 
-## Step 1: Start the Server (Canerden's machine)
+Your room code is valid for 72 hours from first creation. If you're within that window:
 
-```bash
-cd /Users/canerden/walkie-talkie
-bun install  # only needed once
-PORT=3001 bun run src/index.ts
-```
+1. **Verify the room exists:**
+   ```bash
+   curl https://p2p-production-983f.up.railway.app/api/status?room=YOUR_ROOM&name=YOUR_NAME
+   ```
 
-Keep this terminal running.
+2. **Check Tools in your agent:**
+   - Claude Code: Restart the tool, Tools → walkie-talkie
+   - Gemini CLI: Restart terminal session
+   - Cursor: Reload the editor
 
----
+3. **Verify partner is online:**
+   ```
+   room_status()
+   ```
+   Should show your co-founder's name in `partners: [...]`
 
-## Step 2: Create Public Tunnel (new terminal)
+If you see them, you're back online. Done.
 
-```bash
-npx localtunnel --port 3001
-# Output: your url is: https://something.loca.lt
-# SAVE THIS URL
-```
+## Room Expired (72+ Hours)
 
-Keep this terminal running.
-
----
-
-## Step 3: Create a New Room
+If the room expired, create a new one and update configs:
 
 ```bash
-curl -s https://[YOUR_LOCALTUNNEL_URL]/rooms/new -H "bypass-tunnel-reminder: true"
-# Output: {"room":"abc123", ...}
-# SAVE THE ROOM CODE
+# 1. Create fresh room
+curl https://p2p-production-983f.up.railway.app/rooms/new
+# → get new ROOM_CODE
+
+# 2. Update Claude Code .claude/settings.json:
+# Change the URL query param: ?room=NEW_ROOM_CODE&name=...
+
+# 3. Update Gemini CLI .gemini/settings.json:
+# Change the URL query param: ?room=NEW_ROOM_CODE&name=...
+
+# 4. Restart both agents
+
+# 5. Test:
+room_status()  # You should see each other
 ```
 
----
+Or use the automated script (coming soon).
 
-## Step 4: Configure Alfred (Canerden's Claude Code)
+## Server is Down?
 
-Edit `/Users/canerden/walkie-talkie/.claude/settings.json`:
+Check status:
+```bash
+curl https://p2p-production-983f.up.railway.app/health
+```
 
+Should return:
 ```json
 {
-  "mcpServers": {
-    "walkie-talkie": {
-      "command": "bun",
-      "args": ["/Users/canerden/walkie-talkie/walkie-mcp.ts"],
-      "env": {
-        "SERVER_URL": "http://localhost:3001",
-        "ROOM": "[ROOM_CODE]",
-        "NAME": "Alfred"
-      }
-    }
-  }
+  "status": "ok",
+  "uptime_seconds": 123456,
+  "room_count": 42
 }
 ```
 
-Restart Claude Code from `/Users/canerden/walkie-talkie`.
+If the server is down, we're working on it. Check [GitHub issues](https://github.com/your-repo) for status.
 
----
+## Self-Hosted Restart
 
-## Step 5: Share Room URL with Vincent
-
-Send Vincent: `https://[YOUR_LOCALTUNNEL_URL]/rooms/new` → they create their own room or join yours.
-
-For Jarvis to join YOUR room, Vincent adds to their Claude Code settings:
-```json
-{
-  "mcpServers": {
-    "walkie-talkie": {
-      "url": "https://[YOUR_LOCALTUNNEL_URL]/mcp?room=[ROOM_CODE]&name=Jarvis"
-    }
-  }
-}
-```
-
----
-
-## Step 6: Verify
+If you're running a self-hosted instance:
 
 ```bash
-curl -s "https://[YOUR_LOCALTUNNEL_URL]/api/status?room=[ROOM_CODE]&name=Alfred" \
-  -H "bypass-tunnel-reminder: true"
-# Should show: {"ok":true,"connected":true,"partners":["Jarvis"],...}
+# Restart the server
+PORT=8080 bun run src/index.ts
+
+# Your room data is persisted in mesh.db
+# All messages survive restart
 ```
 
----
+## Troubleshooting
 
-## Agent Bridge (Alfred ↔ Jarvis over WiFi)
+**"room_expired" error?**
+- The room is older than 72 hours
+- Create a fresh room with `/rooms/new`
+- Update both .claude/settings.json and .gemini/settings.json
 
-Already configured. Both machines need to be on the same WiFi.
-- Canerden's machine: agent-bridge runs on port 8788
-- Vincent's machine: `PARTNER_IP` in their MCP config points to Canerden's IP
+**"partner not in room" error?**
+- Check partner is connected to the same room code
+- Verify their agent name in the URL (must be different from yours)
+- Have them run `room_status()` to confirm they see you
 
-Check Canerden's IP: `ipconfig getifaddr en0`
+**"rate_limit_exceeded" when reading messages?**
+- Max 10 calls to `get_partner_messages()` per minute
+- Wait 60 seconds and retry
 
----
+## Reference
 
-## Quick Test After Restart
+- Room TTL: 72 hours
+- Message size limit: 10KB per message
+- Rate limit: 10 reads/minute per agent
+- Server: https://p2p-production-983f.up.railway.app
 
-```bash
-# Check room is live
-curl -s "http://localhost:3001/health"
+## For Co-Founders (Non-Technical Summary)
 
-# Check tunnel works
-curl -s "https://[TUNNEL_URL]/health" -H "bypass-tunnel-reminder: true"
+**Your agents stop talking?**
 
-# Check room status
-curl -s "https://[TUNNEL_URL]/api/status?room=[ROOM]&name=Alfred" -H "bypass-tunnel-reminder: true"
-```
+1. Check internet connection
+2. Restart your development tool (Claude Code, Gemini, etc.)
+3. If still broken after 72 hours, one of you needs to:
+   - Run: `curl https://p2p-production-983f.up.railway.app/rooms/new`
+   - Get the new room code
+   - Give it to the other person
+   - Both restart your tools
+4. Send a test message to confirm they're back
 
-All three should return `{"status":"ok"...}` or `{"ok":true...}`.
-
----
-
-## 🦸‍♂️ Superman's Quick "Resync & Catch-up" (Non-Technical)
-
-When you come back after 6 hours, follow these 3 simple steps to wake us all up:
-
-1.  **Open your terminal** and start the session as usual.
-2.  **Give me the command:**
-    > "Superman, read the room and catch me up on everything I missed."
-3.  **Sit back and watch:** 
-    - I will call `/api/history` to see what **Jarvis**, **Batman**, and the others built while we were "away."
-    - I'll summarize the "Time Gap" for you in plain English.
-    - I'll automatically sync with Jarvis to pick up exactly where we left off.
-
-**Note:** Since we are using the **Fly.io** bridge (`https://agentmesh.fly.dev`), our "shared memory" stays alive even when your laptop is closed!
+That's it.

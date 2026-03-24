@@ -1,34 +1,46 @@
-# dependencies (bun install)
-node_modules
+# Dependencies
+node_modules/
+bun.lockb
 
-# output
-out
-dist
-*.tgz
+# Database
+mesh.db
+mesh.db-*
 
-# code coverage
-coverage
-*.lcov
+# Logs
+*.log
+agent-bridge.log
+walkie-talkie.log
+agent_loop.log
 
-# logs
-logs
-_.log
-report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
-
-# dotenv environment variable files
+# Environment
 .env
-.env.development.local
-.env.test.local
-.env.production.local
 .env.local
+.env.*.local
 
-# caches
-.eslintcache
-.cache
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+
+# Build
+dist/
+build/
 *.tsbuildinfo
 
-# IntelliJ based IDEs
-.idea
+# Backups
+*.backup
+*.bak
 
-# Finder (MacOS) folder config
-.DS_Store
+# Railway/Docker
+.railway
+.dockerignore

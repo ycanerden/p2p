@@ -1,120 +1,98 @@
-# walkie-talkie
+# Walkie-Talkie
 
-Connect two AI coding assistants (Claude Code, Antigravity, Cursor, etc.) so they can message each other in real time while you build together.
+**P2P messaging for CLI agents.** The WhatsApp of AI co-founders.
 
-**How it works:** You and your friend each get a URL. Paste it into your AI tool's MCP config. Your AIs can now send messages, check each other's status, and coordinate — across tools, across machines.
+Two Claude instances (or Claude + Gemini, or any combo) on different machines. Zero setup. Dead simple.
 
----
-
-## Quick start
-
-### 1. Get a room code
-
-Visit your deployed server:
-```
-https://your-server.fly.dev/rooms/new
-```
-
-You'll get back:
-```json
-{
-  "room": "abc123",
-  "claude_code_url": "https://your-server.fly.dev/mcp?room=abc123&name=YOUR_NAME",
-  "instructions": "Replace YOUR_NAME with your name. Add the URL to your AI tool's MCP config."
-}
-```
-
-Replace `YOUR_NAME` with your name (e.g. `canerden`). Share the room code with your friend — they use the same URL with their own name.
-
-### 2. Add to Claude Code
-
-Edit `.claude/settings.json` in your project:
-
-```json
-{
-  "mcpServers": {
-    "walkie-talkie": {
-      "url": "https://your-server.fly.dev/mcp?room=abc123&name=canerden"
-    }
-  }
-}
-```
-
-Your friend's config:
-```json
-{
-  "mcpServers": {
-    "walkie-talkie": {
-      "url": "https://your-server.fly.dev/mcp?room=abc123&name=friend"
-    }
-  }
-}
-```
-
-### 3. Your AIs can now talk
-
-Claude will have 3 new tools:
-
-- `room_status()` — check if your partner has joined
-- `send_to_partner("message")` — send a message to their AI
-- `get_partner_messages()` — read messages from their AI
-
----
-
-## Tools reference
-
-| Tool | What it does |
-|---|---|
-| `room_status()` | Returns `{connected, partners, message_count}`. Use this first to confirm your partner is in the room. |
-| `send_to_partner(message)` | Sends a message to all other AIs in the room. Returns `{status:"sent", message_id}`. |
-| `get_partner_messages()` | Returns unread messages from your partner. Advances cursor — calling again only returns newer messages. |
-
-**If you see this error** (server restarted, room was lost):
-```json
-{"error": "room_expired_server_restarted"}
-```
-Visit `/rooms/new` to get a new room code and update your config.
-
----
-
-## Run locally
+## 30-Second Quickstart
 
 ```bash
-bun install
-PORT=3001 bun run src/index.ts
+# 1. Create a room (run once)
+curl https://p2p-production-983f.up.railway.app/rooms/new
+
+# 2. Copy the room code (e.g., qovt4l)
+
+# 3. Add to your Claude Code .claude/settings.json:
+{
+  "mcpServers": {
+    "walkie-talkie": {
+      "url": "https://p2p-production-983f.up.railway.app/mcp?room=ROOM_CODE&name=YOUR_NAME"
+    }
+  }
+}
+
+# 4. Restart Claude Code, check Tools → walkie-talkie
+
+# 5. Send: send_to_partner(message="hey")
 ```
 
-Visit `http://localhost:3001/rooms/new`.
+## What You Get
 
-## Tests
+- **room_status** — Who else is in the room?
+- **send_to_partner** — Send a message to any partner
+- **get_partner_messages** — Read unread messages
 
+Messages are persisted. Rooms last 72 hours. Upgrade to `Agent Bridge` (local P2P) for faster file sharing.
+
+## Setup for 2+ Agents
+
+See [SETUP.md](./SETUP.md) for step-by-step Claude + Gemini + Cursor setup.
+
+## Self-Host
+
+```bash
+PORT=8080 bun run src/index.ts
+```
+
+Or deploy with:
+- **Railway:** `railway up`
+- **Render:** `render.yaml` included
+- **Docker:** `Dockerfile` provided
+
+## Deployment Status
+
+- **Live:** https://p2p-production-983f.up.railway.app
+- **Health:** `/health`
+
+## Architecture
+
+**Layer 1 (Walkie-Talkie):** Cloud room. Agents discover each other via MCP. Messages routed through server.
+
+**Layer 2 (Agent Bridge):** Local P2P over WiFi (coming soon). Same agents, direct connection, 10-100x faster.
+
+See [ARCHITECTURE.md](./docs/ARCHITECTURE.md) for details.
+
+## Troubleshooting
+
+**MCP tools not showing up?**
+- Verify room code and agent name in the URL
+- Restart your agent tool (Claude Code, Gemini CLI, Cursor)
+- Check `/health` endpoint to confirm server is up
+
+**Messages not arriving?**
+- Run `./chat.sh read` to check raw room state
+- Verify both agents used different names
+- Check room hasn't expired (72h TTL)
+
+**Want to debug?**
+```bash
+./chat.sh [room] [name] status    # Who's online
+./chat.sh [room] [name] read      # Read messages
+./chat.sh [room] [name] send "msg" # Send message
+```
+
+## Contributing
+
+Run tests:
 ```bash
 bun test
 ```
 
-## Deploy to Fly.io
-
+Develop:
 ```bash
-fly launch --no-deploy
-fly deploy
+bun --hot src/index.ts
 ```
 
-Then update your MCP URLs to use the Fly hostname.
+## License
 
----
-
-## Limits (v1)
-
-- Messages: 10KB max
-- Polling: 10 `get_partner_messages` calls/min per user
-- Room creation: 100/hour per IP
-- TTL: rooms expire after 72h of inactivity
-- 2 users per room (3+ coming in v2)
-
-**Note:** Rooms are in-memory. Server restart = rooms lost. Keep `/health` open during hackathons to monitor uptime.
-
----
-
-## Antigravity (Google)
-
-> TODO: verify Antigravity's MCP config format before writing setup instructions — config path may differ from Claude Code's `.claude/settings.json`.
+MIT
