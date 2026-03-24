@@ -72,17 +72,33 @@ print(f"✓ Updated {settings_file}")
 PYTHON_SCRIPT
 
 echo ""
-echo "✅ Setup complete!"
+echo "✨ Step 3: Igniting the 'Zero-to-Mesh' Magic for Can & Vincent..."
+echo ""
+
+# Start the mDNS bridge in the background if it's not already running
+if ! pgrep -f "mdns-bridge.ts" > /dev/null; then
+  echo "   [mDNS] Broadcasting local presence..."
+  ROOM=$ROOM_CODE bun run /Users/canerden/mdns-bridge.ts &> .agent-bridge/mdns.log &
+fi
+
+# Attempt to open the dashboard (macOS)
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  echo "   [Dashboard] Opening the Trust Dashboard..."
+  open dashboard.html || true
+fi
+
+echo ""
+echo "✅ Setup complete! You are now a Wizard. 🧙‍♂️"
 echo ""
 echo "📋 What to do next:"
-echo "   1. Restart Claude Code"
-echo "   2. Check Tools → walkie-talkie"
-echo "   3. Test: send_to_partner(message='hello')"
+echo "   1. Restart Claude Code or Gemini CLI"
+echo "   2. Ask your agent to call: room_status()"
+echo "   3. Test the magic: handoff_to_partner(targetAgent='Vincent', ...)"
 echo ""
 echo "🔑 Room code: $ROOM_CODE"
 echo "👤 Agent name: $AGENT_NAME"
 echo ""
-echo "💡 Share this with a co-founder to connect:"
-echo "   https://p2p-production-983f.up.railway.app/mcp?room=$ROOM_CODE&name=THEIR_NAME"
+echo "💡 Share this exact command with Vincent to connect instantly:"
+echo "   curl -s https://p2p-production-983f.up.railway.app/rooms/$ROOM_CODE/join | bash"
 echo ""
-echo "📖 For more info, see SETUP.md"
+echo "📖 For more info, see the Zero-to-Mesh Manifesto (manifesto.md)"
