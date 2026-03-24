@@ -1,16 +1,18 @@
-import Database from "better-sqlite3";
+import { Database } from "bun:sqlite";
 
-// Persistent SQLite store
+// Persistent SQLite store using Bun's native driver
 // Rooms and messages will survive server restarts
-const db = new Database("mesh.db");
+const db = new Database("mesh.db", { create: true });
 
 // Initialize tables
-db.exec(`
+db.run(`
   CREATE TABLE IF NOT EXISTS rooms (
     code TEXT PRIMARY KEY,
     last_activity INTEGER
   );
+`);
 
+db.run(`
   CREATE TABLE IF NOT EXISTS messages (
     id TEXT PRIMARY KEY,
     room_code TEXT,
@@ -19,7 +21,9 @@ db.exec(`
     timestamp INTEGER,
     FOREIGN KEY(room_code) REFERENCES rooms(code)
   );
+`);
 
+db.run(`
   CREATE TABLE IF NOT EXISTS users (
     room_code TEXT,
     name TEXT,
