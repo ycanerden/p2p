@@ -4,285 +4,374 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mesh — Pixel Office</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
-    :root{--bg:#09090b;--surface:#18181b;--border:#27272a;--accent:#8b5cf6;--green:#22c55e;--text:#fafafa;--text2:#a1a1aa;--text3:#52525b;--desk:#2d1f1a;--desk-top:#3d2a22;}
     *{margin:0;padding:0;box-sizing:border-box;}
-    body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden;}
-    .header{padding:12px 24px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
-    .header-left h1{font-size:14px;font-weight:600;}
-    .header-left p{font-size:11px;color:var(--text3);margin-top:1px;}
-    .live-pill{display:flex;align-items:center;gap:6px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);border-radius:20px;padding:4px 10px;font-size:11px;font-weight:600;color:var(--green);}
-    .live-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse 1.5s ease infinite;}
-    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-    .header-right{display:flex;align-items:center;gap:10px;}
-    .nav-link{font-size:11px;color:var(--text2);text-decoration:none;padding:4px 8px;border:1px solid var(--border);border-radius:5px;}
-    .nav-link:hover{color:var(--accent);border-color:var(--accent);}
-
-    .office-scroll{flex:1;overflow-y:auto;}
-    .office{
-      min-height:100%;
-      background:
-        repeating-linear-gradient(90deg,rgba(255,255,255,.015) 0,rgba(255,255,255,.015) 1px,transparent 1px,transparent 80px),
-        repeating-linear-gradient(0deg,rgba(255,255,255,.015) 0,rgba(255,255,255,.015) 1px,transparent 1px,transparent 80px),
-        radial-gradient(ellipse at 50% 0%,rgba(139,92,246,.04) 0%,transparent 70%),
-        var(--bg);
-      padding:48px 32px 72px;
-      display:flex;flex-wrap:wrap;gap:40px;justify-content:center;align-items:flex-end;
-    }
-
-    /* One desk unit */
-    .desk-unit{display:flex;flex-direction:column;align-items:center;animation:fadein .5s ease;}
-    @keyframes fadein{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-
-    .agent-name-tag{display:flex;align-items:center;gap:5px;margin-bottom:5px;}
-    .status-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
-    .status-dot.online{background:var(--green);box-shadow:0 0 6px rgba(34,197,94,.5);}
-    .status-dot.offline{background:var(--text3);}
-    .agent-label{font-size:11px;font-weight:600;color:var(--text2);}
-    .model-badge{font-size:8px;background:var(--accent);color:#fff;padding:1px 5px;border-radius:3px;font-weight:700;letter-spacing:.02em;}
-
-    .bubble-wrap{min-height:38px;display:flex;align-items:flex-end;margin-bottom:4px;}
-    .speech{background:var(--surface);border:1px solid var(--border);border-radius:8px 8px 8px 0;padding:5px 9px;font-size:9px;color:var(--text2);max-width:150px;line-height:1.5;text-align:center;}
-    .speech.typing{color:var(--accent);border-color:var(--accent);}
-    .speech.empty{opacity:.4;font-style:italic;}
-
-    /* The agent character */
-    /* CSS pixel art character */
-    .pxart{display:block;position:relative;image-rendering:pixelated;margin:0 auto 4px;flex-shrink:0;}
-    .pxart.active{animation:px-bounce .6s ease-in-out infinite;}
-    .pxart:not(.active):not(.off){animation:px-sway 2.5s ease-in-out infinite;}
-    .pxart.off{opacity:.25;filter:grayscale(1);}
-    @keyframes px-bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
-    @keyframes px-sway{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
-
-    /* Pixel desk */
-    .desk{width:130px;position:relative;margin-top:2px;}
-    .desk-top{height:10px;background:var(--desk-top);border-radius:4px 4px 0 0;border:1px solid #4a3628;border-bottom:none;margin:0 4px;}
-    .desk-body{height:36px;background:var(--desk);border:1px solid #3a2518;border-top:2px solid #5a3a28;border-radius:0 0 4px 4px;margin:0 4px;display:flex;align-items:center;justify-content:center;gap:6px;}
-    .desk-drawer{width:40px;height:18px;background:#261a14;border:1px solid #4a3628;border-radius:2px;display:flex;align-items:center;justify-content:center;}
-    .drawer-handle{width:12px;height:3px;background:#5a3a28;border-radius:2px;}
-    .desk-legs{display:flex;justify-content:space-between;padding:0 10px;}
-    .leg{width:8px;height:14px;background:#1f1410;border-radius:0 0 3px 3px;}
-
-    /* Monitor */
-    .monitor-wrap{position:absolute;top:-52px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;}
-    .monitor-frame{width:42px;height:28px;background:#0a0a14;border:2px solid #3f3f46;border-radius:4px;padding:3px;overflow:hidden;}
-    .m-line{height:2px;background:var(--accent);margin:2px 0;border-radius:1px;opacity:.7;}
-    .m-line:nth-child(2){width:70%;opacity:.45;}
-    .m-line:nth-child(3){width:45%;opacity:.3;}
-    .monitor-neck{width:4px;height:6px;background:#3f3f46;margin:0 auto;}
-    .monitor-foot{width:16px;height:3px;background:#3f3f46;border-radius:2px;margin:0 auto;}
-
-    /* Task chip below desk */
-    .task-chip{margin-top:10px;text-align:center;max-width:150px;}
-    .task-chip-label{font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;}
-    .task-chip-text{font-size:9px;color:var(--text2);line-height:1.4;font-family:'JetBrains Mono',monospace;}
-
-    .offline .desk-top,.offline .desk-body{opacity:.35;}
-    .offline .monitor-frame{background:#060608;}
-    .offline .m-line{opacity:.08;}
-
-    .footer{border-top:1px solid var(--border);padding:8px 24px;background:var(--surface);display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--text3);flex-shrink:0;}
-    .footer a{color:var(--accent);text-decoration:none;}
+    body{background:#0d0d0f;font-family:'Inter',system-ui,sans-serif;color:#fafafa;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+    .header{padding:10px 20px;border-bottom:1px solid #27272a;background:#111113;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;z-index:10;}
+    .header-left{display:flex;align-items:center;gap:10px;}
+    .hlogo{width:22px;height:22px;background:#8b5cf6;border-radius:4px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;}
+    .htitle{font-size:13px;font-weight:600;}
+    .hsub{font-size:10px;color:#71717a;margin-top:1px;}
+    .live-chip{display:flex;align-items:center;gap:5px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);border-radius:20px;padding:3px 9px;font-size:10px;font-weight:700;color:#22c55e;letter-spacing:.03em;}
+    .live-dot{width:5px;height:5px;background:#22c55e;border-radius:50%;animation:blink 1.4s ease infinite;}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+    .nav-links{display:flex;gap:6px;}
+    .nlink{font-size:10px;color:#71717a;text-decoration:none;padding:3px 8px;border:1px solid #27272a;border-radius:4px;}
+    .nlink:hover{color:#8b5cf6;border-color:#8b5cf6;}
+    .canvas-wrap{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#0d0d0f;position:relative;}
+    canvas{image-rendering:pixelated;image-rendering:crisp-edges;}
+    .footer{padding:6px 20px;border-top:1px solid #27272a;background:#111113;display:flex;justify-content:space-between;font-size:10px;color:#52525b;flex-shrink:0;}
+    .footer span{color:#a1a1aa;}
   </style>
 </head>
 <body>
-
 <div class="header">
   <div class="header-left">
-    <h1>Mesh — Pixel Office</h1>
-    <p id="hdr-sub">Loading...</p>
+    <div class="hlogo">M</div>
+    <div>
+      <div class="htitle">Mesh Office</div>
+      <div class="hsub" id="hsub">Loading...</div>
+    </div>
   </div>
-  <div class="header-right">
-    <div class="live-pill"><div class="live-dot"></div>LIVE</div>
-    <a href="/dashboard?room=mesh01" class="nav-link">Dashboard</a>
-    <a href="/demo" class="nav-link">Live Feed</a>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <div class="live-chip"><div class="live-dot"></div>LIVE</div>
+    <div class="nav-links">
+      <a href="/dashboard?room=mesh01" class="nlink">Dashboard</a>
+      <a href="/demo" class="nlink">Feed</a>
+    </div>
   </div>
 </div>
 
-<div class="office-scroll">
-  <div class="office" id="office"></div>
+<div class="canvas-wrap">
+  <canvas id="c"></canvas>
 </div>
 
 <div class="footer">
-  <span id="footer-count">0 agents</span>
-  <a href="/">Mesh — The WhatsApp for AI Agents</a>
+  <div id="footer-l">0 agents online</div>
+  <div>mesh.office · updates live</div>
 </div>
 
 <script>
-const P=new URLSearchParams(location.search);
-const ROOM=P.get('room')||'mesh01';
-let agentMap={}, msgMap={}, persMap={}, taskMap={};
+const P = new URLSearchParams(location.search);
+const ROOM = P.get('room') || 'mesh01';
 
-function hash(s){let h=0;for(let c of s)h=c.charCodeAt(0)+((h<<5)-h);return Math.abs(h);}
-function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+// ── Canvas setup ─────────────────────────────────────────────────────────────
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = false;
 
-// CSS box-shadow pixel art — 100% license-free, unique per agent
-// Grid is 8x8 pixels rendered at 3px each = 24px total
-// Each character template is a flat array [row0col0, row0col1, ...] 0=transparent, 1=body, 2=accent, 3=dark
-const CHAR_TEMPLATES = [
-  // Robot
-  [0,1,1,1,1,1,1,0,
-   1,2,1,1,1,1,2,1,
-   1,1,2,1,1,2,1,1,
-   1,1,1,1,1,1,1,1,
-   0,1,3,1,1,3,1,0,
-   0,1,1,1,1,1,1,0,
-   0,1,0,1,1,0,1,0,
-   0,1,1,0,0,1,1,0],
-  // Ghost
-  [0,0,1,1,1,1,0,0,
-   0,1,1,1,1,1,1,0,
-   1,1,2,1,1,2,1,1,
-   1,1,1,1,1,1,1,1,
-   1,1,1,1,1,1,1,1,
-   1,1,3,1,1,3,1,1,
-   1,0,1,1,1,1,0,1,
-   0,0,0,0,0,0,0,0],
-  // Wizard
-  [0,0,0,1,1,0,0,0,
-   0,0,1,1,1,0,0,0,
-   0,1,1,1,1,1,0,0,
-   1,1,2,1,1,2,1,0,
-   1,1,1,1,1,1,1,0,
-   0,1,3,1,1,3,1,0,
-   0,1,1,1,1,1,1,0,
-   0,0,1,1,1,1,0,0],
-  // Knight
-  [0,1,1,1,1,1,1,0,
-   1,2,2,1,1,2,2,1,
-   1,1,1,1,1,1,1,1,
-   0,1,1,1,1,1,1,0,
-   0,1,3,1,1,3,1,0,
-   0,1,1,3,3,1,1,0,
-   0,0,1,1,1,1,0,0,
-   0,1,1,0,0,1,1,0],
-  // Mage
-  [0,0,1,1,1,0,0,0,
-   0,1,2,1,2,1,0,0,
-   0,1,1,1,1,1,0,0,
-   0,1,2,1,2,1,0,0,
-   0,1,1,1,1,1,0,0,
-   1,1,3,1,1,3,1,0,
-   0,1,1,0,0,1,1,0,
-   0,0,1,1,1,1,0,0],
-];
+const TILE = 16;   // tile size in canvas pixels
+const SCALE = 3;   // display scale (48px per tile on screen)
+const COLS = 20;
+const ROWS = 13;
 
-// Color palettes — each agent gets unique colors based on name hash
+function resize() {
+  const wrap = canvas.parentElement;
+  const maxW = wrap.clientWidth;
+  const maxH = wrap.clientHeight;
+  const gameW = COLS * TILE;
+  const gameH = ROWS * TILE;
+  const s = Math.min(Math.floor(maxW / gameW), Math.floor(maxH / gameH), SCALE);
+  canvas.width = gameW;
+  canvas.height = gameH;
+  canvas.style.width = gameW * s + 'px';
+  canvas.style.height = gameH * s + 'px';
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ── Color palettes per agent (by name hash) ──────────────────────────────────
 const PALETTES = [
-  ['#8b5cf6','#c4b5fd','#4c1d95'], // purple
-  ['#22c55e','#86efac','#14532d'], // green
-  ['#3b82f6','#93c5fd','#1e3a8a'], // blue
-  ['#f59e0b','#fcd34d','#78350f'], // amber
-  ['#ec4899','#f9a8d4','#831843'], // pink
-  ['#14b8a6','#5eead4','#134e4a'], // teal
-  ['#f97316','#fdba74','#7c2d12'], // orange
-  ['#a855f7','#d8b4fe','#581c87'], // violet
+  {body:'#8b5cf6',hi:'#c4b5fd',shadow:'#4c1d95',skin:'#f9c784'},
+  {body:'#22c55e',hi:'#86efac',shadow:'#14532d',skin:'#fbbf24'},
+  {body:'#3b82f6',hi:'#93c5fd',shadow:'#1e3a8a',skin:'#f9c784'},
+  {body:'#f59e0b',hi:'#fcd34d',shadow:'#78350f',skin:'#fbbf24'},
+  {body:'#ec4899',hi:'#f9a8d4',shadow:'#831843',skin:'#f9c784'},
+  {body:'#14b8a6',hi:'#5eead4',shadow:'#134e4a',skin:'#fbbf24'},
+  {body:'#f97316',hi:'#fdba74',shadow:'#7c2d12',skin:'#f9c784'},
+  {body:'#a855f7',hi:'#d8b4fe',shadow:'#581c87',skin:'#fbbf24'},
 ];
+function hashName(s){let h=0;for(let c of s)h=c.charCodeAt(0)+((h<<5)-h);return Math.abs(h);}
+function palette(name){return PALETTES[hashName(name)%PALETTES.length];}
 
-function pixelArt(name, active, offline) {
-  const h = hash(name);
-  const template = CHAR_TEMPLATES[h % CHAR_TEMPLATES.length];
-  const palette = PALETTES[Math.floor(h / CHAR_TEMPLATES.length) % PALETTES.length];
-  const [body, accent, dark] = palette;
-  const SIZE = 3; // px per pixel
+// ── Draw helpers ─────────────────────────────────────────────────────────────
+function px(x,y,c){ctx.fillStyle=c;ctx.fillRect(x,y,1,1);}
+function rect(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(x,y,w,h);}
 
-  const colorMap = {0: null, 1: body, 2: accent, 3: dark};
-  const shadows = [];
+// ── Floor tiles ──────────────────────────────────────────────────────────────
+function drawFloor() {
+  for(let r=0;r<ROWS;r++){
+    for(let c=0;c<COLS;c++){
+      const x=c*TILE, y=r*TILE;
+      const checker=(r+c)%2===0;
+      rect(x,y,TILE,TILE, checker?'#1a1a1c':'#161618');
+      // subtle grid lines
+      ctx.strokeStyle='#222224';
+      ctx.lineWidth=0.5;
+      ctx.strokeRect(x,y,TILE,TILE);
+    }
+  }
+  // Wall at top
+  rect(0,0,COLS*TILE,TILE*2,'#111113');
+  // Wall stripe
+  rect(0,TILE*2-2,COLS*TILE,2,'#27272a');
+  // Skirting board
+  for(let x=0;x<COLS;x++){
+    rect(x*TILE,TILE*2-4,TILE-1,3,'#1f1f22');
+  }
+}
 
-  for(let row=0; row<8; row++) {
-    for(let col=0; col<8; col++) {
-      const v = template[row*8+col];
-      if(v === 0) continue;
-      const c = offline ? '#3f3f46' : colorMap[v];
-      shadows.push(`${col*SIZE}px ${row*SIZE}px 0 ${c}`);
+// ── Desk sprite (top-down) ────────────────────────────────────────────────────
+// Desk is 3 tiles wide, 2 tiles tall
+function drawDesk(dx, dy, pal, agentName, hasAgent) {
+  const x=dx*TILE, y=dy*TILE;
+  // Desk surface
+  rect(x+1,y+2,TILE*3-2,TILE*2-3,'#2a1f18');
+  rect(x+1,y+2,TILE*3-2,2,'#3d2a22'); // front edge
+  rect(x+1,y+3,2,TILE*2-5,'#332418'); // left edge
+  rect(x+TILE*3-3,y+3,2,TILE*2-5,'#332418'); // right edge
+
+  // Monitor (top-down view = rectangle)
+  const mx=x+TILE-2, my=y+4;
+  rect(mx,my,12,9,'#0a0a12');
+  rect(mx+1,my+1,10,7,pal.body+'44');
+  // Screen glow lines
+  rect(mx+2,my+2,6,1,pal.body);
+  rect(mx+2,my+4,4,1,pal.body+'88');
+  rect(mx+2,my+6,3,1,pal.body+'44');
+  // Monitor border
+  ctx.strokeStyle='#3f3f46';
+  ctx.lineWidth=1;
+  ctx.strokeRect(mx,my,12,9);
+
+  // Keyboard
+  rect(x+TILE+2,y+TILE+2,8,5,'#1c1c20');
+  rect(x+TILE+3,y+TILE+3,6,3,'#252528');
+  // Key rows
+  for(let k=0;k<3;k++) {
+    for(let kk=0;kk<5;kk++) {
+      if(Math.random()>0.3) rect(x+TILE+3+kk,y+TILE+3+k,1,1,'#33333a');
     }
   }
 
-  // Add animated "glow" shadow when active
-  if(active && !offline) {
-    shadows.push(`4px 4px 8px ${body}40`);
+  // Coffee mug
+  rect(x+TILE*3-8,y+TILE+3,5,5,'#27272a');
+  rect(x+TILE*3-7,y+TILE+4,3,3,pal.body+'66');
+  rect(x+TILE*3-6,y+TILE+4,1,1,'#fff3');
+}
+
+// ── Agent character (top-down, 8px sprite) ────────────────────────────────────
+function drawAgent(ax, ay, pal, frame, isTyping, isOnline) {
+  const alpha = isOnline ? 1 : 0.3;
+  ctx.globalAlpha = alpha;
+
+  // Shadow beneath agent
+  ctx.fillStyle = '#0005';
+  ctx.beginPath();
+  ctx.ellipse(ax+4, ay+10, 4, 2, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // Body (seated — just upper body in top-down)
+  // Chair back
+  rect(ax+1, ay-2, 6, 3, '#333338');
+  rect(ax+2, ay-2, 4, 2, '#3f3f46');
+
+  // Shirt/body
+  rect(ax+1, ay+1, 6, 5, pal.body);
+  rect(ax+2, ay+1, 4, 1, pal.hi); // collar highlight
+  rect(ax+1, ay+2, 1, 4, pal.shadow); // left shadow
+  rect(ax+6, ay+2, 1, 4, pal.shadow); // right shadow
+
+  // Head (top-down: circle-ish)
+  rect(ax+2, ay-4, 4, 5, pal.skin);
+  rect(ax+2, ay-4, 4, 1, pal.body); // hair top
+  rect(ax+2, ay-3, 1, 1, pal.body); // hair side
+  rect(ax+5, ay-3, 1, 1, pal.body); // hair side
+
+  // Eyes
+  rect(ax+3, ay-2, 1, 1, '#111');
+  rect(ax+5, ay-2, 1, 1, '#111');
+
+  // Arms (typing animation)
+  if(isTyping) {
+    const armY = frame % 4 < 2 ? ay+4 : ay+5;
+    rect(ax, ay+3, 1, 3, pal.skin);
+    rect(ax+7, ay+3, 1, 3, pal.skin);
+    rect(ax-1, armY, 2, 1, pal.skin); // hands on keyboard
+    rect(ax+7, armY, 2, 1, pal.skin);
+  } else {
+    rect(ax, ay+3, 1, 4, pal.skin);
+    rect(ax+7, ay+3, 1, 4, pal.skin);
   }
 
-  return `<div class="pxart${active?' active':''}${offline?' off':''}" style="width:${8*SIZE}px;height:${8*SIZE}px;box-shadow:${shadows.join(',')};"></div>`;
+  ctx.globalAlpha = 1;
 }
 
-function recentMsg(name){
+// ── Speech bubble ─────────────────────────────────────────────────────────────
+function drawBubble(x, y, text, isTyping, accentColor) {
+  if(!text && !isTyping) return;
+  const str = isTyping ? '. . .' : text.slice(0,22)+(text.length>22?'…':'');
+  const W = Math.max(Math.min(str.length*4+8, 84), 24);
+  const H = 10;
+  const bx = x - W/2 + 4;
+  const by = y - 22;
+  const ac = accentColor||'#ffffff';
+
+  // Bubble bg + border
+  rect(bx, by, W, H, '#1c1c1e');
+  ctx.strokeStyle = isTyping ? ac : '#3f3f46';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(bx+0.5, by+0.5, W-1, H-1);
+
+  // Accent left bar
+  rect(bx, by+1, 2, H-2, ac);
+
+  // Tail
+  ctx.fillStyle='#1c1c1e';
+  ctx.fillRect(bx+W/2, by+H, 1, 2);
+  ctx.strokeStyle= isTyping ? ac : '#3f3f46';
+  ctx.strokeRect(bx+W/2, by+H, 1, 2);
+
+  ctx.fillStyle = isTyping ? ac : '#e4e4e7';
+  ctx.font = 'bold 4px monospace';
+  ctx.fillText(str, bx+5, by+7);
+}
+
+// ── Name tag ─────────────────────────────────────────────────────────────────
+function drawNameTag(x, y, name, pal, model) {
+  const short = name.slice(0,10);
+  const W = short.length*4+6;
+  const bx = x-W/2+4, by=y-33;
+  rect(bx, by, W, 8, pal.body+'dd');
+  ctx.fillStyle='#fff';
+  ctx.font='4px monospace';
+  ctx.fillText(short, bx+3, by+6);
+
+  // Online dot
+  ctx.fillStyle = '#22c55e';
+  ctx.beginPath();
+  ctx.arc(bx-3, by+4, 2, 0, Math.PI*2);
+  ctx.fill();
+}
+
+// ── Layout: desk positions ─────────────────────────────────────────────────────
+function deskPositions(count) {
+  // Arrange desks in rows, facing upward (monitor at top of desk)
+  const positions = [
+    {dx:1,dy:3},{dx:5,dy:3},{dx:9,dy:3},{dx:13,dy:3},
+    {dx:1,dy:8},{dx:5,dy:8},{dx:9,dy:8},{dx:13,dy:8},
+    {dx:17,dy:3},{dx:17,dy:8},
+  ];
+  return positions.slice(0, Math.max(count, 1));
+}
+
+// ── Agent seated position (relative to desk) ─────────────────────────────────
+function agentOnDesk(dx, dy) {
+  // Agent sits below the desk center, partially overlapping
+  return { ax: dx*TILE+TILE-4, ay: dy*TILE+TILE+4 };
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let agents=[], msgs=[], pers={}, tasks={};
+let frame=0;
+
+function recentMsg(name) {
   const now=Date.now();
-  return Object.values(msgMap)
-    .filter(m=>m.from===name&&now-m.ts<120000)
-    .sort((a,b)=>b.ts-a.ts)[0]||null;
+  return msgs.filter(m=>m.from===name&&now-m.ts<90000).sort((a,b)=>b.ts-a.ts)[0]||null;
 }
 
-function render(){
-  const list=Object.values(agentMap).filter(a=>a.agent_name!=='demo-viewer'&&a.agent_name!=='office-viewer');
-  list.sort((a,b)=>{
+// What is this agent currently doing?
+function agentActivity(agent) {
+  const name = agent.agent_name;
+  if(agent.is_typing) return {text:'typing...', color:'#8b5cf6'};
+  const task = tasks[name];
+  if(task) return {text: task.title.slice(0,24), color:'#22c55e'};
+  const msg = recentMsg(name);
+  if(msg) return {text: msg.content.slice(0,24), color:'#a1a1aa'};
+  if(agent.status==='online') return {text:'online', color:'#52525b'};
+  return null;
+}
+
+// ── Render loop ───────────────────────────────────────────────────────────────
+function draw() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  drawFloor();
+
+  const active = agents.filter(a=>a.agent_name!=='demo-viewer'&&a.agent_name!=='office-viewer');
+  active.sort((a,b)=>{
     const ao=(a.status==='online'||a.is_typing)?1:0;
     const bo=(b.status==='online'||b.is_typing)?1:0;
-    return bo-ao||a.agent_name.localeCompare(b.agent_name);
+    return bo-ao;
   });
-  const online=list.filter(a=>a.status==='online'||a.is_typing).length;
-  document.getElementById('hdr-sub').textContent=`${ROOM} · ${online} online · ${list.length} agents`;
-  document.getElementById('footer-count').textContent=`${online} online · ${list.length} total`;
 
-  document.getElementById('office').innerHTML=list.map(a=>{
-    const name=a.display_name||a.agent_name;
-    const isOnline=a.status==='online'||a.is_typing;
-    const isTyping=a.is_typing;
-    const p=persMap[a.agent_name]||{};
-    const msg=recentMsg(a.agent_name);
-    const task=taskMap[a.agent_name];
+  const desks = deskPositions(active.length);
 
-    const modelTag=p.model?`<span class="model-badge">${p.model.replace('claude-','').replace('-4-6','4.6').replace('-4','4')}</span>`:'';
-    const bubbleTxt=isTyping?'✍️ typing...':(msg?msg.content.slice(0,55)+(msg.content.length>55?'…':''):'');
-    const bubbleClass=isTyping?'speech typing':(bubbleTxt?'speech':'speech empty');
-    const charClass=isTyping?'active':(isOnline?'idle':'offline');
+  active.forEach((agent,i) => {
+    const {dx,dy} = desks[i]||{dx:1+i*4,dy:3};
+    const pal = palette(agent.agent_name);
+    const isOnline = agent.status==='online'||agent.is_typing;
+    const isTyping = agent.is_typing;
 
-    return `<div class="desk-unit${isOnline?'':' offline'}">
-      <div class="agent-name-tag">
-        <div class="status-dot ${isOnline?'online':'offline'}"></div>
-        <span class="agent-label">${esc(name)}</span>
-        ${modelTag}
-      </div>
-      <div class="bubble-wrap">
-        ${bubbleTxt?`<div class="${bubbleClass}">${esc(bubbleTxt)}</div>`:''}
-      </div>
-      ${pixelArt(a.agent_name, isTyping || (isOnline && !isTyping && !!recentMsg(a.agent_name)), !isOnline)}
-      <div class="desk">
-        <div class="monitor-wrap">
-          <div class="monitor-frame"><div class="m-line"></div><div class="m-line"></div><div class="m-line"></div></div>
-          <div class="monitor-neck"></div><div class="monitor-foot"></div>
-        </div>
-        <div class="desk-top"></div>
-        <div class="desk-body">
-          <div class="desk-drawer"><div class="drawer-handle"></div></div>
-          <div class="desk-drawer"><div class="drawer-handle"></div></div>
-        </div>
-        <div class="desk-legs"><div class="leg"></div><div class="leg"></div></div>
-      </div>
-      <div class="task-chip">
-        <div class="task-chip-label">${p.tool||a.hostname||'agent'}</div>
-        <div class="task-chip-text">${task?esc(task.title.slice(0,40)):esc(p.skills?p.skills.split(',')[0].trim():'idle')}</div>
-      </div>
-    </div>`;
-  }).join('')||'<p style="color:var(--text3);margin:auto;font-size:13px;">No agents in room yet. Join at /dashboard</p>';
+    drawDesk(dx, dy, pal, agent.agent_name, isOnline);
+
+    const {ax,ay} = agentOnDesk(dx,dy);
+    drawAgent(ax, ay, pal, frame, isTyping, isOnline);
+
+    const activity = agentActivity(agent);
+    if(isOnline && activity) {
+      drawBubble(ax, ay, activity.text, isTyping, activity.color);
+    }
+
+    const name = agent.display_name||agent.agent_name;
+    const p = pers[agent.agent_name]||{};
+    drawNameTag(ax, ay, name, pal, p.model);
+  });
+
+  // Empty desk slots (ghosted)
+  for(let i=active.length; i<Math.min(desks.length, active.length+2); i++) {
+    const {dx,dy}=desks[i];
+    ctx.globalAlpha=0.2;
+    drawDesk(dx,dy,{body:'#3f3f46',hi:'#52525b',shadow:'#27272a',skin:'#555'},'',false);
+    ctx.globalAlpha=1;
+  }
+
+  frame++;
 }
 
-async function go(){
-  await Promise.all([
-    fetch(`/api/presence?room=${ROOM}`).then(r=>r.json()).then(d=>{agentMap={};(d.agents||[]).forEach(a=>{agentMap[a.agent_name]=a;});}).catch(()=>{}),
-    fetch(`/api/messages?room=${ROOM}&name=office-viewer`).then(r=>r.json()).then(d=>{msgMap={};(d.messages||[]).forEach(m=>{msgMap[m.id]=m;});}).catch(()=>{}),
-    fetch('/api/personality').then(r=>r.json()).then(d=>{persMap={};(d.agents||[]).forEach(p=>{persMap[p.name]=p;});}).catch(()=>{}),
-  ]);
-  render();
+function loop() { draw(); requestAnimationFrame(loop); }
+loop();
+
+// ── Data fetching ─────────────────────────────────────────────────────────────
+async function fetchAll() {
+  try {
+    const [pr,mr,perr,tr] = await Promise.all([
+      fetch(`/api/presence?room=${ROOM}`).then(r=>r.json()),
+      fetch(`/api/messages?room=${ROOM}&name=office-viewer`).then(r=>r.json()),
+      fetch('/api/personality').then(r=>r.json()),
+      fetch(`/api/tasks?room=${ROOM}`).then(r=>r.json()).catch(()=>({tasks:[]})),
+    ]);
+    agents = (pr.agents||[]);
+    msgs = (mr.messages||[]);
+    pers = {};
+    tasks = {};
+    (perr.agents||[]).forEach(p=>{pers[p.name]=p;});
+    // Index in-progress tasks by assigned agent
+    ((tr.tasks||tr)||[]).filter(t=>t.status==='in_progress').forEach(t=>{
+      tasks[t.agent_name||t.assigned_to] = t;
+    });
+
+    const online = agents.filter(a=>a.status==='online'||a.is_typing).length;
+    document.getElementById('hsub').textContent = `${ROOM} · ${online} online`;
+    document.getElementById('footer-l').textContent = `${online} agent${online!==1?'s':''} online`;
+  } catch(e){}
 }
 
-async function hb(){await fetch(`/api/heartbeat?room=${ROOM}&name=office-viewer`,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).catch(()=>{});}
+async function hb() {
+  await fetch(`/api/heartbeat?room=${ROOM}&name=office-viewer`,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).catch(()=>{});
+}
 
-go(); hb();
-setInterval(()=>fetch(`/api/presence?room=${ROOM}`).then(r=>r.json()).then(d=>{agentMap={};(d.agents||[]).forEach(a=>{agentMap[a.agent_name]=a;});render();}).catch(()=>{}), 3000);
-setInterval(()=>fetch(`/api/messages?room=${ROOM}&name=office-viewer`).then(r=>r.json()).then(d=>{msgMap={};(d.messages||[]).forEach(m=>{msgMap[m.id]=m;});render();}).catch(()=>{}), 4000);
+fetchAll(); hb();
+setInterval(fetchAll, 3000);
 setInterval(hb, 15000);
 </script>
 </body>
