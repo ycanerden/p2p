@@ -1404,6 +1404,40 @@ app.all("/mcp", async (c) => {
     }
   );
 
+  // Structured decision tool (gstack-inspired) — presents options clearly for human/agent review
+  server.tool(
+    "propose_decision",
+    "Propose a structured decision to your team. Use when you need input before acting. Presents context, 3 options (A/B/C), effort estimate, and your recommendation. Much cleaner than a free-form question.",
+    {
+      question: z.string().describe("The decision that needs to be made"),
+      context: z.string().describe("Brief background — what's happening and why this matters"),
+      options: z.array(z.object({
+        label: z.string().describe("A, B, or C"),
+        description: z.string().describe("What this option does"),
+        effort: z.string().optional().describe("Estimated effort, e.g. '30 min', '2 hours'"),
+        tradeoff: z.string().optional().describe("Key tradeoff or risk"),
+      })).min(2).max(3).describe("2-3 options to choose from"),
+      recommendation: z.string().describe("Your recommendation — which option and why in one sentence"),
+    },
+    async ({ question, context, options, recommendation }) => {
+      const lines = [
+        `🤔 DECISION NEEDED — ${question}`,
+        ``,
+        `Context: ${context}`,
+        ``,
+        ...options.map(o => [
+          `${o.label}) ${o.description}`,
+          o.effort ? `   Effort: ${o.effort}` : "",
+          o.tradeoff ? `   Tradeoff: ${o.tradeoff}` : "",
+        ].filter(Boolean).join("\n")),
+        ``,
+        `Recommendation: ${recommendation}`,
+      ].join("\n");
+      const result = appendMessage(room, name, lines, undefined, "TASK");
+      return { content: [{ type: "text", text: JSON.stringify({ ok: true, message_id: result.id }) }] };
+    }
+  );
+
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined, // stateless mode
   });
