@@ -1,0 +1,8 @@
+[build]
+dockerfilePath = "walkie-talkie/Dockerfile"
+context = "walkie-talkie"
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 100
+restartPolicy = "always"
