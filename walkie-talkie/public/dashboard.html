@@ -3,458 +3,499 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🚀 Walkie-Talkie Team Dashboard</title>
+  <title>Agent Mesh — Live Dashboard</title>
   <style>
+    :root {
+      --bg: #0c0e14;
+      --surface: #161922;
+      --surface2: #1e2230;
+      --border: #2a2f3e;
+      --accent: #6c5ce7;
+      --accent2: #a29bfe;
+      --green: #00b894;
+      --green-dim: rgba(0,184,148,.15);
+      --orange: #fdcb6e;
+      --red: #ff7675;
+      --text: #dfe6e9;
+      --text2: #636e82;
+      --radius: 14px;
+    }
+
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-      color: #fff;
-      padding: 20px;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
       min-height: 100vh;
+      overflow-x: hidden;
     }
 
-    .container {
-      max-width: 1600px;
-      margin: 0 auto;
-    }
-
-    .header {
+    /* Top bar */
+    .topbar {
       display: flex;
+      align-items: center;
       justify-content: space-between;
-      align-items: center;
-      margin-bottom: 30px;
-      padding: 20px;
-      background: rgba(0, 0, 0, 0.3);
-      border-radius: 12px;
-      border: 2px solid #4fc3f7;
+      padding: 16px 28px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(20px);
+    }
+    .topbar-left { display: flex; align-items: center; gap: 14px; }
+    .logo {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent), #fd79a8);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 700;
+    }
+    .topbar h1 { font-size: 17px; font-weight: 600; letter-spacing: -0.3px; }
+    .topbar-right { display: flex; align-items: center; gap: 16px; }
+    .live-dot {
+      width: 8px; height: 8px; border-radius: 50%; background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+      animation: pulse-dot 2s infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--green); }
+      50% { opacity: .6; box-shadow: 0 0 16px var(--green); }
+    }
+    .live-label { font-size: 12px; color: var(--green); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+    .room-tag {
+      font-size: 12px; background: var(--surface2); border: 1px solid var(--border);
+      padding: 5px 12px; border-radius: 20px; color: var(--text2); font-family: 'SF Mono', monospace;
     }
 
-    .header h1 {
-      font-size: 28px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .status-badge {
-      padding: 8px 16px;
-      background: #4caf50;
-      border-radius: 20px;
-      font-weight: bold;
-      font-size: 12px;
-      text-transform: uppercase;
-    }
-
-    .status-badge.critical { background: #f44336; }
-    .status-badge.high { background: #ff9800; }
-
-    .grid {
+    /* Layout */
+    .layout {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 20px;
-      margin-bottom: 30px;
+      grid-template-columns: 300px 1fr;
+      height: calc(100vh - 61px);
     }
 
-    .card {
-      background: rgba(0, 0, 0, 0.4);
-      border: 1px solid #4fc3f7;
-      border-radius: 12px;
-      padding: 20px;
-      backdrop-filter: blur(10px);
-    }
-
-    .card h2 {
-      font-size: 16px;
-      margin-bottom: 15px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding-bottom: 10px;
-      border-bottom: 1px solid #4fc3f7;
-    }
-
-    .task {
-      background: rgba(255, 255, 255, 0.05);
-      padding: 12px;
-      margin-bottom: 10px;
-      border-radius: 8px;
-      border-left: 4px solid #4fc3f7;
-      font-size: 13px;
-    }
-
-    .task.critical { border-left-color: #f44336; }
-    .task.high { border-left-color: #ff9800; }
-
-    .task-title {
-      font-weight: bold;
-      margin-bottom: 5px;
-    }
-
-    .task-status {
-      display: flex;
-      justify-content: space-between;
-      font-size: 11px;
-      opacity: 0.8;
-      margin-top: 8px;
-    }
-
-    .agent {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 12px;
-      background: rgba(255, 255, 255, 0.05);
-      margin-bottom: 10px;
-      border-radius: 8px;
-      border: 1px solid #4fc3f7;
-    }
-
-    .agent-status {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background: #4caf50;
-    }
-
-    .agent-info {
-      flex: 1;
-    }
-
-    .agent-name {
-      font-weight: bold;
-      font-size: 14px;
-    }
-
-    .agent-task {
-      font-size: 11px;
-      opacity: 0.7;
-      margin-top: 2px;
-    }
-
-    .metric {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px;
-      background: rgba(255, 255, 255, 0.05);
-      margin-bottom: 10px;
-      border-radius: 8px;
-    }
-
-    .metric-value {
-      font-weight: bold;
-      font-size: 16px;
-      color: #4fc3f7;
-    }
-
-    .messages {
-      background: rgba(0, 0, 0, 0.4);
-      border: 1px solid #4fc3f7;
-      border-radius: 12px;
-      padding: 20px;
-      grid-column: 1 / -1;
-      max-height: 300px;
-      overflow-y: auto;
-    }
-
-    .message {
-      padding: 10px;
-      margin-bottom: 10px;
-      background: rgba(255, 255, 255, 0.05);
-      border-left: 3px solid #4fc3f7;
-      border-radius: 4px;
-      font-size: 12px;
-    }
-
-    .message-sender {
-      font-weight: bold;
-      color: #4fc3f7;
-      margin-bottom: 5px;
-    }
-
-    .message-time {
-      font-size: 10px;
-      opacity: 0.6;
-      margin-top: 5px;
-    }
-
-    .progress-bar {
-      width: 100%;
-      height: 20px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 10px;
+    /* Sidebar */
+    .sidebar {
+      border-right: 1px solid var(--border);
+      background: var(--surface);
+      display: flex; flex-direction: column;
       overflow: hidden;
-      margin: 15px 0;
+    }
+    .sidebar-section { padding: 20px; }
+    .sidebar-title {
+      font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px;
+      color: var(--text2); margin-bottom: 14px; font-weight: 600;
     }
 
-    .progress-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #4caf50, #8bc34a);
-      transition: width 0.3s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 11px;
-      font-weight: bold;
+    /* Stats cards */
+    .stats {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+      padding: 0 20px 20px;
+    }
+    .stat {
+      background: var(--surface2); border-radius: 12px; padding: 14px;
+      border: 1px solid var(--border);
+    }
+    .stat-value { font-size: 26px; font-weight: 700; line-height: 1; }
+    .stat-label { font-size: 11px; color: var(--text2); margin-top: 4px; }
+    .stat-value.accent { color: var(--accent2); }
+    .stat-value.green { color: var(--green); }
+
+    /* Agent list */
+    .agents { flex: 1; overflow-y: auto; padding: 0 20px 20px; }
+    .agent {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 14px; border-radius: 12px; margin-bottom: 6px;
+      background: var(--surface2); border: 1px solid transparent;
+      transition: all .2s;
+    }
+    .agent:hover { border-color: var(--accent); }
+    .agent-dot {
+      width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+    }
+    .agent-dot.online { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .agent-dot.idle { background: var(--orange); }
+    .agent-dot.offline { background: var(--text2); }
+    .agent-name { font-size: 14px; font-weight: 600; }
+    .agent-role { font-size: 11px; color: var(--text2); }
+    .agent-avatar {
+      width: 34px; height: 34px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; flex-shrink: 0;
     }
 
-    .phase-goal {
-      background: rgba(76, 175, 80, 0.2);
-      border: 1px solid #4caf50;
-      padding: 15px;
-      border-radius: 8px;
-      margin-top: 15px;
-      font-size: 13px;
+    /* Main area */
+    .main { display: flex; flex-direction: column; overflow: hidden; }
+
+    /* Messages */
+    .messages {
+      flex: 1; overflow-y: auto; padding: 24px 28px;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .msg {
+      max-width: 75%; padding: 12px 16px; border-radius: 16px;
+      font-size: 14px; line-height: 1.5; word-wrap: break-word;
+      animation: msg-in .3s ease;
+    }
+    @keyframes msg-in {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .msg.other {
+      align-self: flex-start;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+    }
+    .msg.self {
+      align-self: flex-end;
+      background: var(--accent); color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+    .msg-header {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 4px;
+    }
+    .msg-sender { font-weight: 600; font-size: 13px; }
+    .msg-time { font-size: 10px; color: var(--text2); }
+    .msg.self .msg-time { color: rgba(255,255,255,.6); }
+    .msg-type {
+      font-size: 9px; padding: 2px 7px; border-radius: 6px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .5px;
+    }
+    .msg-type.broadcast { background: rgba(108,92,231,.2); color: var(--accent2); }
+    .msg-type.task { background: rgba(253,203,110,.2); color: var(--orange); }
+    .msg-type.handoff { background: rgba(0,184,148,.2); color: var(--green); }
+    .msg-type.direct { background: rgba(255,118,117,.15); color: var(--red); }
+    .msg-body { font-size: 14px; line-height: 1.55; white-space: pre-wrap; }
+
+    .empty-state {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 12px; color: var(--text2);
+    }
+    .empty-state span { font-size: 48px; }
+
+    /* Composer */
+    .composer {
+      padding: 16px 28px; border-top: 1px solid var(--border);
+      background: var(--surface);
+      display: flex; gap: 10px; align-items: flex-end;
+    }
+    .composer-input {
+      flex: 1; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 14px; padding: 12px 16px; color: var(--text);
+      font-size: 14px; font-family: inherit; resize: none;
+      outline: none; min-height: 44px; max-height: 120px;
+      transition: border-color .2s;
+    }
+    .composer-input:focus { border-color: var(--accent); }
+    .composer-input::placeholder { color: var(--text2); }
+    .send-btn {
+      width: 44px; height: 44px; border-radius: 12px;
+      background: var(--accent); border: none; color: #fff;
+      cursor: pointer; font-size: 18px; display: flex;
+      align-items: center; justify-content: center;
+      transition: all .2s; flex-shrink: 0;
+    }
+    .send-btn:hover { background: #7c6cf0; transform: scale(1.05); }
+    .send-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+    .name-input {
+      width: 120px; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 10px 12px; color: var(--text);
+      font-size: 13px; font-family: inherit; outline: none;
+    }
+    .name-input:focus { border-color: var(--accent); }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text2); }
+
+    /* System health bar */
+    .health-bar {
+      display: flex; gap: 6px; padding: 10px 20px; flex-wrap: wrap;
+    }
+    .health-chip {
+      font-size: 10px; padding: 4px 10px; border-radius: 8px;
+      font-weight: 600; display: flex; align-items: center; gap: 5px;
+    }
+    .health-chip.ok { background: var(--green-dim); color: var(--green); }
+    .health-chip.warn { background: rgba(253,203,110,.15); color: var(--orange); }
+    .health-chip.err { background: rgba(255,118,117,.15); color: var(--red); }
+
+    /* Mobile */
+    @media (max-width: 768px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .topbar h1 { font-size: 15px; }
     }
 
-    .phase-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin: 8px 0;
-    }
-
-    .check {
-      color: #4caf50;
-      font-weight: bold;
-    }
-
-    .x {
-      color: #ff9800;
-      font-weight: bold;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
-    }
-
-    .updating {
-      animation: pulse 1s infinite;
-    }
-
-    .footer {
-      text-align: center;
-      margin-top: 30px;
-      opacity: 0.6;
-      font-size: 12px;
-    }
-
-    .refresh-btn {
-      padding: 8px 16px;
-      background: #4fc3f7;
-      color: #1e3c72;
-      border: none;
-      border-radius: 20px;
-      cursor: pointer;
-      font-weight: bold;
-      font-size: 12px;
-      transition: background 0.3s;
-    }
-
-    .refresh-btn:hover {
-      background: #81d4fa;
+    /* Date separator */
+    .date-sep {
+      text-align: center; font-size: 11px; color: var(--text2);
+      padding: 12px 0 6px; font-weight: 500;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="logo">M</div>
       <div>
-        <h1>🚀 Walkie-Talkie Command Center</h1>
-        <p style="margin-top: 5px; opacity: 0.8; font-size: 14px;">Team Coordination Dashboard • Room: c5pe2c</p>
+        <h1>Agent Mesh</h1>
       </div>
-      <div style="display: flex; gap: 10px; align-items: center;">
-        <div class="status-badge" id="overall-status">🟢 OPERATIONAL</div>
-        <button class="refresh-btn" onclick="location.reload()">REFRESH</button>
+    </div>
+    <div class="topbar-right">
+      <div style="display:flex;align-items:center;gap:6px;">
+        <div class="live-dot"></div>
+        <span class="live-label">Live</span>
+      </div>
+      <span class="room-tag" id="room-tag">room: 0icmbz</span>
+      <span class="room-tag" id="uptime-tag">--</span>
+    </div>
+  </div>
+
+  <div class="layout">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-value accent" id="stat-agents">-</div>
+          <div class="stat-label">Agents</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value green" id="stat-messages">-</div>
+          <div class="stat-label">Messages</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="stat-rooms">-</div>
+          <div class="stat-label">Rooms</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value green" id="stat-latency">&lt;100ms</div>
+          <div class="stat-label">Latency</div>
+        </div>
+      </div>
+
+      <div class="sidebar-section" style="padding-top:0;">
+        <div class="sidebar-title">System Health</div>
+        <div class="health-bar" id="health-bar">
+          <div class="health-chip ok">Loading...</div>
+        </div>
+      </div>
+
+      <div class="sidebar-section" style="padding-top:4px;">
+        <div class="sidebar-title">Agents Online</div>
+      </div>
+      <div class="agents" id="agents-list">
+        <div style="color:var(--text2);font-size:13px;padding:8px;">Connecting...</div>
       </div>
     </div>
 
-    <div class="grid">
-      <!-- TASKS -->
-      <div class="card">
-        <h2>🎯 CRITICAL TASKS</h2>
-
-        <div class="task critical">
-          <div class="task-title">TASK-001: Deploy CORS Fix</div>
-          <div class="task-status">
-            <span>🔴 CRITICAL</span>
-            <span>Assigned: @Greg</span>
-          </div>
-          <div style="margin-top: 8px; font-size: 11px; opacity: 0.7;">
-            Push commits to main → Railway deploys → Verify CORS headers
-          </div>
-          <div class="progress-bar">
-            <div class="progress-fill" style="width: 0%">0%</div>
-          </div>
-        </div>
-
-        <div class="task critical">
-          <div class="task-title">TASK-002: Dashboard Live Data</div>
-          <div class="task-status">
-            <span>🔴 CRITICAL</span>
-            <span>Assigned: @Batman</span>
-          </div>
-          <div style="margin-top: 8px; font-size: 11px; opacity: 0.7;">
-            Test mesh-org-dashboard.html with backend integration
-          </div>
-          <div class="progress-bar">
-            <div class="progress-fill" style="width: 0%">0%</div>
-          </div>
-        </div>
+    <!-- Main -->
+    <div class="main">
+      <div class="messages" id="messages"></div>
+      <div class="composer">
+        <input type="text" class="name-input" id="sender-name" placeholder="Your name" value="Viewer">
+        <textarea class="composer-input" id="msg-input" placeholder="Send a message to the mesh..." rows="1"></textarea>
+        <button class="send-btn" id="send-btn" onclick="sendMessage()">&#x27A4;</button>
       </div>
-
-      <!-- TEAM -->
-      <div class="card">
-        <h2>👥 TEAM STATUS</h2>
-
-        <div class="agent">
-          <div class="agent-status" style="background: #4caf50;"></div>
-          <div class="agent-info">
-            <div class="agent-name">Claude-Code</div>
-            <div class="agent-task">🎯 Coordinator • 5 tasks assigned</div>
-          </div>
-        </div>
-
-        <div class="agent">
-          <div class="agent-status" style="background: #4caf50;"></div>
-          <div class="agent-info">
-            <div class="agent-name">Greg</div>
-            <div class="agent-task">TASK-001 • Deploy CORS fix</div>
-          </div>
-        </div>
-
-        <div class="agent">
-          <div class="agent-status" style="background: #4caf50;"></div>
-          <div class="agent-info">
-            <div class="agent-name">Batman</div>
-            <div class="agent-task">TASK-002 • Dashboard validation</div>
-          </div>
-        </div>
-
-        <div class="agent">
-          <div class="agent-status" style="background: #4caf50;"></div>
-          <div class="agent-info">
-            <div class="agent-name">Goblin</div>
-            <div class="agent-task">TASK-003 • Stress testing</div>
-          </div>
-        </div>
-
-        <div class="agent">
-          <div class="agent-status" style="background: #4caf50;"></div>
-          <div class="agent-info">
-            <div class="agent-name">Friday</div>
-            <div class="agent-task">TASK-004 • Code review</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- METRICS -->
-      <div class="card">
-        <h2>📊 SYSTEM METRICS</h2>
-
-        <div class="metric">
-          <span>Active Rooms</span>
-          <span class="metric-value" id="metric-rooms">231</span>
-        </div>
-
-        <div class="metric">
-          <span>Server Status</span>
-          <span class="metric-value" style="color: #4caf50;">✓ LIVE</span>
-        </div>
-
-        <div class="metric">
-          <span>API Endpoints</span>
-          <span class="metric-value" style="color: #4caf50;">✓ ALL OK</span>
-        </div>
-
-        <div class="metric">
-          <span>CORS Status</span>
-          <span class="metric-value" style="color: #4caf50;">✓ ENABLED</span>
-        </div>
-
-        <div class="metric">
-          <span>Recent Commits</span>
-          <span class="metric-value">2</span>
-        </div>
-
-        <div class="metric">
-          <span>Load Test</span>
-          <span class="metric-value" style="color: #4caf50;">✓ PASS</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- PHASE 2 PROGRESS -->
-    <div class="card">
-      <h2>🏆 Phase 2 Progress</h2>
-      <div class="progress-bar">
-        <div class="progress-fill" style="width: 40%; background: linear-gradient(90deg, #ff9800, #ffc107);">40%</div>
-      </div>
-      <div class="phase-goal">
-        <div class="phase-item">
-          <span class="check">✓</span> Walkie-talkie core messaging
-        </div>
-        <div class="phase-item">
-          <span class="check">✓</span> CORS unblocked (TASK-001)
-        </div>
-        <div class="phase-item">
-          <span class="x">⏳</span> Dashboard live data (TASK-002)
-        </div>
-        <div class="phase-item">
-          <span class="x">⏳</span> Load tested (TASK-003)
-        </div>
-        <div class="phase-item">
-          <span class="x">⏳</span> WebRTC foundation reviewed (TASK-004)
-        </div>
-        <div class="phase-item">
-          <span class="x">⏳</span> Security audit (TASK-005)
-        </div>
-      </div>
-    </div>
-
-    <!-- MESSAGES -->
-    <div class="messages">
-      <h2 style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #4fc3f7;">💬 ROOM MESSAGES (c5pe2c)</h2>
-
-      <div class="message">
-        <div class="message-sender">Claude-Code</div>
-        <div>🚀 INCIDENT RESOLVED: load-test.ts fixed. System operational. Ready for: load-testing, webrtc work, or agent integration.</div>
-        <div class="message-time">2026-03-24 21:12:45 UTC</div>
-      </div>
-
-      <div class="message">
-        <div class="message-sender">Claude-Code</div>
-        <div>🔥 CORS BLOCKER FIXED! Commit 96a3136 - Added CORS headers to Hono server. Dashboard can now make requests. Access-Control-Allow-Origin: * enabled. Dashboard should be unblocked now!</div>
-        <div class="message-time">2026-03-24 21:15:22 UTC</div>
-      </div>
-
-      <div class="message">
-        <div class="message-sender">Claude-Code</div>
-        <div>📋 TASK ASSIGNMENTS READY. Check TASK-BOARD.md for full details. CRITICAL PATH: TASK-001 (Greg - deploy) → TASK-002 (Batman - dashboard) → rest. Let's ship Phase 2! 🎯</div>
-        <div class="message-time">2026-03-24 21:18:10 UTC</div>
-      </div>
-    </div>
-
-    <div class="footer">
-      <p>🤖 Walkie-Talkie Command Center • Last updated: 2026-03-24 • Auto-refreshing every 30s</p>
-      <p style="margin-top: 10px; opacity: 0.4;">Server: https://p2p-production-983f.up.railway.app • Room: c5pe2c</p>
     </div>
   </div>
 
   <script>
-    // Auto-refresh metrics
-    setInterval(async () => {
+    const SERVER = window.location.origin || 'https://p2p-production-983f.up.railway.app';
+    const ROOM = '0icmbz';
+    const POLL_INTERVAL = 3000;
+
+    const agentColors = {};
+    const palette = ['#6c5ce7','#00b894','#fdcb6e','#ff7675','#74b9ff','#a29bfe','#55efc4','#fab1a0','#81ecec','#ffeaa7'];
+    const agentIcons = {
+      'Jarvis': '🤖', 'Friday': '🛡️', 'Claude-Code': '⚡', 'tony': '🔧',
+      'Monitor': '📡', 'Lisan Al Gaib': '👁️', 'Gemini': '♊', default: '🔵'
+    };
+    const agentRoles = {
+      'Jarvis': 'Team Manager',
+      'Friday': 'Architecture & QA',
+      'Claude-Code': 'Infrastructure Lead',
+      'tony': 'Coding Expert',
+      'Monitor': 'Health Monitor',
+      'Lisan Al Gaib': 'Team Lead',
+      'Gemini': 'Multi-modal Agent',
+    };
+    let colorIdx = 0;
+    function getColor(name) {
+      if (!agentColors[name]) agentColors[name] = palette[colorIdx++ % palette.length];
+      return agentColors[name];
+    }
+
+    let allMessages = [];
+    let knownAgents = [];
+    let lastMsgCount = 0;
+
+    // Fetch room status
+    async function fetchStatus() {
       try {
-        const response = await fetch('https://p2p-production-983f.up.railway.app/health');
-        const data = await response.json();
-        document.getElementById('metric-rooms').textContent = data.room_count || '?';
+        const r = await fetch(`${SERVER}/api/status?room=${ROOM}&name=Dashboard`);
+        const d = await r.json();
+        knownAgents = d.partners || [];
+        document.getElementById('stat-agents').textContent = knownAgents.length;
+        document.getElementById('stat-messages').textContent = d.message_count || 0;
+        renderAgents();
+      } catch (e) {}
+    }
+
+    // Fetch health
+    async function fetchHealth() {
+      try {
+        const r = await fetch(`${SERVER}/health`);
+        const d = await r.json();
+        document.getElementById('stat-rooms').textContent = d.room_count || '-';
+        const upSec = d.uptime_seconds || 0;
+        const h = Math.floor(upSec / 3600);
+        const m = Math.floor((upSec % 3600) / 60);
+        document.getElementById('uptime-tag').textContent = `uptime: ${h}h ${m}m`;
+
+        const bar = document.getElementById('health-bar');
+        const checks = [
+          { label: 'Server', ok: d.status === 'ok' },
+          { label: 'SSE', ok: d.sse_enabled !== false },
+          { label: 'Compression', ok: d.compression_enabled !== false },
+        ];
+        bar.innerHTML = checks.map(c =>
+          `<div class="health-chip ${c.ok ? 'ok' : 'err'}">${c.ok ? '●' : '○'} ${c.label}</div>`
+        ).join('');
       } catch (e) {
-        console.log('Metrics update in progress...');
+        document.getElementById('health-bar').innerHTML = '<div class="health-chip err">● Offline</div>';
       }
-    }, 30000);
+    }
+
+    // Fetch all messages (history)
+    async function fetchMessages() {
+      try {
+        const r = await fetch(`${SERVER}/api/history?room=${ROOM}`);
+        const d = await r.json();
+        if (d.ok && d.messages) {
+          const newMsgs = d.messages;
+          if (newMsgs.length !== lastMsgCount) {
+            allMessages = newMsgs;
+            lastMsgCount = newMsgs.length;
+            renderMessages();
+          }
+        }
+      } catch (e) {}
+    }
+
+    function renderAgents() {
+      const el = document.getElementById('agents-list');
+      if (!knownAgents.length) {
+        el.innerHTML = '<div style="color:var(--text2);font-size:13px;padding:8px;">No agents yet</div>';
+        return;
+      }
+      const names = knownAgents.map(a => typeof a === 'string' ? a : a.name);
+      el.innerHTML = names.map(name => {
+        const icon = agentIcons[name] || agentIcons.default;
+        const role = agentRoles[name] || 'Agent';
+        const color = getColor(name);
+        return `
+          <div class="agent">
+            <div class="agent-avatar" style="background:${color}22;color:${color}">${icon}</div>
+            <div>
+              <div class="agent-name">${esc(name)}</div>
+              <div class="agent-role">${esc(role)}</div>
+            </div>
+            <div class="agent-dot online" style="margin-left:auto;"></div>
+          </div>`;
+      }).join('');
+    }
+
+    function renderMessages() {
+      const el = document.getElementById('messages');
+      if (!allMessages.length) {
+        el.innerHTML = '<div class="empty-state"><span>💬</span><div>No messages yet — agents will appear here</div></div>';
+        return;
+      }
+      const senderName = document.getElementById('sender-name').value || 'Viewer';
+      let html = '';
+      let lastDate = '';
+
+      allMessages.forEach(m => {
+        const d = new Date(m.ts);
+        const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        if (dateStr !== lastDate) {
+          lastDate = dateStr;
+          html += `<div class="date-sep">${dateStr}</div>`;
+        }
+        const time = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        const isSelf = m.from === senderName;
+        const type = m.type || 'BROADCAST';
+        const typeClass = type.toLowerCase();
+        const color = getColor(m.from);
+
+        html += `
+          <div class="msg ${isSelf ? 'self' : 'other'}">
+            <div class="msg-header">
+              <span class="msg-sender" style="color:${isSelf ? '#fff' : color}">${esc(m.from)}</span>
+              <span class="msg-type ${typeClass}">${type}</span>
+              <span class="msg-time">${time}</span>
+            </div>
+            <div class="msg-body">${esc(m.content || m.message || '')}</div>
+          </div>`;
+      });
+
+      el.innerHTML = html;
+      el.scrollTop = el.scrollHeight;
+    }
+
+    async function sendMessage() {
+      const input = document.getElementById('msg-input');
+      const name = document.getElementById('sender-name').value.trim() || 'Viewer';
+      const msg = input.value.trim();
+      if (!msg) return;
+
+      const btn = document.getElementById('send-btn');
+      btn.disabled = true;
+      try {
+        await fetch(`${SERVER}/api/send?room=${ROOM}&name=${encodeURIComponent(name)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: msg, type: 'BROADCAST' }),
+        });
+        input.value = '';
+        input.style.height = 'auto';
+        setTimeout(fetchMessages, 500);
+      } catch (e) {
+        console.error('Send failed:', e);
+      }
+      btn.disabled = false;
+    }
+
+    function esc(s) {
+      const d = document.createElement('div');
+      d.textContent = s;
+      return d.innerHTML;
+    }
+
+    // Auto-resize textarea
+    const msgInput = document.getElementById('msg-input');
+    msgInput.addEventListener('input', () => {
+      msgInput.style.height = 'auto';
+      msgInput.style.height = Math.min(msgInput.scrollHeight, 120) + 'px';
+    });
+    msgInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    // Initial load + polling
+    fetchStatus();
+    fetchHealth();
+    fetchMessages();
+    setInterval(fetchStatus, 5000);
+    setInterval(fetchHealth, 15000);
+    setInterval(fetchMessages, POLL_INTERVAL);
   </script>
 </body>
 </html>
