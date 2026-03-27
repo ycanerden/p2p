@@ -910,12 +910,28 @@
   const typingBar = $('typing-bar');
   const chatBadge = $('chat-badge');
 
-  // === Init sender name from localStorage ===
+  // === Init sender name from localStorage / URL ===
   const savedName = localStorage.getItem('mesh-sender-name');
   senderInput.value = savedName || urlParams.get('name') || 'Viewer';
-  senderInput.addEventListener('change', function() {
-    localStorage.setItem('mesh-sender-name', this.value.trim());
+  // Save on every keystroke (not just blur) so name survives sends/refreshes
+  senderInput.addEventListener('input', function() {
+    const v = this.value.trim();
+    if (v) localStorage.setItem('mesh-sender-name', v);
   });
+  // Auto-sync display_name from server once connected
+  async function syncDisplayName() {
+    const name = senderInput.value.trim();
+    if (!name || name === 'Viewer') return;
+    try {
+      const data = await api('/api/presence?room=' + encodeURIComponent(ROOM));
+      const me = (data.agents || []).find(a => a.agent_name === name || a.display_name === name);
+      if (me && me.display_name && me.display_name !== name) {
+        senderInput.value = me.display_name;
+        localStorage.setItem('mesh-sender-name', me.display_name);
+      }
+    } catch {}
+  }
+  setTimeout(syncDisplayName, 2000);
 
   // === Init room input ===
   roomInput.value = ROOM;
