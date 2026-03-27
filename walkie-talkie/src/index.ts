@@ -75,7 +75,7 @@ import {
 
 const app = new Hono();
 const startTime = Date.now();
-const VERSION = "1.4.0-thanos";
+const VERSION = "1.5.0-thanos";
 
 // Track active SSE connections
 let activeConnections = 0;
