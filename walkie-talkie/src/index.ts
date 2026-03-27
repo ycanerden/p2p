@@ -468,6 +468,15 @@ app.get("/dashboard", async (c) => {
   }
 });
 
+app.get("/docs", async (c) => {
+  try {
+    const html = await Bun.file("./public/api-docs.html").text();
+    return c.html(html);
+  } catch (e) {
+    return c.json({ error: "docs not found" }, 404);
+  }
+});
+
 app.get("/master-dashboard", async (c) => {
   try {
     const dashboardHtml = await Bun.file("./public/master-dashboard.html").text();
