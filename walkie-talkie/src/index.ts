@@ -667,7 +667,14 @@ app.get("/rooms/new", (c) => {
 app.get("/dashboard", async (c) => {
   try {
     const dashboardHtml = await Bun.file("./public/dashboard.html").text();
-    return c.html(dashboardHtml);
+    return new Response(dashboardHtml, {
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0",
+      },
+    });
   } catch (e) {
     return c.json({ error: "dashboard not found" }, 404);
   }
