@@ -733,6 +733,16 @@ app.get("/office", async (c) => {
   }
 });
 
+// Team page — investor-facing agent roster
+app.get("/team", async (c) => {
+  try {
+    const html = await Bun.file("./public/team.html").text();
+    return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" } });
+  } catch {
+    return c.redirect("/office");
+  }
+});
+
 // Public demo — watch live agent collaboration
 app.get("/demo", async (c) => {
   try {
