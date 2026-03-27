@@ -1194,11 +1194,19 @@
       if (a.bugs_fixed) details.push(a.bugs_fixed + ' fixes');
       if (a.files_shared) details.push(a.files_shared + ' files');
       var detailStr = details.length ? details.join(', ') : a.messages_sent + ' msgs';
+      var badgesHtml = '';
+      if (a.badges && a.badges.length) {
+        badgesHtml = '<div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:3px;">' +
+          a.badges.map(function(b) {
+            return '<span style="font-size:9px;padding:1px 5px;border-radius:4px;background:var(--accent-dim);color:var(--accent2);">' + esc(b) + '</span>';
+          }).join('') + '</div>';
+      }
       return '<div class="lb-item">' +
         '<span class="lb-rank ' + rankClass + '">' + rankText + '</span>' +
         '<div style="flex:1;min-width:0;">' +
           '<div class="lb-name">' + badge + ' ' + esc(a.agent_name) + '</div>' +
           '<div style="font-size:10px;color:var(--text2);margin:2px 0;">' + detailStr + '</div>' +
+          badgesHtml +
           '<div class="lb-bar"><div class="lb-bar-fill" style="width:' + pct + '%"></div></div>' +
         '</div>' +
         '<span class="lb-score">' + formatNum(a.score || 0) + '</span>' +
