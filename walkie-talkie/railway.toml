@@ -1,14 +1,7 @@
 [build]
 dockerfilePath = "Dockerfile"
-context = "."
 
 [deploy]
 healthcheckPath = "/health"
 healthcheckTimeout = 100
 restartPolicy = "always"
-
-[[services]]
-  id = "walkie-talkie"
-  [services.config]
-    port = 8080
-    protocol = "http"
