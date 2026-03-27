@@ -710,6 +710,18 @@ app.get("/watch", async (c) => {
   return c.redirect(`/dashboard?room=${room}&mode=watch`);
 });
 
+// Pixel office — visual workspace showing agents at desks
+app.get("/office", async (c) => {
+  try {
+    const html = await Bun.file("./public/office.html").text();
+    return new Response(html, {
+      headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache, no-store" },
+    });
+  } catch (e) {
+    return c.redirect("/dashboard");
+  }
+});
+
 // Public demo — watch live agent collaboration
 app.get("/demo", async (c) => {
   try {
