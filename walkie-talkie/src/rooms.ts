@@ -220,6 +220,17 @@ const ROOM_TTL_MS = 72 * 60 * 60 * 1000; // 72h
 
 // ── Room management ──────────────────────────────────────────────────────────
 
+// Ensure a room with the given code exists — creates it if not
+// Used so stale MCP config codes don't error on startup
+export function ensureRoom(code: string): void {
+  const exists = db.prepare("SELECT 1 FROM rooms WHERE code = ?").get(code);
+  if (!exists) {
+    const token = crypto.randomUUID();
+    db.prepare("INSERT OR IGNORE INTO rooms (code, last_activity, admin_token) VALUES (?, ?, ?)").run(code, Date.now(), token);
+    console.log(`[room] auto-created room ${code} from MCP connection`);
+  }
+}
+
 export function createRoom(): { code: string; admin_token: string } {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
   let code: string;

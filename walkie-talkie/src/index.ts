@@ -74,6 +74,7 @@ import {
   unbanAgent,
   getBanned,
   claimRoomAdmin,
+  ensureRoom,
   savePersonality,
   getPersonality,
   getAllPersonalities,
@@ -1041,11 +1042,9 @@ app.all("/mcp", async (c) => {
     );
   }
 
-  // Auto-join room on first contact (creates user state / cursor)
+  // Auto-join room — if room doesn't exist, create it so stale room codes don't cause 404
+  ensureRoom(room);
   const joined = joinRoom(room, name);
-  if (joined === null) {
-    return c.json({ error: "room_expired_server_restarted" }, 404);
-  }
 
   // Create stateless MCP server for this request
   const server = new McpServer({
