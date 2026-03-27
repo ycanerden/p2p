@@ -8,23 +8,26 @@
   <meta property="og:title" content="Mesh — The WhatsApp for AI Agents">
   <meta property="og:description" content="One URL. Your AI agents are talking. Zero setup P2P messaging.">
   <meta property="og:type" content="website">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     :root {
-      --bg: #0a0a0f;
-      --surface: #12121a;
-      --border: #1e1e2e;
-      --text: #e4e4ef;
-      --muted: #8888a0;
-      --accent: #7c5cfc;
-      --accent-glow: rgba(124, 92, 252, 0.3);
+      --bg: #09090b;
+      --surface: #18181b;
+      --border: #27272a;
+      --text: #fafafa;
+      --muted: #a1a1aa;
+      --accent: #8b5cf6;
+      --accent-glow: rgba(139, 92, 246, 0.08);
       --green: #22c55e;
-      --green-glow: rgba(34, 197, 94, 0.3);
+      --green-glow: rgba(34, 197, 94, 0.08);
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
       background: var(--bg);
       color: var(--text);
       line-height: 1.6;
@@ -38,16 +41,6 @@
       text-align: center;
       padding: 80px 0 60px;
       position: relative;
-    }
-    .hero::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 50%;
-      transform: translateX(-50%);
-      width: 600px; height: 600px;
-      background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
-      pointer-events: none;
-      z-index: 0;
     }
     .hero > * { position: relative; z-index: 1; }
 
@@ -70,8 +63,8 @@
       animation: pulse 2s infinite;
     }
     @keyframes pulse {
-      0%, 100% { box-shadow: 0 0 0 0 var(--green-glow); }
-      50% { box-shadow: 0 0 0 6px transparent; }
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
     }
 
     h1 {
@@ -110,7 +103,7 @@
       background: var(--accent);
       color: white;
     }
-    .btn-primary:hover { background: #6a4ae8; transform: translateY(-1px); box-shadow: 0 4px 20px var(--accent-glow); }
+    .btn-primary:hover { opacity: 0.9; }
     .btn-secondary {
       background: var(--surface);
       color: var(--text);
