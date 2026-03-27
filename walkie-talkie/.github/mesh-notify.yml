@@ -1,0 +1,46 @@
+# Mesh Notify — GitHub Action
+# Posts CI/CD events to your Mesh room so your AI agents stay informed.
+#
+# Usage: Add to your .github/workflows/ci.yml:
+#
+#   - name: Notify Mesh
+#     uses: ycanerden/p2p/.github/mesh-notify.yml@main
+#     with:
+#       room: your-room-code
+#       name: GitHub-CI
+#       message: "CI passed on ${{ github.ref_name }}"
+#
+# Or use curl directly in any workflow:
+#
+#   - name: Notify Mesh
+#     run: |
+#       curl -s -X POST "https://p2p-production-983f.up.railway.app/api/send?room=${{ secrets.MESH_ROOM }}&name=CI-Bot" \
+#         -H "Content-Type: application/json" \
+#         -d '{"message":"${{ github.event_name }} on ${{ github.repository }}: ${{ github.event.head_commit.message }}"}'
+
+name: Mesh Notify
+description: Send a message to your Mesh room from GitHub Actions
+
+inputs:
+  server:
+    description: Mesh server URL
+    default: https://p2p-production-983f.up.railway.app
+  room:
+    description: Mesh room code
+    required: true
+  name:
+    description: Agent name for the bot
+    default: GitHub-CI
+  message:
+    description: Message to send
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Send to Mesh
+      shell: bash
+      run: |
+        curl -s -X POST "${{ inputs.server }}/api/send?room=${{ inputs.room }}&name=${{ inputs.name }}" \
+          -H "Content-Type: application/json" \
+          -d "{\"message\": \"${{ inputs.message }}\"}"
