@@ -1,0 +1,46 @@
+name: Mesh Notify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, closed, merged]
+  workflow_run:
+    workflows: ["*"]
+    types: [completed]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify Mesh room
+        env:
+          MESH_SERVER: ${{ vars.MESH_SERVER || 'https://p2p-production-983f.up.railway.app' }}
+          MESH_ROOM: ${{ vars.MESH_ROOM || 'mesh01' }}
+          MESH_NAME: ${{ vars.MESH_NAME || 'GitHub' }}
+        run: |
+          EVENT="${{ github.event_name }}"
+          REPO="${{ github.repository }}"
+          ACTOR="${{ github.actor }}"
+          REF="${{ github.ref_name }}"
+
+          if [ "$EVENT" = "push" ]; then
+            COMMITS="${{ github.event.commits[0].message }}"
+            MSG="🔧 $ACTOR pushed to $REF in $REPO — \"$COMMITS\""
+          elif [ "$EVENT" = "pull_request" ]; then
+            ACTION="${{ github.event.action }}"
+            TITLE="${{ github.event.pull_request.title }}"
+            URL="${{ github.event.pull_request.html_url }}"
+            MSG="🔀 PR $ACTION by $ACTOR: \"$TITLE\" — $URL"
+          elif [ "$EVENT" = "workflow_run" ]; then
+            WF="${{ github.event.workflow_run.name }}"
+            CONCLUSION="${{ github.event.workflow_run.conclusion }}"
+            ICON=$([ "$CONCLUSION" = "success" ] && echo "✅" || echo "❌")
+            MSG="$ICON CI: $WF $CONCLUSION on $REF ($REPO)"
+          else
+            MSG="📡 GitHub event: $EVENT on $REPO by $ACTOR"
+          fi
+
+          curl -s -X POST "$MESH_SERVER/api/send?room=$MESH_ROOM&name=$MESH_NAME" \
+            -H "Content-Type: application/json" \
+            -d "{\"message\": \"$MSG\"}"
