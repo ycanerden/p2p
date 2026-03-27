@@ -193,18 +193,98 @@
       font-size: 15px; flex-shrink: 0; position: relative;
       overflow: hidden;
     }
-    .pixel-char {
-      width: 2px; height: 2px;
+    /* Pixel art characters via box-shadow (8 unique bots, 8x8 grid, 3px per pixel) */
+    .pixel-bot {
+      width: 3px; height: 3px;
+      position: absolute; top: 4px; left: 4px;
       image-rendering: pixelated;
-      transform: scale(1);
-      transform-origin: top left;
     }
-    .agent-avatar.active .pixel-char {
-      animation: pixel-bounce 1s ease infinite;
-    }
+    .agent-avatar.active .pixel-bot { animation: pixel-bounce 0.8s ease infinite; }
     @keyframes pixel-bounce {
       0%, 100% { transform: translateY(0); }
       50% { transform: translateY(-2px); }
+    }
+    /* Bot 0: Robot (purple) */
+    .bot-0 { box-shadow:
+      3px 0 #8b5cf6, 6px 0 #8b5cf6, 9px 0 #8b5cf6, 12px 0 #8b5cf6, 15px 0 #8b5cf6,
+      0px 3px #8b5cf6, 3px 3px #a78bfa, 6px 3px #a78bfa, 9px 3px #a78bfa, 12px 3px #a78bfa, 15px 3px #a78bfa, 18px 3px #8b5cf6,
+      0px 6px #8b5cf6, 3px 6px #fff, 6px 6px #1e1b4b, 9px 6px #a78bfa, 12px 6px #fff, 15px 6px #1e1b4b, 18px 6px #8b5cf6,
+      0px 9px #8b5cf6, 3px 9px #a78bfa, 6px 9px #a78bfa, 9px 9px #a78bfa, 12px 9px #a78bfa, 15px 9px #a78bfa, 18px 9px #8b5cf6,
+      3px 12px #8b5cf6, 6px 12px #8b5cf6, 9px 12px #c4b5fd, 12px 12px #8b5cf6, 15px 12px #8b5cf6,
+      3px 15px #8b5cf6, 6px 15px #a78bfa, 9px 15px #a78bfa, 12px 15px #a78bfa, 15px 15px #8b5cf6,
+      0px 18px #8b5cf6, 6px 18px #8b5cf6, 12px 18px #8b5cf6, 18px 18px #8b5cf6,
+      0px 21px #8b5cf6, 3px 21px #8b5cf6, 12px 21px #8b5cf6, 15px 21px #8b5cf6;
+    }
+    /* Bot 1: Ghost (green) */
+    .bot-1 { box-shadow:
+      6px 0 #22c55e, 9px 0 #22c55e, 12px 0 #22c55e,
+      3px 3px #22c55e, 6px 3px #4ade80, 9px 3px #4ade80, 12px 3px #4ade80, 15px 3px #22c55e,
+      3px 6px #4ade80, 6px 6px #fff, 9px 6px #4ade80, 12px 6px #fff, 15px 6px #4ade80,
+      3px 9px #4ade80, 6px 9px #166534, 9px 9px #4ade80, 12px 9px #166534, 15px 9px #4ade80,
+      3px 12px #4ade80, 6px 12px #4ade80, 9px 12px #4ade80, 12px 12px #4ade80, 15px 12px #4ade80,
+      3px 15px #4ade80, 6px 15px #22c55e, 9px 15px #4ade80, 12px 15px #22c55e, 15px 15px #4ade80,
+      3px 18px #22c55e, 6px 18px #22c55e, 9px 18px #22c55e, 12px 18px #22c55e, 15px 18px #22c55e,
+      3px 21px #22c55e, 9px 21px #22c55e, 15px 21px #22c55e;
+    }
+    /* Bot 2: Skull (red) */
+    .bot-2 { box-shadow:
+      6px 0 #ef4444, 9px 0 #ef4444, 12px 0 #ef4444,
+      3px 3px #ef4444, 6px 3px #fca5a5, 9px 3px #fca5a5, 12px 3px #fca5a5, 15px 3px #ef4444,
+      3px 6px #fca5a5, 6px 6px #1c1917, 9px 6px #fca5a5, 12px 6px #1c1917, 15px 6px #fca5a5,
+      3px 9px #fca5a5, 6px 9px #fca5a5, 9px 9px #fca5a5, 12px 9px #fca5a5, 15px 9px #fca5a5,
+      6px 12px #1c1917, 9px 12px #fca5a5, 12px 12px #1c1917,
+      3px 15px #ef4444, 6px 15px #ef4444, 9px 15px #ef4444, 12px 15px #ef4444, 15px 15px #ef4444,
+      3px 18px #ef4444, 9px 18px #ef4444, 15px 18px #ef4444;
+    }
+    /* Bot 3: Wizard (blue) */
+    .bot-3 { box-shadow:
+      9px 0 #3b82f6,
+      6px 3px #3b82f6, 9px 3px #60a5fa, 12px 3px #3b82f6,
+      3px 6px #3b82f6, 6px 6px #60a5fa, 9px 6px #93c5fd, 12px 6px #60a5fa, 15px 6px #3b82f6,
+      6px 9px #fbbf24, 9px 9px #fbbf24, 12px 9px #fbbf24,
+      3px 12px #fbbf24, 6px 12px #fff, 9px 12px #1e3a5f, 12px 12px #fff, 15px 12px #1e3a5f,
+      3px 15px #fbbf24, 6px 15px #fbbf24, 9px 15px #fbbf24, 12px 15px #fbbf24, 15px 15px #fbbf24,
+      6px 18px #3b82f6, 9px 18px #60a5fa, 12px 18px #3b82f6,
+      3px 21px #3b82f6, 6px 21px #3b82f6, 12px 21px #3b82f6, 15px 21px #3b82f6;
+    }
+    /* Bot 4: Slime (orange) */
+    .bot-4 { box-shadow:
+      6px 3px #f59e0b, 9px 3px #f59e0b, 12px 3px #f59e0b,
+      3px 6px #f59e0b, 6px 6px #fbbf24, 9px 6px #fbbf24, 12px 6px #fbbf24, 15px 6px #f59e0b,
+      3px 9px #fbbf24, 6px 9px #fff, 9px 9px #78350f, 12px 9px #fff, 15px 9px #78350f,
+      3px 12px #fbbf24, 6px 12px #fbbf24, 9px 12px #fbbf24, 12px 12px #fbbf24, 15px 12px #fbbf24,
+      3px 15px #fbbf24, 6px 15px #fde68a, 9px 15px #fbbf24, 12px 15px #fde68a, 15px 15px #fbbf24,
+      0px 18px #f59e0b, 3px 18px #f59e0b, 6px 18px #f59e0b, 9px 18px #f59e0b, 12px 18px #f59e0b, 15px 18px #f59e0b, 18px 18px #f59e0b;
+    }
+    /* Bot 5: Eye (pink) */
+    .bot-5 { box-shadow:
+      6px 3px #ec4899, 9px 3px #ec4899, 12px 3px #ec4899,
+      3px 6px #ec4899, 6px 6px #f9a8d4, 9px 6px #f9a8d4, 12px 6px #f9a8d4, 15px 6px #ec4899,
+      3px 9px #f9a8d4, 6px 9px #fff, 9px 9px #fff, 12px 9px #831843, 15px 9px #f9a8d4,
+      3px 12px #f9a8d4, 6px 12px #fff, 9px 12px #831843, 12px 12px #fff, 15px 12px #f9a8d4,
+      3px 15px #ec4899, 6px 15px #f9a8d4, 9px 15px #f9a8d4, 12px 15px #f9a8d4, 15px 15px #ec4899,
+      6px 18px #ec4899, 9px 18px #ec4899, 12px 18px #ec4899;
+    }
+    /* Bot 6: Diamond (cyan) */
+    .bot-6 { box-shadow:
+      9px 0 #06b6d4,
+      6px 3px #06b6d4, 9px 3px #67e8f9, 12px 3px #06b6d4,
+      3px 6px #06b6d4, 6px 6px #67e8f9, 9px 6px #a5f3fc, 12px 6px #67e8f9, 15px 6px #06b6d4,
+      0px 9px #06b6d4, 3px 9px #67e8f9, 6px 9px #a5f3fc, 9px 9px #cffafe, 12px 9px #a5f3fc, 15px 9px #67e8f9, 18px 9px #06b6d4,
+      3px 12px #06b6d4, 6px 12px #67e8f9, 9px 12px #a5f3fc, 12px 12px #67e8f9, 15px 12px #06b6d4,
+      6px 15px #06b6d4, 9px 15px #67e8f9, 12px 15px #06b6d4,
+      9px 18px #06b6d4;
+    }
+    /* Bot 7: Bird (lime) */
+    .bot-7 { box-shadow:
+      6px 0 #84cc16, 9px 0 #84cc16,
+      3px 3px #84cc16, 6px 3px #a3e635, 9px 3px #a3e635, 12px 3px #84cc16,
+      3px 6px #a3e635, 6px 6px #fff, 9px 6px #365314, 12px 6px #a3e635,
+      3px 9px #a3e635, 6px 9px #a3e635, 9px 9px #a3e635, 12px 9px #a3e635, 15px 9px #f59e0b, 18px 9px #f59e0b,
+      6px 12px #a3e635, 9px 12px #d9f99d, 12px 12px #a3e635,
+      3px 15px #84cc16, 6px 15px #a3e635, 9px 15px #a3e635, 12px 15px #84cc16,
+      3px 18px #84cc16, 12px 18px #84cc16,
+      0px 21px #84cc16, 3px 21px #84cc16, 12px 21px #84cc16, 15px 21px #84cc16;
     }
     .agent-status-dot {
       position: absolute; bottom: -1px; right: -1px;
@@ -1137,9 +1217,14 @@
         ? '<span class="agent-typing-text">typing...</span>'
         : (hostname ? esc(hostname) + ' · ' : '') + esc(status);
 
+      // Deterministic bot index from name
+      var botHash = 0;
+      for (var ci = 0; ci < name.length; ci++) botHash = name.charCodeAt(ci) + ((botHash << 5) - botHash);
+      var botIdx = Math.abs(botHash) % 8;
+
       return '<div class="agent-item">' +
-        '<div class="agent-avatar' + (isActive ? ' active' : '') + '" style="background:' + color + '15;color:' + color + '">' +
-          esc(initial) +
+        '<div class="agent-avatar' + (isActive ? ' active' : '') + '" style="background:' + color + '10;">' +
+          '<div class="pixel-bot bot-' + botIdx + '"></div>' +
           '<div class="agent-status-dot ' + esc(status) + '"></div>' +
         '</div>' +
         '<div class="agent-info">' +
