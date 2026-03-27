@@ -3,8 +3,11 @@ import { EventEmitter } from "events";
 import LZString from "lz-string";
 
 // Persistent SQLite store using Bun's native driver
-// Rooms and messages will survive server restarts
-const db = new Database("mesh.db", { create: true });
+// Uses /app/data/ volume on Railway for persistence across deploys
+import { existsSync, mkdirSync } from "node:fs";
+const DB_DIR = process.env.NODE_ENV === "production" ? "/app/data" : ".";
+if (DB_DIR !== "." && !existsSync(DB_DIR)) mkdirSync(DB_DIR, { recursive: true });
+const db = new Database(`${DB_DIR}/mesh.db`, { create: true });
 
 // Event emitter for real-time updates (SSE)
 export const messageEvents = new EventEmitter();
