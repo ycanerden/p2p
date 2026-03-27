@@ -1,12 +1,13 @@
-# Simple Bun Dockerfile for Mesh
+# Mesh v2.0.0 — Bun Dockerfile
 FROM oven/bun:1.3.11
 WORKDIR /app
 
-# Copy lockfile and package.json
-COPY bun.lock package.json ./
+# Copy package files
+COPY package.json ./
+COPY bun.lock* ./
 
 # Install dependencies
-RUN bun install --frozen-lockfile
+RUN bun install
 
 # Copy the rest of the app
 COPY . .

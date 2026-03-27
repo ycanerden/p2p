@@ -63,6 +63,16 @@ import {
   cancelScheduledMessage,
   setDisplayName,
   getDisplayName,
+  verifyAdmin,
+  setRoomReadOnly,
+  isRoomReadOnly,
+  canAgentSend,
+  addToWhitelist,
+  removeFromWhitelist,
+  getWhitelist,
+  kickAgent,
+  unbanAgent,
+  getBanned,
 } from "./rooms.js";
 import {
   createRoomGroup,
@@ -204,6 +214,10 @@ app.post("/api/send", async (c) => {
     return c.json({ error: "rate_limit_exceeded" }, 429);
   }
 
+  // Check read-only and whitelist/ban
+  if (isRoomReadOnly(room)) return c.json({ error: "room_read_only", detail: "This room is read-only" }, 403);
+  if (!canAgentSend(room, name)) return c.json({ error: "not_allowed", detail: "You are not allowed to send in this room" }, 403);
+
   try {
     const { message, to, type, reply_to } = await c.req.json();
     const reqStart = Date.now();
@@ -216,6 +230,49 @@ app.post("/api/send", async (c) => {
   } catch (e) {
     return c.json({ error: "invalid_request", detail: String(e) }, 400);
   }
+});
+
+// ── Admin endpoints ────────────────────────────────────────────────────────
+app.post("/api/admin/read-only", async (c) => {
+  const room = c.req.query("room");
+  const token = c.req.query("token");
+  if (!room || !token || !verifyAdmin(room, token)) return c.json({ error: "unauthorized" }, 401);
+  const { read_only } = await c.req.json();
+  setRoomReadOnly(room, !!read_only);
+  return c.json({ ok: true, read_only: !!read_only });
+});
+
+app.post("/api/admin/whitelist", async (c) => {
+  const room = c.req.query("room");
+  const token = c.req.query("token");
+  if (!room || !token || !verifyAdmin(room, token)) return c.json({ error: "unauthorized" }, 401);
+  const { add, remove } = await c.req.json();
+  if (add) addToWhitelist(room, add);
+  if (remove) removeFromWhitelist(room, remove);
+  return c.json({ ok: true, whitelist: getWhitelist(room) });
+});
+
+app.post("/api/admin/kick", async (c) => {
+  const room = c.req.query("room");
+  const token = c.req.query("token");
+  if (!room || !token || !verifyAdmin(room, token)) return c.json({ error: "unauthorized" }, 401);
+  const { name, unban } = await c.req.json();
+  if (!name) return c.json({ error: "missing name" }, 400);
+  if (unban) unbanAgent(room, name);
+  else kickAgent(room, name);
+  return c.json({ ok: true, banned: getBanned(room) });
+});
+
+app.get("/api/admin/status", (c) => {
+  const room = c.req.query("room");
+  const token = c.req.query("token");
+  if (!room || !token || !verifyAdmin(room, token)) return c.json({ error: "unauthorized" }, 401);
+  return c.json({
+    ok: true,
+    read_only: isRoomReadOnly(room),
+    whitelist: getWhitelist(room),
+    banned: getBanned(room),
+  });
 });
 
 app.post("/api/publish", async (c) => {
@@ -658,15 +715,34 @@ app.get("/rooms/new", (c) => {
     return c.json({ error: "rate_limit_exceeded" }, 429);
   }
 
-  const code = createRoom();
+  const { code, admin_token } = createRoom();
   const baseUrl = new URL(c.req.url).origin;
   return c.json({
     room: code,
+    admin_token,
     claude_code_url: `${baseUrl}/mcp?room=${code}&name=YOUR_NAME`,
     antigravity_url: `${baseUrl}/mcp?room=${code}&name=YOUR_NAME`,
     instructions:
       "Replace YOUR_NAME with your name. Add the URL to your AI tool's MCP config.",
   });
+});
+
+// ── Admin endpoints (require admin_token) ────────────────────────────────────
+app.post("/api/admin/read-only", async (c) => {
+  const room = c.req.query("room");
+  const token = c.req.query("token") || c.req.header("x-admin-token");
+  if (!room || !token) return c.json({ error: "missing room or token" }, 400);
+  if (!verifyAdmin(room, token)) return c.json({ error: "unauthorized" }, 403);
+  const { read_only } = await c.req.json();
+  setRoomReadOnly(room, read_only !== false);
+  return c.json({ ok: true, read_only: read_only !== false });
+});
+
+app.get("/api/admin/verify", (c) => {
+  const room = c.req.query("room");
+  const token = c.req.query("token") || c.req.header("x-admin-token");
+  if (!room || !token) return c.json({ error: "missing room or token" }, 400);
+  return c.json({ ok: true, is_admin: verifyAdmin(room, token) });
 });
 
 app.get("/dashboard", async (c) => {

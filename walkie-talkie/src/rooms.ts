@@ -35,6 +35,24 @@ db.run(`
   );
 `);
 
+// Migration: admin_token + read_only for room security
+try { db.run("ALTER TABLE rooms ADD COLUMN admin_token TEXT DEFAULT NULL;"); } catch (e) {}
+try { db.run("ALTER TABLE rooms ADD COLUMN read_only INTEGER DEFAULT 0;"); } catch (e) {}
+
+// Whitelist: only these agent names can send messages (empty = everyone allowed)
+db.run(`CREATE TABLE IF NOT EXISTS room_whitelist (
+  room_code TEXT,
+  agent_name TEXT,
+  PRIMARY KEY(room_code, agent_name)
+);`);
+
+// Kicked/banned agents
+db.run(`CREATE TABLE IF NOT EXISTS room_banned (
+  room_code TEXT,
+  agent_name TEXT,
+  PRIMARY KEY(room_code, agent_name)
+);`);
+
 db.run(`
   CREATE TABLE IF NOT EXISTS messages (
     id TEXT PRIMARY KEY,
@@ -188,11 +206,11 @@ const ROOM_TTL_MS = 72 * 60 * 60 * 1000; // 72h
 
 // ── Room management ──────────────────────────────────────────────────────────
 
-export function createRoom(): string {
+export function createRoom(): { code: string; admin_token: string } {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
   let code: string;
   const checkStmt = db.prepare("SELECT 1 FROM rooms WHERE code = ?");
-  
+
   do {
     code = Array.from(
       { length: 6 },
@@ -200,8 +218,60 @@ export function createRoom(): string {
     ).join("");
   } while (checkStmt.get(code));
 
-  db.prepare("INSERT INTO rooms (code, last_activity) VALUES (?, ?)").run(code, Date.now());
-  return code;
+  const admin_token = crypto.randomUUID();
+  db.prepare("INSERT INTO rooms (code, last_activity, admin_token) VALUES (?, ?, ?)").run(code, Date.now(), admin_token);
+  return { code, admin_token };
+}
+
+export function verifyAdmin(roomCode: string, token: string): boolean {
+  const row = db.prepare("SELECT admin_token FROM rooms WHERE code = ?").get(roomCode) as any;
+  return row?.admin_token === token;
+}
+
+export function setRoomReadOnly(roomCode: string, readOnly: boolean): void {
+  db.prepare("UPDATE rooms SET read_only = ? WHERE code = ?").run(readOnly ? 1 : 0, roomCode);
+}
+
+export function isRoomReadOnly(roomCode: string): boolean {
+  const row = db.prepare("SELECT read_only FROM rooms WHERE code = ?").get(roomCode) as any;
+  return row?.read_only === 1;
+}
+
+export function addToWhitelist(roomCode: string, agentName: string): void {
+  db.prepare("INSERT OR IGNORE INTO room_whitelist (room_code, agent_name) VALUES (?, ?)").run(roomCode, agentName);
+}
+
+export function removeFromWhitelist(roomCode: string, agentName: string): void {
+  db.prepare("DELETE FROM room_whitelist WHERE room_code = ? AND agent_name = ?").run(roomCode, agentName);
+}
+
+export function getWhitelist(roomCode: string): string[] {
+  const rows = db.prepare("SELECT agent_name FROM room_whitelist WHERE room_code = ?").all(roomCode) as any[];
+  return rows.map(r => r.agent_name);
+}
+
+// Returns true if agent is allowed to send (whitelist empty = everyone allowed)
+export function canAgentSend(roomCode: string, agentName: string): boolean {
+  const banned = db.prepare("SELECT 1 FROM room_banned WHERE room_code = ? AND agent_name = ?").get(roomCode, agentName);
+  if (banned) return false;
+  const whitelistCount = db.prepare("SELECT COUNT(*) as n FROM room_whitelist WHERE room_code = ?").get(roomCode) as any;
+  if (whitelistCount.n === 0) return true; // no whitelist = open room
+  const allowed = db.prepare("SELECT 1 FROM room_whitelist WHERE room_code = ? AND agent_name = ?").get(roomCode, agentName);
+  return !!allowed;
+}
+
+export function kickAgent(roomCode: string, agentName: string): void {
+  db.prepare("INSERT OR IGNORE INTO room_banned (room_code, agent_name) VALUES (?, ?)").run(roomCode, agentName);
+  db.prepare("DELETE FROM presence WHERE room_code = ? AND agent_name = ?").run(roomCode, agentName);
+}
+
+export function unbanAgent(roomCode: string, agentName: string): void {
+  db.prepare("DELETE FROM room_banned WHERE room_code = ? AND agent_name = ?").run(roomCode, agentName);
+}
+
+export function getBanned(roomCode: string): string[] {
+  const rows = db.prepare("SELECT agent_name FROM room_banned WHERE room_code = ?").all(roomCode) as any[];
+  return rows.map(r => r.agent_name);
 }
 
 export function joinRoom(code: string, name: string): boolean | null {
