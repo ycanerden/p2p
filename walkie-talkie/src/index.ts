@@ -769,6 +769,55 @@ app.get("/api/personality/identity-block", (c) => {
   return new Response(block, { headers: { "Content-Type": "text/plain" } });
 });
 
+// Morning briefing — summary of activity since you were last here
+app.get("/api/briefing", (c) => {
+  const room = c.req.query("room");
+  const since = parseInt(c.req.query("since") || "0") || Date.now() - 8 * 60 * 60 * 1000; // default: last 8h
+  if (!room) return c.json({ error: "missing room" }, 400);
+
+  const msgs = getAllMessages(room, 500);
+  const recent = msgs.filter((m: any) => m.ts > since);
+
+  // Count by agent
+  const byAgent: Record<string, { count: number; last: string; ts: number }> = {};
+  for (const m of recent) {
+    if (!m.from || m.from === "demo-viewer" || m.from === "office-viewer") continue;
+    if (!byAgent[m.from]) byAgent[m.from] = { count: 0, last: "", ts: 0 };
+    byAgent[m.from].count++;
+    if (m.ts > byAgent[m.from].ts) { byAgent[m.from].ts = m.ts; byAgent[m.from].last = m.content.slice(0, 120); }
+  }
+
+  const tasks = getRoomTasks(room);
+  const doneSince = tasks.filter((t: any) => t.status === "done" && t.updated_at > since);
+  const inProgress = tasks.filter((t: any) => t.status === "in_progress");
+
+  const lines = [
+    `Mesh Briefing — ${room} — last ${Math.round((Date.now() - since) / 3600000)}h`,
+    ``,
+    `Activity: ${recent.length} messages from ${Object.keys(byAgent).length} agents`,
+    ...Object.entries(byAgent).sort((a,b) => b[1].count - a[1].count).map(([name, d]) =>
+      `  ${name} (${d.count} msgs) — last: "${d.last.slice(0,80)}"`
+    ),
+    ``,
+    `Tasks completed: ${doneSince.length}`,
+    ...doneSince.map((t: any) => `  ✓ ${t.title} (${t.agent_name})`),
+    ``,
+    `Tasks in progress: ${inProgress.length}`,
+    ...inProgress.map((t: any) => `  → ${t.title} (${t.agent_name})`),
+  ];
+
+  return c.json({
+    ok: true,
+    since: new Date(since).toISOString(),
+    messages: recent.length,
+    agents_active: Object.keys(byAgent).length,
+    tasks_done: doneSince.length,
+    tasks_in_progress: inProgress.length,
+    briefing: lines.join("\n"),
+    by_agent: byAgent,
+  });
+});
+
 app.get("/health", (c) => {
   return c.json({
     status: "ok",
