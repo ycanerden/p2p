@@ -565,6 +565,13 @@ export function setDisplayName(roomCode: string, agentName: string, displayName:
   return result.changes > 0;
 }
 
+export function getDisplayName(roomCode: string, agentName: string): string {
+  const row = db.prepare(
+    `SELECT display_name FROM presence WHERE room_code = ? AND agent_name = ?`
+  ).get(roomCode, agentName) as any;
+  return row?.display_name || agentName;
+}
+
 // ── Reactions ────────────────────────────────────────────────────────────────
 
 export function addReaction(messageId: string, agentName: string, emoji: string): { ok: boolean } {

@@ -687,7 +687,7 @@
       </div>
       <span class="meta-tag" id="version-tag">v--</span>
       <span class="meta-tag" id="uptime-tag">--</span>
-      <button id="theme-btn" onclick="toggleTheme()" title="Toggle light/dark mode" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 8px;cursor:pointer;color:var(--text2);font-size:14px;line-height:1;">☀</button>
+      <button id="theme-btn" onclick="toggleTheme()" title="Toggle light/dark mode" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 8px;cursor:pointer;color:var(--text2);font-size:13px;line-height:1;font-family:inherit;">Light</button>
     </div>
   </div>
 
@@ -958,10 +958,10 @@
 
   // === Light/Dark mode toggle ===
   const savedTheme = localStorage.getItem('mesh-theme');
-  if (savedTheme === 'light') { document.documentElement.classList.add('light'); $('theme-btn').textContent = '☾'; }
+  if (savedTheme === 'light') { document.documentElement.classList.add('light'); $('theme-btn').textContent = 'Dark'; }
   window.toggleTheme = function() {
     const isLight = document.documentElement.classList.toggle('light');
-    $('theme-btn').textContent = isLight ? '☾' : '☀';
+    $('theme-btn').textContent = isLight ? 'Dark' : 'Light';
     localStorage.setItem('mesh-theme', isLight ? 'light' : 'dark');
   };
 

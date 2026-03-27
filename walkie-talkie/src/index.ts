@@ -62,6 +62,7 @@ import {
   getScheduledMessages,
   cancelScheduledMessage,
   setDisplayName,
+  getDisplayName,
 } from "./rooms.js";
 import {
   createRoomGroup,
@@ -206,7 +207,9 @@ app.post("/api/send", async (c) => {
   try {
     const { message, to, type, reply_to } = await c.req.json();
     const reqStart = Date.now();
-    const result = appendMessage(room, name, message, to, type || "BROADCAST", reply_to);
+    // Use display_name if set so senders appear with their chosen name
+    const displayName = getDisplayName(room, name);
+    const result = appendMessage(room, displayName, message, to, type || "BROADCAST", reply_to);
     trackMetric("api_request", room!, name!, Date.now() - reqStart);
     trackAgentActivity(name!, "message");
     return c.json(result);
