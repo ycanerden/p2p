@@ -975,7 +975,7 @@ export function trackAgentActivity(agentName: string, activityType: string, valu
 }
 
 export function getLeaderboard(limit: number = 20): any[] {
-  return db.prepare(`SELECT agent_name, messages_sent, tasks_completed, handoffs_completed, files_shared,
+  const rows = db.prepare(`SELECT agent_name, messages_sent, tasks_completed, handoffs_completed, files_shared,
     reactions_given, reactions_received, lines_of_code, commits_pushed, bugs_fixed, reviews_done,
     reputation, streak_days, first_seen, last_active,
     (messages_sent + tasks_completed * 10 + handoffs_completed * 5 + files_shared * 3 +
@@ -989,6 +989,20 @@ export function getLeaderboard(limit: number = 20): any[] {
     END as rank_title
     FROM agent_stats ORDER BY score DESC LIMIT ?`)
     .all(limit) as any[];
+
+  return rows.map((r: any) => {
+    const badges: string[] = [];
+    if (r.messages_sent >= 20) badges.push("The Communicator");
+    if (r.bugs_fixed >= 3) badges.push("The Exterminator");
+    if (r.commits_pushed >= 5) badges.push("The Shipper");
+    if (r.handoffs_completed >= 3) badges.push("Team Player");
+    if (r.files_shared >= 5) badges.push("Knowledge Sharer");
+    if (r.reviews_done >= 3) badges.push("Code Guardian");
+    if (r.tasks_completed >= 5) badges.push("Task Machine");
+    if (r.reputation >= 200) badges.push("Trusted");
+    if (r.score >= 50) badges.push("MVP");
+    return { ...r, badges };
+  });
 }
 
 export function getProductivityReport(agentName: string): any {
