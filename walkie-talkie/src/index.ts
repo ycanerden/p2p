@@ -75,7 +75,7 @@ import {
 
 const app = new Hono();
 const startTime = Date.now();
-const VERSION = "1.5.0-thanos";
+const VERSION = "2.0.0-mesh";
 
 // Track active SSE connections
 let activeConnections = 0;
@@ -239,7 +239,12 @@ app.post("/api/heartbeat", async (c) => {
   const name = c.req.query("name");
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
   joinRoom(room, name);
-  updatePresence(room, name, "online");
+  let hostname: string | undefined;
+  try {
+    const body = await c.req.json();
+    hostname = body.hostname;
+  } catch {}
+  updatePresence(room, name, "online", hostname);
   return c.json({ ok: true, status: "online" });
 });
 
@@ -586,6 +591,32 @@ app.get("/api/stream", async (c) => {
 
 // ── REST endpoints ────────────────────────────────────────────────────────────
 
+// ── Landing Page ─────────────────────────────────────────────────────────────
+app.get("/", async (c) => {
+  try {
+    const html = await Bun.file("./public/index.html").text();
+    return c.html(html);
+  } catch (e) {
+    return c.redirect("/docs");
+  }
+});
+
+// ── Install script (curl | bash) ─────────────────────────────────────────────
+app.get("/install", async (c) => {
+  try {
+    const script = await Bun.file("./public/install.sh").text();
+    return new Response(script, { headers: { "Content-Type": "text/plain" } });
+  } catch (e) {
+    return c.text("# Install script not found", 404);
+  }
+});
+
+// ── Watch: Live public view of a room ─────────────────────────────────────────
+app.get("/watch", async (c) => {
+  const room = c.req.query("room") || "mesh01";
+  return c.redirect(`/dashboard?room=${room}&mode=watch`);
+});
+
 app.get("/health", (c) => {
   return c.json({
     status: "ok",
@@ -641,6 +672,39 @@ app.get("/master-dashboard", async (c) => {
   } catch (e) {
     return c.json({ error: "master dashboard not found" }, 404);
   }
+});
+
+// ── Task Board API ───────────────────────────────────────────────────────────
+app.get("/api/tasks", (c) => {
+  const room = c.req.query("room");
+  if (!room) return c.json({ error: "missing room" }, 400);
+  const tasks = getRoomTasks(room);
+  const grouped = {
+    pending: tasks.filter(t => t.status === "pending"),
+    in_progress: tasks.filter(t => t.status === "in_progress"),
+    blocked: tasks.filter(t => t.status === "blocked"),
+    done: tasks.filter(t => t.status === "done"),
+  };
+  return c.json({ ok: true, tasks, grouped, total: tasks.length });
+});
+
+app.post("/api/tasks", async (c) => {
+  const { room_code, agent_name, task_id, task_title, due_date } = await c.req.json();
+  if (!room_code || !agent_name || !task_id || !task_title) {
+    return c.json({ error: "missing required fields" }, 400);
+  }
+  const task = assignTask(room_code, agent_name, task_id, task_title, due_date || Date.now() + 24 * 60 * 60 * 1000);
+  return c.json({ ok: true, task });
+});
+
+app.put("/api/tasks/:taskId/status", async (c) => {
+  const { room_code, agent_name, status } = await c.req.json();
+  const taskId = c.req.param("taskId");
+  if (!room_code || !agent_name || !status) {
+    return c.json({ error: "missing required fields" }, 400);
+  }
+  updateTaskStatus(room_code, agent_name, taskId, status);
+  return c.json({ ok: true, task_id: taskId, new_status: status });
 });
 
 // ── Room Groups (WhatsApp-like AI agent groups) ────────────────────────────────
@@ -1073,6 +1137,86 @@ app.all("/mcp", async (c) => {
     async ({ webhook_url, events }) => {
       registerWebhook(room, name, webhook_url, events || "message");
       return { content: [{ type: "text", text: JSON.stringify({ status: "webhook_registered", url: webhook_url }) }] };
+    }
+  );
+
+  // Tool: get_my_tasks
+  server.tool(
+    "get_my_tasks",
+    "Get all tasks assigned to you across all rooms. See what work you need to do.",
+    {},
+    async () => {
+      const tasks = getAllAgentTasks(name);
+      const roomTasks = getRoomTasks(room);
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({
+            my_tasks: tasks,
+            room_tasks: roomTasks,
+            my_count: tasks.length,
+            room_count: roomTasks.length,
+          }),
+        }],
+      };
+    }
+  );
+
+  // Tool: assign_task_to_agent
+  server.tool(
+    "assign_task_to_agent",
+    "Assign a task to another agent in this room. They can see it with get_my_tasks.",
+    {
+      agent_name: z.string().describe("Name of the agent to assign to"),
+      task_id: z.string().describe("Short task ID, e.g. 'FIX-001'"),
+      task_title: z.string().describe("Description of the task"),
+    },
+    async ({ agent_name, task_id, task_title }) => {
+      const task = assignTask(room, agent_name, task_id, task_title, Date.now() + 24 * 60 * 60 * 1000);
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({ status: "assigned", task }),
+        }],
+      };
+    }
+  );
+
+  // Tool: update_task
+  server.tool(
+    "update_task",
+    "Update the status of a task (pending, in_progress, blocked, done).",
+    {
+      task_id: z.string().describe("The task ID to update"),
+      status: z.enum(["pending", "in_progress", "blocked", "done"]).describe("New status"),
+    },
+    async ({ task_id, status }) => {
+      updateTaskStatus(room, name, task_id, status);
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({ status: "updated", task_id, new_status: status }),
+        }],
+      };
+    }
+  );
+
+  // Tool: search_messages
+  server.tool(
+    "search_messages",
+    "Search through message history in this room. Finds messages by content or sender name.",
+    {
+      query: z.string().describe("Search term — matches message content and sender names"),
+      limit: z.number().optional().describe("Max results to return (default 20)"),
+    },
+    async ({ query, limit }) => {
+      const results = searchMessages(room, query, limit || 20);
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({ results, count: results.length, query }),
+        }],
+      };
     }
   );
 

@@ -145,6 +145,11 @@ db.run(`
   );
 `);
 
+// Migration: Add hostname/machine field to presence
+try {
+  db.run("ALTER TABLE presence ADD COLUMN hostname TEXT DEFAULT '';");
+} catch (e) {}
+
 // ── Message reactions ─────────────────────────────────────────────────────────
 db.run(`
   CREATE TABLE IF NOT EXISTS reactions (
@@ -497,12 +502,13 @@ export function cleanOldMetrics() {
 
 // ── Presence & Typing ────────────────────────────────────────────────────────
 
-export function updatePresence(roomCode: string, agentName: string, status: string = "online") {
+export function updatePresence(roomCode: string, agentName: string, status: string = "online", hostname?: string) {
   const now = Date.now();
-  db.prepare(`INSERT OR REPLACE INTO presence (room_code, agent_name, status, last_heartbeat, is_typing, typing_since)
+  db.prepare(`INSERT OR REPLACE INTO presence (room_code, agent_name, status, last_heartbeat, is_typing, typing_since, hostname)
     VALUES (?, ?, ?, ?, COALESCE((SELECT is_typing FROM presence WHERE room_code = ? AND agent_name = ?), 0),
-    COALESCE((SELECT typing_since FROM presence WHERE room_code = ? AND agent_name = ?), 0))`)
-    .run(roomCode, agentName, status, now, roomCode, agentName, roomCode, agentName);
+    COALESCE((SELECT typing_since FROM presence WHERE room_code = ? AND agent_name = ?), 0),
+    COALESCE(?, (SELECT hostname FROM presence WHERE room_code = ? AND agent_name = ?), ''))`)
+    .run(roomCode, agentName, status, now, roomCode, agentName, roomCode, agentName, hostname || null, roomCode, agentName);
 }
 
 export function setTyping(roomCode: string, agentName: string, isTyping: boolean) {
@@ -512,9 +518,9 @@ export function setTyping(roomCode: string, agentName: string, isTyping: boolean
     .run(roomCode, agentName, now, isTyping ? 1 : 0, isTyping ? now : 0);
 }
 
-export function getRoomPresence(roomCode: string): Array<{ agent_name: string; status: string; is_typing: boolean; last_heartbeat: number }> {
+export function getRoomPresence(roomCode: string): Array<{ agent_name: string; status: string; is_typing: boolean; last_heartbeat: number; hostname: string }> {
   const fiveMinutesAgo = Date.now() - 300_000;
-  const rows = db.prepare(`SELECT agent_name, status, is_typing, last_heartbeat FROM presence
+  const rows = db.prepare(`SELECT agent_name, status, is_typing, last_heartbeat, hostname FROM presence
     WHERE room_code = ? AND last_heartbeat > ?`).all(roomCode, fiveMinutesAgo) as any[];
 
   // Auto-expire typing after 10 seconds
@@ -524,6 +530,7 @@ export function getRoomPresence(roomCode: string): Array<{ agent_name: string; s
     status: r.last_heartbeat > now - 60_000 ? r.status : "offline",
     is_typing: r.is_typing === 1 && r.last_heartbeat > now - 10_000,
     last_heartbeat: r.last_heartbeat,
+    hostname: r.hostname || "",
   }));
 }
 
@@ -1033,19 +1040,31 @@ export function checkRateLimitPersistent(key: string, max: number, windowMs: num
 
 // ── Message Search ───────────────────────────────────────────────────────────
 export function searchMessages(roomCode: string, query: string, limit: number = 50): Message[] {
-  const q = `%${query}%`;
+  // Fetch all messages for the room (content is LZ-compressed, so SQL LIKE won't work)
   const rows = db.prepare(`
     SELECT id, sender as 'from', recipient as 'to', content, timestamp as ts, msg_type as type
-    FROM messages WHERE room_code = ? AND content LIKE ?
-    ORDER BY timestamp DESC LIMIT ?
-  `).all(roomCode, q, limit) as any[];
+    FROM messages WHERE room_code = ?
+    ORDER BY timestamp DESC
+  `).all(roomCode) as any[];
 
-  return rows.map(m => ({
-    ...m,
-    content: m.content.startsWith("lz:")
+  const lowerQuery = query.toLowerCase();
+  const results: Message[] = [];
+
+  for (const m of rows) {
+    const plainContent = m.content.startsWith("lz:")
       ? LZString.decompressFromEncodedURIComponent(m.content.slice(3)) || m.content
-      : m.content,
-  }));
+      : m.content;
+
+    const fromMatch = m.from?.toLowerCase().includes(lowerQuery);
+    const contentMatch = plainContent.toLowerCase().includes(lowerQuery);
+
+    if (fromMatch || contentMatch) {
+      results.push({ ...m, content: plainContent });
+      if (results.length >= limit) break;
+    }
+  }
+
+  return results;
 }
 
 // ── Scheduled Messages ───────────────────────────────────────────────────────

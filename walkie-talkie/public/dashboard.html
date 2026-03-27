@@ -3,42 +3,46 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Agent Mesh — Live Dashboard</title>
+  <title>Mesh — Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #0c0e14;
-      --surface: #161922;
-      --surface2: #1e2230;
-      --surface3: #252a3a;
-      --border: #2a2f3e;
-      --border-light: #353b4e;
-      --accent: #6c5ce7;
-      --accent2: #a29bfe;
-      --accent-dim: rgba(108,92,231,.12);
-      --green: #00b894;
-      --green-dim: rgba(0,184,148,.15);
-      --orange: #fdcb6e;
-      --orange-dim: rgba(253,203,110,.15);
-      --red: #ff7675;
-      --red-dim: rgba(255,118,117,.15);
-      --blue: #74b9ff;
-      --blue-dim: rgba(116,185,255,.15);
-      --pink: #fd79a8;
-      --text: #dfe6e9;
-      --text2: #636e82;
-      --text3: #4a5068;
-      --radius: 14px;
-      --radius-sm: 10px;
-      --radius-xs: 6px;
-      --shadow: 0 2px 12px rgba(0,0,0,.3);
-      --sidebar-w: 320px;
-      --topbar-h: 60px;
+      --bg: #09090b;
+      --surface: #0f0f12;
+      --surface2: #18181b;
+      --surface3: #1f1f23;
+      --border: #27272a;
+      --border-light: #3f3f46;
+      --accent: #8b5cf6;
+      --accent2: #a78bfa;
+      --accent-dim: rgba(139,92,246,.08);
+      --green: #22c55e;
+      --green-dim: rgba(34,197,94,.1);
+      --orange: #f59e0b;
+      --orange-dim: rgba(245,158,11,.1);
+      --red: #ef4444;
+      --red-dim: rgba(239,68,68,.1);
+      --blue: #3b82f6;
+      --blue-dim: rgba(59,130,246,.1);
+      --pink: #ec4899;
+      --text: #fafafa;
+      --text2: #a1a1aa;
+      --text3: #52525b;
+      --radius: 8px;
+      --radius-sm: 6px;
+      --radius-xs: 4px;
+      --shadow: 0 1px 3px rgba(0,0,0,.3);
+      --sidebar-w: 300px;
+      --topbar-h: 52px;
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
@@ -61,44 +65,42 @@
     }
     .topbar-left { display: flex; align-items: center; gap: 14px; }
     .logo {
-      width: 38px; height: 38px; border-radius: 11px;
-      background: linear-gradient(135deg, var(--accent), var(--pink));
+      width: 32px; height: 32px; border-radius: 8px;
+      background: var(--accent);
       display: flex; align-items: center; justify-content: center;
-      font-size: 18px; font-weight: 800; color: #fff;
-      box-shadow: 0 0 20px rgba(108,92,231,.3);
+      font-size: 15px; font-weight: 700; color: #fff;
     }
-    .topbar-title h1 { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
-    .topbar-title .subtitle { font-size: 11px; color: var(--text2); margin-top: 1px; }
+    .topbar-title h1 { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; }
+    .topbar-title .subtitle { font-size: 11px; color: var(--text3); margin-top: 1px; }
     .topbar-center { display: flex; align-items: center; gap: 12px; }
     .room-input {
       background: var(--surface2); border: 1px solid var(--border);
-      border-radius: 20px; padding: 7px 14px; color: var(--text);
-      font-size: 12px; font-family: 'SF Mono', 'Fira Code', monospace;
-      outline: none; width: 140px; transition: all .2s;
+      border-radius: var(--radius-sm); padding: 6px 12px; color: var(--text);
+      font-size: 13px; font-family: 'JetBrains Mono', monospace;
+      outline: none; width: 140px; transition: border-color .15s;
     }
-    .room-input:focus { border-color: var(--accent); width: 180px; }
+    .room-input:focus { border-color: var(--accent); }
     .room-input::placeholder { color: var(--text3); }
     .topbar-right { display: flex; align-items: center; gap: 14px; }
     .live-badge {
       display: flex; align-items: center; gap: 6px;
-      padding: 5px 12px; border-radius: 20px;
-      background: var(--green-dim); border: 1px solid rgba(0,184,148,.25);
+      padding: 4px 10px; border-radius: var(--radius-sm);
+      background: var(--green-dim); border: 1px solid var(--border);
     }
     .live-dot {
-      width: 7px; height: 7px; border-radius: 50%; background: var(--green);
-      box-shadow: 0 0 8px var(--green);
+      width: 6px; height: 6px; border-radius: 50%; background: var(--green);
       animation: pulse-dot 2s infinite;
     }
-    .live-dot.offline { background: var(--red); box-shadow: 0 0 8px var(--red); animation: none; }
+    .live-dot.offline { background: var(--red); animation: none; }
     @keyframes pulse-dot {
-      0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--green); }
-      50% { opacity: .5; box-shadow: 0 0 16px var(--green); }
+      0%, 100% { opacity: 1; }
+      50% { opacity: .4; }
     }
-    .live-label { font-size: 11px; color: var(--green); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+    .live-label { font-size: 11px; color: var(--green); font-weight: 600; }
     .meta-tag {
-      font-size: 11px; color: var(--text2); padding: 5px 12px;
+      font-size: 11px; color: var(--text3); padding: 4px 10px;
       background: var(--surface2); border: 1px solid var(--border);
-      border-radius: 20px; font-family: 'SF Mono', monospace;
+      border-radius: var(--radius-sm); font-family: 'JetBrains Mono', monospace;
     }
     .mobile-menu-btn {
       display: none; background: none; border: 1px solid var(--border);
@@ -137,14 +139,15 @@
     .metric-card:hover { border-color: var(--border-light); }
     .metric-card.wide { grid-column: span 2; }
     .metric-value {
-      font-size: 22px; font-weight: 800; line-height: 1;
+      font-size: 20px; font-weight: 600; line-height: 1;
       font-variant-numeric: tabular-nums;
+      color: var(--text);
     }
-    .metric-value.accent { color: var(--accent2); }
+    .metric-value.accent { color: var(--accent); }
     .metric-value.green { color: var(--green); }
     .metric-value.orange { color: var(--orange); }
     .metric-value.blue { color: var(--blue); }
-    .metric-label { font-size: 10px; color: var(--text2); margin-top: 4px; text-transform: uppercase; letter-spacing: .5px; font-weight: 600; }
+    .metric-label { font-size: 10px; color: var(--text3); margin-top: 6px; text-transform: uppercase; letter-spacing: .5px; font-weight: 500; }
     .metric-trend {
       font-size: 10px; margin-top: 4px; font-weight: 600;
     }
@@ -185,9 +188,23 @@
     }
     .agent-item:hover { border-color: var(--border-light); background: var(--surface3); }
     .agent-avatar {
-      width: 32px; height: 32px; border-radius: 9px;
+      width: 32px; height: 32px; border-radius: 6px;
       display: flex; align-items: center; justify-content: center;
       font-size: 15px; flex-shrink: 0; position: relative;
+      overflow: hidden;
+    }
+    .pixel-char {
+      width: 2px; height: 2px;
+      image-rendering: pixelated;
+      transform: scale(1);
+      transform-origin: top left;
+    }
+    .agent-avatar.active .pixel-char {
+      animation: pixel-bounce 1s ease infinite;
+    }
+    @keyframes pixel-bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-2px); }
     }
     .agent-status-dot {
       position: absolute; bottom: -1px; right: -1px;
@@ -242,7 +259,7 @@
       display: flex; align-items: center; gap: 7px;
     }
     .main-tab:hover { color: var(--text); }
-    .main-tab.active { color: var(--accent2); border-bottom-color: var(--accent); }
+    .main-tab.active { color: var(--text); border-bottom-color: var(--accent); }
     .main-tab .tab-badge {
       font-size: 10px; background: var(--accent-dim); color: var(--accent2);
       padding: 1px 7px; border-radius: 10px; font-weight: 700;
@@ -270,7 +287,7 @@
     }
     .msg.self {
       align-self: flex-end;
-      background: linear-gradient(135deg, var(--accent), #7c6cf0);
+      background: var(--accent);
       color: #fff; border-bottom-right-radius: 4px;
     }
     .msg.system {
@@ -364,14 +381,13 @@
     .composer-input:focus { border-color: var(--accent); }
     .composer-input::placeholder { color: var(--text3); }
     .send-btn {
-      width: 44px; height: 44px; border-radius: 12px;
-      background: linear-gradient(135deg, var(--accent), #7c6cf0);
-      border: none; color: #fff; cursor: pointer; font-size: 18px;
+      width: 40px; height: 40px; border-radius: var(--radius-sm);
+      background: var(--accent);
+      border: none; color: #fff; cursor: pointer; font-size: 16px;
       display: flex; align-items: center; justify-content: center;
-      transition: all .2s; flex-shrink: 0;
-      box-shadow: 0 2px 12px rgba(108,92,231,.3);
+      transition: opacity .15s; flex-shrink: 0;
     }
-    .send-btn:hover { transform: scale(1.05); box-shadow: 0 4px 20px rgba(108,92,231,.4); }
+    .send-btn:hover { opacity: .85; }
     .send-btn:active { transform: scale(.97); }
     .send-btn:disabled { opacity: .35; cursor: not-allowed; transform: none; box-shadow: none; }
 
@@ -496,6 +512,57 @@
     @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
     @keyframes slide-up { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     .animate-in { animation: slide-up .3s ease; }
+
+    /* ===================== KANBAN ===================== */
+    .kanban-col { min-height: 200px; }
+    .kanban-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      animation: slide-up .2s ease;
+    }
+    .kanban-card .kc-agent {
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .kanban-card .kc-title {
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.4;
+      margin-bottom: 6px;
+    }
+    .kanban-card .kc-meta {
+      font-size: 10px;
+      color: var(--text3);
+      display: flex;
+      justify-content: space-between;
+    }
+    .kanban-card .kc-id {
+      font-family: monospace;
+      font-size: 11px;
+      color: var(--accent2);
+    }
+    .kanban-card .kc-actions {
+      margin-top: 8px;
+      display: flex;
+      gap: 6px;
+    }
+    .kanban-card .kc-actions button {
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text2);
+      cursor: pointer;
+    }
+    .kanban-card .kc-actions button:hover {
+      border-color: var(--accent);
+      color: var(--text);
+    }
   </style>
 </head>
 <body>
@@ -511,7 +578,7 @@
       </div>
     </div>
     <div class="topbar-center">
-      <input type="text" class="room-input" id="room-input" placeholder="Room name..." />
+      <input type="text" class="room-input" id="room-input" placeholder="Workspace name..." />
     </div>
     <div class="topbar-right">
       <div class="live-badge" id="live-badge">
@@ -542,7 +609,7 @@
           </div>
           <div class="metric-card">
             <div class="metric-value blue" id="m-rooms">--</div>
-            <div class="metric-label">Rooms</div>
+            <div class="metric-label">Workspaces</div>
           </div>
           <div class="metric-card wide">
             <div class="metric-value" id="m-total">--</div>
@@ -550,13 +617,18 @@
           </div>
           <div class="metric-card">
             <div class="metric-value orange" id="m-latency">--</div>
-            <div class="metric-label">Latency</div>
+            <div class="metric-label">Speed</div>
           </div>
         </div>
 
         <!-- Health -->
         <div class="health-strip" id="health-strip">
           <div class="health-chip ok">Loading...</div>
+        </div>
+
+        <!-- Connect Agent -->
+        <div class="sidebar-section">
+          <button id="connect-agent-btn" onclick="showConnectModal()" style="width:100%;padding:10px 0;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;">+ Connect Agent</button>
         </div>
 
         <!-- Agent Presence -->
@@ -589,6 +661,7 @@
           <span>Chat</span>
           <span class="tab-badge" id="chat-badge" style="display:none;">0</span>
         </div>
+        <div class="main-tab" data-tab="tasks"><span>Tasks</span></div>
         <div class="main-tab" data-tab="files"><span>Files</span></div>
         <div class="main-tab" data-tab="handoffs"><span>Handoffs</span></div>
         <div class="main-tab" data-tab="directory"><span>Directory</span></div>
@@ -606,17 +679,40 @@
           <div class="composer-left">
             <input type="text" class="composer-name" id="sender-name" placeholder="Your name" value="Viewer" />
             <select class="composer-type" id="msg-type">
-              <option value="BROADCAST">Broadcast</option>
+              <option value="BROADCAST">Chat</option>
               <option value="TASK">Task</option>
-              <option value="DIRECT">Direct</option>
+              <option value="DIRECT">DM</option>
               <option value="HANDOFF">Handoff</option>
-              <option value="STATUS">Status</option>
             </select>
           </div>
           <div class="composer-body">
             <textarea class="composer-input" id="msg-input" placeholder="Send a message to the mesh..." rows="1"></textarea>
           </div>
           <button class="send-btn" id="send-btn">&#x27A4;</button>
+        </div>
+      </div>
+
+      <!-- Tasks / Kanban panel -->
+      <div class="tab-panel" id="panel-tasks">
+        <div style="padding:16px 20px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <h3 style="font-size:16px;font-weight:700;">Task Board</h3>
+            <button onclick="showAssignTaskModal()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;">+ Assign Task</button>
+          </div>
+          <div id="kanban-board" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;min-height:300px;">
+            <div class="kanban-col" id="kanban-pending">
+              <div style="font-size:13px;font-weight:700;color:var(--orange);margin-bottom:10px;padding:8px 12px;background:var(--orange-dim);border-radius:8px;text-align:center;">To Do</div>
+              <div class="kanban-cards" id="cards-pending"></div>
+            </div>
+            <div class="kanban-col" id="kanban-in_progress">
+              <div style="font-size:13px;font-weight:700;color:var(--blue);margin-bottom:10px;padding:8px 12px;background:var(--blue-dim);border-radius:8px;text-align:center;">In Progress</div>
+              <div class="kanban-cards" id="cards-in_progress"></div>
+            </div>
+            <div class="kanban-col" id="kanban-done">
+              <div style="font-size:13px;font-weight:700;color:var(--green);margin-bottom:10px;padding:8px 12px;background:var(--green-dim);border-radius:8px;text-align:center;">Done</div>
+              <div class="kanban-cards" id="cards-done"></div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -914,7 +1010,7 @@
     await api('/api/heartbeat?room=' + encodeURIComponent(ROOM) + '&name=' + encodeURIComponent(name), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: '{}',
+      body: JSON.stringify({ hostname: navigator.userAgent.includes('Mac') ? 'macOS' : navigator.userAgent.includes('Win') ? 'Windows' : navigator.userAgent.includes('Linux') ? 'Linux' : 'Web' }),
     });
   }
 
@@ -1024,6 +1120,8 @@
       const status = a.is_typing ? 'typing' : (a.status || 'offline');
       const color = getColor(name);
       const initial = name.charAt(0).toUpperCase();
+      const isActive = status === 'online' || status === 'typing';
+      const hostname = a.hostname || '';
 
       // Heartbeat ago
       let heartbeatText = '';
@@ -1037,10 +1135,10 @@
 
       const metaText = a.is_typing
         ? '<span class="agent-typing-text">typing...</span>'
-        : esc(status);
+        : (hostname ? esc(hostname) + ' · ' : '') + esc(status);
 
       return '<div class="agent-item">' +
-        '<div class="agent-avatar" style="background:' + color + '18;color:' + color + '">' +
+        '<div class="agent-avatar' + (isActive ? ' active' : '') + '" style="background:' + color + '15;color:' + color + '">' +
           esc(initial) +
           '<div class="agent-status-dot ' + esc(status) + '"></div>' +
         '</div>' +
@@ -1303,6 +1401,162 @@ async function doSearch() {
   } catch (e) {
     el.innerHTML = '<div style="color:var(--red);padding:20px;text-align:center;">Search failed: ' + e.message + '</div>';
   }
+}
+
+// === Kanban Task Board ===
+async function fetchTasks() {
+  try {
+    var urlParams = new URLSearchParams(window.location.search);
+    var room = urlParams.get('room') || 'mesh01';
+    var r = await fetch('/tasks/room/' + encodeURIComponent(room));
+    var d = await r.json();
+    renderKanban(d.tasks || []);
+  } catch (e) {}
+}
+
+function renderKanban(tasks) {
+  var cols = { pending: [], in_progress: [], blocked: [], done: [] };
+  tasks.forEach(function(t) {
+    var s = t.status || 'pending';
+    if (s === 'blocked') s = 'pending';
+    if (!cols[s]) cols[s] = [];
+    cols[s].push(t);
+  });
+
+  ['pending', 'in_progress', 'done'].forEach(function(status) {
+    var el = document.getElementById('cards-' + status);
+    if (!el) return;
+    if (!cols[status] || cols[status].length === 0) {
+      el.innerHTML = '<div style="color:var(--text3);font-size:12px;text-align:center;padding:20px;">No tasks</div>';
+      return;
+    }
+    var escDiv = document.createElement('div');
+    el.innerHTML = cols[status].map(function(t) {
+      escDiv.textContent = t.agent_name || '';
+      var agentHtml = escDiv.innerHTML;
+      escDiv.textContent = t.task_title || '';
+      var titleHtml = escDiv.innerHTML;
+      escDiv.textContent = t.task_id || '';
+      var idHtml = escDiv.innerHTML;
+      var ago = t.assigned_at ? timeSince(t.assigned_at) : '';
+      var actions = '';
+      if (status === 'pending') {
+        actions = '<div class="kc-actions"><button onclick="moveTask(\'' + idHtml + '\',\'' + agentHtml + '\',\'in_progress\')">Start</button></div>';
+      } else if (status === 'in_progress') {
+        actions = '<div class="kc-actions"><button onclick="moveTask(\'' + idHtml + '\',\'' + agentHtml + '\',\'done\')">Done</button><button onclick="moveTask(\'' + idHtml + '\',\'' + agentHtml + '\',\'blocked\')">Blocked</button></div>';
+      }
+      return '<div class="kanban-card">' +
+        '<div class="kc-agent" style="color:' + getAgentColor(agentHtml) + ';">' + agentHtml + '</div>' +
+        '<div class="kc-title">' + titleHtml + '</div>' +
+        '<div class="kc-meta"><span class="kc-id">' + idHtml + '</span><span>' + ago + '</span></div>' +
+        actions +
+      '</div>';
+    }).join('');
+  });
+}
+
+function getAgentColor(name) {
+  var colors = ['#6c5ce7','#00b894','#fdcb6e','#ff7675','#74b9ff','#a29bfe','#55efc4','#fab1a0'];
+  var hash = 0;
+  for (var i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return colors[Math.abs(hash) % colors.length];
+}
+
+function timeSince(ts) {
+  var s = Math.floor((Date.now() - ts) / 1000);
+  if (s < 60) return s + 's ago';
+  if (s < 3600) return Math.floor(s / 60) + 'm ago';
+  if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+  return Math.floor(s / 86400) + 'd ago';
+}
+
+async function moveTask(taskId, agentName, newStatus) {
+  var urlParams = new URLSearchParams(window.location.search);
+  var room = urlParams.get('room') || 'mesh01';
+  try {
+    await fetch('/tasks/status', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ room_code: room, agent_name: agentName, task_id: taskId, status: newStatus })
+    });
+    fetchTasks();
+  } catch (e) {}
+}
+
+function showAssignTaskModal() {
+  var existing = document.getElementById('assign-modal');
+  if (existing) { existing.remove(); return; }
+  var modal = document.createElement('div');
+  modal.id = 'assign-modal';
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  modal.onclick = function(e) { if (e.target === modal) modal.remove(); };
+  modal.innerHTML =
+    '<div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:32px;max-width:420px;width:90%;">' +
+      '<h2 style="font-size:18px;margin-bottom:16px;">Assign Task</h2>' +
+      '<input id="at-agent" placeholder="Agent name" style="width:100%;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;margin-bottom:10px;outline:none;font-family:inherit;" />' +
+      '<input id="at-id" placeholder="Task ID (e.g. TASK-001)" style="width:100%;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;margin-bottom:10px;outline:none;font-family:inherit;" />' +
+      '<input id="at-title" placeholder="Task description" style="width:100%;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;margin-bottom:16px;outline:none;font-family:inherit;" />' +
+      '<button onclick="submitTask()" style="width:100%;padding:10px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;">Assign</button>' +
+      '<button onclick="this.closest(\'#assign-modal\').remove()" style="width:100%;padding:10px;margin-top:8px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:10px;font-size:14px;cursor:pointer;">Cancel</button>' +
+    '</div>';
+  document.body.appendChild(modal);
+}
+
+async function submitTask() {
+  var urlParams = new URLSearchParams(window.location.search);
+  var room = urlParams.get('room') || 'mesh01';
+  var agent = document.getElementById('at-agent').value.trim();
+  var taskId = document.getElementById('at-id').value.trim();
+  var title = document.getElementById('at-title').value.trim();
+  if (!agent || !taskId || !title) return;
+  try {
+    await fetch('/tasks/assign', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ room_code: room, agent_name: agent, task_id: taskId, task_title: title })
+    });
+    var modal = document.getElementById('assign-modal');
+    if (modal) modal.remove();
+    fetchTasks();
+  } catch (e) {}
+}
+
+// Fetch tasks on load and every 5 seconds
+fetchTasks();
+setInterval(fetchTasks, 5000);
+
+// Connect Agent modal
+function showConnectModal() {
+  var existing = document.getElementById('connect-modal');
+  if (existing) { existing.remove(); return; }
+  var urlParams = new URLSearchParams(window.location.search);
+  var room = urlParams.get('room') || 'mesh01';
+  var baseUrl = window.location.origin;
+  var configJson = JSON.stringify({
+    "mcpServers": {
+      "mesh": {
+        "url": baseUrl + "/mcp?room=" + room + "&name=YOUR_AGENT_NAME"
+      }
+    }
+  }, null, 2);
+
+  var modal = document.createElement('div');
+  modal.id = 'connect-modal';
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  modal.onclick = function(e) { if (e.target === modal) modal.remove(); };
+  modal.innerHTML =
+    '<div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:32px;max-width:520px;width:90%;max-height:80vh;overflow-y:auto;">' +
+      '<h2 style="font-size:20px;margin-bottom:4px;">Connect an Agent</h2>' +
+      '<p style="color:var(--text2);font-size:14px;margin-bottom:20px;">Add this to your AI tool\'s MCP config (Claude Code, Cursor, Windsurf, etc.):</p>' +
+      '<div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:16px;position:relative;">' +
+        '<pre id="connect-config" style="font-family:monospace;font-size:13px;color:#00b894;white-space:pre-wrap;word-break:break-all;">' + configJson.replace(/</g,'&lt;') + '</pre>' +
+        '<button onclick="navigator.clipboard.writeText(document.getElementById(\'connect-config\').textContent).then(function(){this.textContent=\'Copied!\';var b=this;setTimeout(function(){b.textContent=\'Copy\'},2000)}.bind(this))" style="position:absolute;top:8px;right:8px;background:var(--accent);color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;font-weight:600;">Copy</button>' +
+      '</div>' +
+      '<p style="color:var(--text2);font-size:13px;margin-top:16px;">Replace <code style="color:var(--accent2);">YOUR_AGENT_NAME</code> with your agent\'s name, then restart your AI tool. It will auto-connect.</p>' +
+      '<p style="color:var(--text3);font-size:12px;margin-top:12px;">Workspace: <strong>' + room + '</strong> &middot; Agents auto-get 17 collaboration tools</p>' +
+      '<button onclick="this.closest(\'#connect-modal\').remove()" style="margin-top:20px;width:100%;padding:10px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:10px;font-size:14px;cursor:pointer;">Close</button>' +
+    '</div>';
+  document.body.appendChild(modal);
 }
 </script>
 </body>

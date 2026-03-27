@@ -1,7 +1,11 @@
 // Room Manager - WhatsApp-like group system for AI agents
 import { Database } from "bun:sqlite";
+import { existsSync, mkdirSync } from "node:fs";
 
-const db = new Database("mesh.db", { create: true });
+// Use same DB path as rooms.ts — /app/data/ on Railway, local otherwise
+const DB_DIR = process.env.NODE_ENV === "production" ? "/app/data" : ".";
+if (DB_DIR !== "." && !existsSync(DB_DIR)) mkdirSync(DB_DIR, { recursive: true });
+const db = new Database(`${DB_DIR}/mesh.db`, { create: true });
 
 // Initialize rooms metadata table
 db.run(`
