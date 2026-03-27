@@ -155,6 +155,14 @@ try {
   db.run("ALTER TABLE presence ADD COLUMN display_name TEXT DEFAULT '';");
 } catch (e) {}
 
+// Migration: Add role + parent for hierarchy view
+try {
+  db.run("ALTER TABLE presence ADD COLUMN role TEXT DEFAULT 'worker';");
+} catch (e) {}
+try {
+  db.run("ALTER TABLE presence ADD COLUMN parent_agent TEXT DEFAULT '';");
+} catch (e) {}
+
 // ── Message reactions ─────────────────────────────────────────────────────────
 db.run(`
   CREATE TABLE IF NOT EXISTS reactions (
@@ -507,13 +515,22 @@ export function cleanOldMetrics() {
 
 // ── Presence & Typing ────────────────────────────────────────────────────────
 
-export function updatePresence(roomCode: string, agentName: string, status: string = "online", hostname?: string) {
+export function updatePresence(roomCode: string, agentName: string, status: string = "online", hostname?: string, role?: string, parentAgent?: string) {
   const now = Date.now();
-  db.prepare(`INSERT OR REPLACE INTO presence (room_code, agent_name, status, last_heartbeat, is_typing, typing_since, hostname)
-    VALUES (?, ?, ?, ?, COALESCE((SELECT is_typing FROM presence WHERE room_code = ? AND agent_name = ?), 0),
-    COALESCE((SELECT typing_since FROM presence WHERE room_code = ? AND agent_name = ?), 0),
-    COALESCE(?, (SELECT hostname FROM presence WHERE room_code = ? AND agent_name = ?), ''))`)
-    .run(roomCode, agentName, status, now, roomCode, agentName, roomCode, agentName, hostname || null, roomCode, agentName);
+  db.prepare(`INSERT OR REPLACE INTO presence (room_code, agent_name, status, last_heartbeat, is_typing, typing_since, hostname, display_name, role, parent_agent)
+    VALUES (?, ?, ?, ?,
+      COALESCE((SELECT is_typing FROM presence WHERE room_code = ? AND agent_name = ?), 0),
+      COALESCE((SELECT typing_since FROM presence WHERE room_code = ? AND agent_name = ?), 0),
+      COALESCE(?, (SELECT hostname FROM presence WHERE room_code = ? AND agent_name = ?), ''),
+      COALESCE((SELECT display_name FROM presence WHERE room_code = ? AND agent_name = ?), ''),
+      COALESCE(?, (SELECT role FROM presence WHERE room_code = ? AND agent_name = ?), 'worker'),
+      COALESCE(?, (SELECT parent_agent FROM presence WHERE room_code = ? AND agent_name = ?), ''))`)
+    .run(roomCode, agentName, status, now,
+      roomCode, agentName, roomCode, agentName,
+      hostname || null, roomCode, agentName,
+      roomCode, agentName,
+      role || null, roomCode, agentName,
+      parentAgent || null, roomCode, agentName);
 }
 
 export function setTyping(roomCode: string, agentName: string, isTyping: boolean) {
@@ -523,9 +540,9 @@ export function setTyping(roomCode: string, agentName: string, isTyping: boolean
     .run(roomCode, agentName, now, isTyping ? 1 : 0, isTyping ? now : 0);
 }
 
-export function getRoomPresence(roomCode: string): Array<{ agent_name: string; display_name: string; status: string; is_typing: boolean; last_heartbeat: number; hostname: string }> {
+export function getRoomPresence(roomCode: string): Array<{ agent_name: string; display_name: string; status: string; is_typing: boolean; last_heartbeat: number; hostname: string; role: string; parent_agent: string }> {
   const fiveMinutesAgo = Date.now() - 300_000;
-  const rows = db.prepare(`SELECT agent_name, status, is_typing, last_heartbeat, hostname, display_name FROM presence
+  const rows = db.prepare(`SELECT agent_name, status, is_typing, last_heartbeat, hostname, display_name, role, parent_agent FROM presence
     WHERE room_code = ? AND last_heartbeat > ?`).all(roomCode, fiveMinutesAgo) as any[];
 
   const now = Date.now();
@@ -536,6 +553,8 @@ export function getRoomPresence(roomCode: string): Array<{ agent_name: string; d
     is_typing: r.is_typing === 1 && r.last_heartbeat > now - 10_000,
     last_heartbeat: r.last_heartbeat,
     hostname: r.hostname || "",
+    role: r.role || "worker",
+    parent_agent: r.parent_agent || "",
   }));
 }
 

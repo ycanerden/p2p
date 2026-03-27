@@ -240,12 +240,14 @@ app.post("/api/heartbeat", async (c) => {
   const name = c.req.query("name");
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
   joinRoom(room, name);
-  let hostname: string | undefined;
+  let hostname: string | undefined, role: string | undefined, parentAgent: string | undefined;
   try {
     const body = await c.req.json();
     hostname = body.hostname;
+    role = body.role;
+    parentAgent = body.parent;
   } catch {}
-  updatePresence(room, name, "online", hostname);
+  updatePresence(room, name, "online", hostname, role, parentAgent);
   return c.json({ ok: true, status: "online" });
 });
 

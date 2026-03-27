@@ -1214,9 +1214,51 @@
   }
 
   // === Render: Agents ===
+  function agentCard(a, indent) {
+    const name = a.agent_name || 'Unknown';
+    const displayName = a.display_name || name;
+    const status = a.is_typing ? 'typing' : (a.status || 'offline');
+    const color = getColor(name);
+    const isActive = status === 'online' || status === 'typing';
+    const hostname = a.hostname || '';
+    const role = a.role || 'worker';
+
+    var botHash = 0;
+    for (var ci = 0; ci < name.length; ci++) botHash = name.charCodeAt(ci) + ((botHash << 5) - botHash);
+    var botIdx = Math.abs(botHash) % 8;
+
+    let heartbeatText = '';
+    if (a.last_heartbeat) {
+      const ago = Math.floor((Date.now() - new Date(a.last_heartbeat).getTime()) / 1000);
+      if (ago < 10) heartbeatText = 'now';
+      else if (ago < 60) heartbeatText = ago + 's';
+      else heartbeatText = Math.floor(ago / 60) + 'm';
+    }
+
+    const metaText = a.is_typing
+      ? '<span class="agent-typing-text">typing...</span>'
+      : (hostname ? esc(hostname) + ' · ' : '') + esc(role);
+
+    const indentStyle = indent ? 'margin-left:' + (indent * 16) + 'px;' : '';
+    const connector = indent ? '<span style="color:var(--text3);margin-right:4px;font-size:10px;">└─</span>' : '';
+
+    return '<div class="agent-item" style="' + indentStyle + '">' +
+      (connector ? '<div style="display:flex;align-items:center;flex:1;">' + connector : '') +
+      '<div class="agent-avatar' + (isActive ? ' active' : '') + '" style="background:' + color + '10;">' +
+        '<div class="pixel-bot bot-' + botIdx + '"></div>' +
+        '<div class="agent-status-dot ' + esc(status) + '"></div>' +
+      '</div>' +
+      '<div class="agent-info">' +
+        '<div class="agent-name">' + esc(displayName) + (role === 'manager' ? ' <span style="font-size:9px;background:var(--accent-dim);color:var(--accent);padding:1px 5px;border-radius:3px;font-weight:600;">MGR</span>' : '') + '</div>' +
+        '<div class="agent-meta">' + metaText + '</div>' +
+      '</div>' +
+      (heartbeatText ? '<div class="agent-heartbeat">' + esc(heartbeatText) + '</div>' : '') +
+      (connector ? '</div>' : '') +
+    '</div>';
+  }
+
   function renderAgents() {
     const el = $('agents-list');
-    // Only show online/typing agents (hide offline to reduce clutter)
     const agents = Object.values(presenceMap).filter(function(a) {
       return a.status === 'online' || a.status === 'typing' || a.is_typing;
     });
@@ -1224,48 +1266,52 @@
       el.innerHTML = '<div style="color:var(--text2);font-size:12px;padding:6px 0;">No agents online</div>';
       return;
     }
-    const order = { typing: 0, online: 1, idle: 2, offline: 3 };
-    agents.sort((a, b) => (order[a.status] || 3) - (order[b.status] || 3));
 
-    el.innerHTML = agents.map(function(a) {
-      const name = a.agent_name || 'Unknown';
-      const status = a.is_typing ? 'typing' : (a.status || 'offline');
-      const color = getColor(name);
-      const initial = name.charAt(0).toUpperCase();
-      const isActive = status === 'online' || status === 'typing';
-      const hostname = a.hostname || '';
-
-      // Heartbeat ago
-      let heartbeatText = '';
-      if (a.last_heartbeat) {
-        const ago = Math.floor((Date.now() - new Date(a.last_heartbeat).getTime()) / 1000);
-        if (ago < 10) heartbeatText = 'just now';
-        else if (ago < 60) heartbeatText = ago + 's ago';
-        else if (ago < 3600) heartbeatText = Math.floor(ago / 60) + 'm ago';
-        else heartbeatText = Math.floor(ago / 3600) + 'h ago';
+    // Build hierarchy tree
+    // Group by hostname → manager → workers
+    const byHost = {};
+    const noHost = [];
+    agents.forEach(function(a) {
+      const host = a.hostname || '';
+      if (host) {
+        if (!byHost[host]) byHost[host] = [];
+        byHost[host].push(a);
+      } else {
+        noHost.push(a);
       }
+    });
 
-      const metaText = a.is_typing
-        ? '<span class="agent-typing-text">typing...</span>'
-        : (hostname ? esc(hostname) + ' · ' : '') + esc(status);
+    let html = '';
 
-      // Deterministic bot index from name
-      var botHash = 0;
-      for (var ci = 0; ci < name.length; ci++) botHash = name.charCodeAt(ci) + ((botHash << 5) - botHash);
-      var botIdx = Math.abs(botHash) % 8;
+    // Render grouped by machine
+    Object.keys(byHost).sort().forEach(function(host) {
+      const hostAgents = byHost[host];
+      // Host header
+      html += '<div style="font-size:10px;font-weight:600;color:var(--text3);padding:6px 0 3px;letter-spacing:.05em;text-transform:uppercase;">' + esc(host) + '</div>';
 
-      return '<div class="agent-item">' +
-        '<div class="agent-avatar' + (isActive ? ' active' : '') + '" style="background:' + color + '10;">' +
-          '<div class="pixel-bot bot-' + botIdx + '"></div>' +
-          '<div class="agent-status-dot ' + esc(status) + '"></div>' +
-        '</div>' +
-        '<div class="agent-info">' +
-          '<div class="agent-name">' + esc(name) + '</div>' +
-          '<div class="agent-meta">' + metaText + '</div>' +
-        '</div>' +
-        (heartbeatText ? '<div class="agent-heartbeat">' + esc(heartbeatText) + '</div>' : '') +
-      '</div>';
-    }).join('');
+      // Managers first, then workers
+      const managers = hostAgents.filter(function(a) { return a.role === 'manager'; });
+      const workers = hostAgents.filter(function(a) { return a.role !== 'manager'; });
+
+      managers.forEach(function(mgr) {
+        html += agentCard(mgr, 0);
+        // Workers that report to this manager
+        const children = workers.filter(function(w) { return w.parent_agent === mgr.agent_name; });
+        children.forEach(function(w) { html += agentCard(w, 1); });
+      });
+
+      // Workers with no manager
+      const orphans = workers.filter(function(w) { return !w.parent_agent || !agents.find(function(m) { return m.agent_name === w.parent_agent; }); });
+      orphans.forEach(function(w) { html += agentCard(w, managers.length ? 1 : 0); });
+    });
+
+    // Agents with no hostname
+    if (noHost.length) {
+      noHost.sort((a, b) => (a.role === 'manager' ? -1 : 1));
+      noHost.forEach(function(a) { html += agentCard(a, 0); });
+    }
+
+    el.innerHTML = html;
   }
 
   // === Render: Typing bar ===
