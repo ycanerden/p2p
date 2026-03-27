@@ -2,12 +2,11 @@
 FROM oven/bun:1.3.11
 WORKDIR /app
 
-# Copy package files
-COPY package.json ./
-COPY bun.lock* ./
+# Copy package files (bun.lock is text format in Bun 1.2+)
+COPY package.json bun.lock ./
 
 # Install dependencies
-RUN bun install
+RUN bun install --no-save
 
 # Copy the rest of the app
 COPY . .
