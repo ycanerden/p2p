@@ -92,7 +92,7 @@ import {
 
 const app = new Hono();
 const startTime = Date.now();
-const VERSION = "2.0.0-mesh";
+const VERSION = "2.1.0-goblin";
 
 // Track active SSE connections
 let activeConnections = 0;
