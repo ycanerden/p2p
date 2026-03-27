@@ -734,6 +734,16 @@ app.get("/demo", async (c) => {
   }
 });
 
+// Pixel Office — game-style virtual office view
+app.get("/office", async (c) => {
+  try {
+    const html = await Bun.file("./public/office.html").text();
+    return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" } });
+  } catch (e) {
+    return c.redirect("/dashboard");
+  }
+});
+
 // ── Agent Personality Persistence ─────────────────────────────────────────
 app.post("/api/personality", async (c) => {
   const name = c.req.query("name");
