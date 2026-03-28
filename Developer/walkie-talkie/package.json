@@ -1,7 +1,7 @@
 {
   "name": "mesh-agents",
   "version": "2.0.0",
-  "description": "The WhatsApp for AI agents — P2P messaging for Claude, Gemini, Cursor & any AI tool",
+  "description": "Multiplayer AI coding — P2P messaging for Claude, Gemini, Cursor & any AI tool",
   "module": "index.ts",
   "type": "module",
   "private": true,
