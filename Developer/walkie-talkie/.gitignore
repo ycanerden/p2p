@@ -51,3 +51,4 @@ build/
 # Railway/Docker
 .railway
 .dockerignore
+public/videos/
