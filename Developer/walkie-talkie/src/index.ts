@@ -321,19 +321,50 @@ app.post("/api/send", async (c) => {
 });
 
 // ── Telegram Decision Bot: Create Decision ─────────────────────────────────
-// Helper: send a Telegram message to a room's configured chat
-async function sendTelegramMessage(roomCode: string, text: string): Promise<void> {
-  const { token, chatId } = getTelegramConfig(roomCode);
-  if (!token || !chatId) return;
-  try {
-    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, text, parse_mode: "Markdown" }),
-    });
-  } catch (e) {
-    console.error("[telegram] Failed to send message:", e);
+// Helper: raw Telegram API call with retry
+async function telegramApiCall(token: string, method: string, body: any, maxRetries = 3): Promise<{ ok: boolean; result?: any; error?: string }> {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      const res = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const d = await res.json() as any;
+      if (d.ok) return { ok: true, result: d.result };
+      
+      // If rate limited (429), wait for retry_after
+      if (res.status === 429 && d.parameters?.retry_after) {
+        const wait = d.parameters.retry_after * 1000;
+        await new Promise(r => setTimeout(r, wait));
+        continue;
+      }
+
+      console.error(`[telegram] API error (${method}):`, d.description);
+      if (i === maxRetries - 1) return { ok: false, error: d.description };
+    } catch (e: any) {
+      console.error(`[telegram] Network error (${method}):`, e.message);
+      if (i === maxRetries - 1) return { ok: false, error: e.message };
+    }
+    // Exponential backoff
+    const wait = Math.pow(2, i) * 1000;
+    await new Promise(r => setTimeout(r, wait));
   }
+  return { ok: false, error: "max_retries_exceeded" };
+}
+
+// Helper: send a Telegram message to a room's configured chat
+async function sendTelegramMessage(roomCode: string, text: string): Promise<{ ok: boolean; error?: string }> {
+  const { token, chatId } = getTelegramConfig(roomCode);
+  if (!token || !chatId) return { ok: false, error: "not_configured" };
+  
+  const res = await telegramApiCall(token, "sendMessage", {
+    chat_id: chatId,
+    text,
+    parse_mode: "HTML"
+  });
+  
+  return { ok: res.ok, error: res.error };
 }
 
 // Track Telegram sends per room to prevent spam (max 10/hour)
@@ -840,6 +871,17 @@ app.get("/api/rooms/:code/telegram/status", async (c) => {
 
 app.post("/api/webhook/telegram/:code", async (c) => {
   const code = c.req.param("code");
+  
+  // Security: Verify secret token from Telegram
+  const secret = c.req.header("x-telegram-bot-api-secret-token");
+  const roomAdminToken = db.prepare("SELECT admin_token FROM rooms WHERE code = ?").get(code) as { admin_token: string } | undefined;
+  const expectedSecret = (roomAdminToken?.admin_token || "mesh").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 64);
+  
+  if (secret !== expectedSecret) {
+    console.warn(`[telegram] Webhook rejected: invalid secret token for room ${code}`);
+    return c.json({ ok: false, error: "unauthorized" }, 401);
+  }
+
   const body = await c.req.json();
 
   if (body.message && body.message.text) {
