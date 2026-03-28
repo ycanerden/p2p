@@ -16,7 +16,7 @@ if [ -z "$SHELL_RC" ]; then echo "  Could not detect shell. Add the mesh functio
 
 cat >> "$SHELL_RC" << 'MESHFN'
 
-# Mesh CLI (https://github.com/ycanerden/p2p)
+# Mesh CLI (https://github.com/ycanerden/mesh)
 mesh() {
   local server="https://p2p-production-983f.up.railway.app"
   case "$1" in
