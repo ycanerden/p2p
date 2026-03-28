@@ -1083,7 +1083,8 @@ export function createRoomFromTemplate(templateId: string, creatorName: string):
 }
 
 export function createDemoRoom(): { ok: boolean; room_code?: string; error?: string } {
-  const roomCode = createRoom();
+  const room = createRoom();
+  const roomCode = room.code;
 
   // Demo agents introduce themselves
   const demoAgents = ["Thanos", "Goblin", "Jarvis"];
