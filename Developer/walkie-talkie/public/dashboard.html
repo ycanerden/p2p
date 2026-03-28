@@ -1012,6 +1012,8 @@
         ROOM = newRoom;
         allMessages = [];
         lastMsgHash = '';
+        lastMsgTs = 0;
+        knownMsgTs = 0;
         presenceMap = {};
         renderMessages();
         renderAgents();
@@ -1165,6 +1167,7 @@
 
   // === Toast notifications ===
   let knownMsgTs = 0;
+  let lastMsgTs = 0; // tracks highest ts seen — used for incremental ?since= fetches
   function showToast(from, content, isMention) {
     const container = document.getElementById('toast-container');
     if (!container) return;
@@ -1181,33 +1184,44 @@
   }
 
   async function fetchMessages() {
-    const d = await api('/api/history?room=' + encodeURIComponent(ROOM));
+    // Incremental fetch: use ?since= after first load to only pull new messages
+    const url = lastMsgTs > 0
+      ? '/api/history?room=' + encodeURIComponent(ROOM) + '&since=' + lastMsgTs
+      : '/api/history?room=' + encodeURIComponent(ROOM);
+    const d = await api(url);
     if (!d || !d.messages) return;
-    const hash = d.messages.length + '-' + (d.messages.length > 0 ? (d.messages[d.messages.length-1].ts || '') : '');
-    if (hash === lastMsgHash) return;
 
-    // Toast for new messages when tab is not focused
-    if (knownMsgTs > 0 && d.messages.length > 0) {
+    // On incremental fetch, merge new messages into allMessages
+    if (lastMsgTs > 0 && d.messages.length > 0) {
+      const existingIds = new Set(allMessages.map(m => m.id));
+      const newMsgs = d.messages.filter(m => !existingIds.has(m.id));
+      if (newMsgs.length === 0) return;
+      allMessages = allMessages.concat(newMsgs);
+      // Keep last 200 in memory
+      if (allMessages.length > 200) allMessages = allMessages.slice(-200);
+
+      // Toast for new messages
       const viewerName = (senderInput.value.trim() || VIEWER_DEFAULT).toLowerCase();
-      const newMsgs = d.messages.filter(m => (m.ts || 0) > knownMsgTs);
       for (const m of newMsgs) {
-        if (m.from === (senderInput.value.trim() || VIEWER_DEFAULT)) continue; // skip own
+        if (m.from === (senderInput.value.trim() || VIEWER_DEFAULT)) continue;
         const content = m.content || '';
         const isMention = content.toLowerCase().includes('@' + viewerName);
         if (isMention || !document.hasFocus()) {
           showToast(m.from, content, isMention);
-          // Browser notification for mentions
           if (isMention && Notification.permission === 'granted') {
             new Notification(m.from + ' mentioned you', { body: content.slice(0,80), icon: '/favicon.ico' });
           }
         }
       }
+      lastMsgTs = Math.max(...allMessages.map(m => m.ts || 0));
+      renderMessages();
+    } else if (lastMsgTs === 0) {
+      // Initial full load
+      allMessages = d.messages;
+      if (d.messages.length > 0) lastMsgTs = Math.max(...d.messages.map(m => m.ts || 0));
+      if (knownMsgTs === 0 && lastMsgTs > 0) knownMsgTs = lastMsgTs;
+      renderMessages();
     }
-    if (d.messages.length > 0) knownMsgTs = Math.max(...d.messages.map(m => m.ts || 0));
-
-    lastMsgHash = hash;
-    allMessages = d.messages;
-    renderMessages();
   }
 
   async function fetchPresence() {
