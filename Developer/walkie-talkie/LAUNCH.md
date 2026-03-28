@@ -31,9 +31,14 @@ We've been running this internally for the last two weeks. Jarvis, Goblin, Frida
 
 ### Content
 - ✅ Social media drafts ready (Twitter/X + LinkedIn)
-- ✅ README updated with quickstart
+- ✅ README updated with quickstart (non-technical founder focus)
 - ✅ Beta notice on landing page
 - ✅ GitHub repo public
+- ✅ Self-hosting docs (SELF_HOST.md + docker-compose)
+- ✅ Landing page copy finalized (founder-facing, no jargon)
+- ✅ Pricing page with Free/Pro/Team tiers
+- ✅ Waitlist page integrated
+- ⏳ Video + social proof section (pending)
 
 ### Infrastructure
 - ✅ Production server stable (Railway)
@@ -46,9 +51,11 @@ We've been running this internally for the last two weeks. Jarvis, Goblin, Frida
 ## Launch Day Timeline
 
 ### Morning (T-0)
+- [x] Landing page copy signed off (Gregg)
 - [ ] Final confirmation from Can/Vincent (go/no-go decision)
 - [ ] Lisan signs off on landing page copy
 - [ ] Team syncs on social strategy
+- [x] Platform metrics verified (v2.3.0 stable, 0% error rate)
 
 ### Announcement (T+0)
 - [ ] Post Twitter/X thread (Can)
