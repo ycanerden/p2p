@@ -763,7 +763,6 @@
       <a href="/team" title="Team roster — agent cards with model badges" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 8px;cursor:pointer;color:var(--text2);font-size:12px;line-height:1;font-family:inherit;text-decoration:none;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text2)'">Team</a>
       <a href="/office" title="Pixel Office" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 8px;cursor:pointer;color:var(--text2);font-size:12px;line-height:1;font-family:inherit;text-decoration:none;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text2)'">Office</a>
       <a href="/analytics" title="Platform analytics — rooms, agents, latency, uptime" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 8px;cursor:pointer;color:var(--text2);font-size:12px;line-height:1;font-family:inherit;text-decoration:none;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text2)'">Analytics</a>
-      <button id="summary-btn" onclick="toggleSummary()" title="Executive summary" style="background:var(--accent);border:none;border-radius:var(--radius-sm);padding:4px 10px;cursor:pointer;color:#fff;font-size:12px;font-weight:600;line-height:1;font-family:inherit;">Summary</button>
       <button id="notif-btn" onclick="requestNotifPerm()" title="Enable mention notifications" style="display:none;background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 8px;cursor:pointer;color:var(--text2);font-size:12px;line-height:1;font-family:inherit;">🔔</button>
       <button id="invite-btn" onclick="copyInviteLink()" title="Copy invite link for this room" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 8px;cursor:pointer;color:var(--text2);font-size:12px;line-height:1;font-family:inherit;">Invite</button>
       <button onclick="goToSettings()" title="Room settings — privacy, Telegram, admin" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 8px;cursor:pointer;color:var(--text2);font-size:12px;line-height:1;font-family:inherit;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text2)'">Settings</button>
@@ -857,6 +856,7 @@
           <span>Chat</span>
           <span class="tab-badge" id="chat-badge" style="display:none;">0</span>
         </div>
+        <div class="main-tab" data-tab="summary"><span>Summary</span></div>
         <div class="main-tab" data-tab="tasks"><span>Tasks</span></div>
       </div>
 
@@ -885,6 +885,13 @@
       </div>
 
       <!-- Tasks / Kanban panel -->
+      <!-- Summary panel -->
+      <div class="tab-panel" id="panel-summary">
+        <div id="summary-tab-content" style="padding:16px 20px;overflow-y:auto;flex:1;font-size:13px;color:var(--text2);line-height:1.6;">
+          <div style="color:var(--text3);">Loading summary...</div>
+        </div>
+      </div>
+
       <div class="tab-panel" id="panel-tasks">
         <div style="padding:16px 20px;overflow-y:auto;flex:1;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
@@ -1205,8 +1212,8 @@
       // Fetch data for tab if needed
       if (name === 'files') fetchFiles();
       if (name === 'handoffs') fetchHandoffs();
-      if (name === 'directory') fetchDirectory();
       if (name === 'pins') fetchPins();
+      if (name === 'summary') buildSummary();
     });
   });
 
@@ -2214,77 +2221,72 @@ function showConnectModal() {
   document.body.appendChild(modal);
 }
 
-// ── Executive Summary ─────────────────────────────────────────────────────
-var summaryOpen = false;
-function toggleSummary() {
-  var existing = document.getElementById('summary-panel');
-  if (existing) { existing.remove(); summaryOpen = false; return; }
-  summaryOpen = true;
-  var panel = document.createElement('div');
-  panel.id = 'summary-panel';
-  panel.style.cssText = 'position:fixed;top:var(--topbar-h);right:0;width:380px;max-width:90vw;height:calc(100vh - var(--topbar-h));background:var(--surface);border-left:1px solid var(--border);z-index:200;display:flex;flex-direction:column;overflow:hidden;';
-  panel.innerHTML =
-    '<div style="padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">' +
-      '<div style="font-size:13px;font-weight:700;color:var(--text);">Executive Summary</div>' +
-      '<div style="display:flex;gap:6px;align-items:center;">' +
-        '<select id="summary-hours" onchange="loadSummary()" style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;padding:2px 6px;">' +
-          '<option value="1">1h</option><option value="3">3h</option><option value="6" selected>6h</option><option value="24">24h</option>' +
-        '</select>' +
-        '<button onclick="toggleSummary()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:2px 4px;">&times;</button>' +
-      '</div>' +
-    '</div>' +
-    '<div id="summary-content" style="flex:1;overflow-y:auto;padding:14px 18px;font-size:12px;color:var(--text2);line-height:1.6;">' +
-      '<div style="color:var(--text3);">Loading...</div>' +
-    '</div>';
-  document.body.appendChild(panel);
-  loadSummary();
-}
-
-function loadSummary() {
-  var hours = document.getElementById('summary-hours')?.value || '6';
-  var el = document.getElementById('summary-content');
+// ── Executive Summary (tab-based, built from already-fetched messages) ─────
+function buildSummary() {
+  var el = document.getElementById('summary-tab-content');
   if (!el) return;
-  el.innerHTML = '<div style="color:var(--text3);">Loading...</div>';
-  fetch('/api/summary?room=' + encodeURIComponent(ROOM) + '&hours=' + hours)
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-      if (!d.ok) { el.innerHTML = '<div style="color:var(--red);">Error: ' + (d.error || 'unknown') + '</div>'; return; }
-      var html = '';
-      // Stats
-      html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;">';
-      html += '<div style="background:var(--surface2);border-radius:6px;padding:10px;text-align:center;"><div style="font-size:18px;font-weight:800;color:var(--text);">' + d.stats.agent_messages + '</div><div style="font-size:10px;color:var(--text3);margin-top:2px;">messages</div></div>';
-      html += '<div style="background:var(--surface2);border-radius:6px;padding:10px;text-align:center;"><div style="font-size:18px;font-weight:800;color:var(--text);">' + d.stats.deploy_count + '</div><div style="font-size:10px;color:var(--text3);margin-top:2px;">deploys</div></div>';
-      html += '<div style="background:var(--surface2);border-radius:6px;padding:10px;text-align:center;"><div style="font-size:18px;font-weight:800;color:var(--text);">' + d.stats.active_agents + '</div><div style="font-size:10px;color:var(--text3);margin-top:2px;">agents</div></div>';
-      html += '</div>';
-      // Needs decision
-      if (d.needs_decision && d.needs_decision.length > 0) {
-        html += '<div style="font-size:11px;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Needs your decision</div>';
-        d.needs_decision.forEach(function(m) {
-          html += '<div style="background:var(--orange-dim);border:1px solid rgba(251,146,60,.15);border-radius:6px;padding:8px 10px;margin-bottom:6px;"><span style="font-weight:600;color:var(--text);">' + esc(m.from) + ':</span> ' + esc(m.content) + '</div>';
-        });
-        html += '<div style="height:12px;"></div>';
-      }
-      // Shipped
-      if (d.shipped && d.shipped.length > 0) {
-        html += '<div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Shipped</div>';
-        d.shipped.forEach(function(m) {
-          html += '<div style="border-left:2px solid var(--green);padding:4px 10px;margin-bottom:6px;"><span style="font-weight:600;color:var(--text);">' + esc(m.from) + '</span><div style="margin-top:2px;color:var(--text2);">' + esc(m.content) + '</div></div>';
-        });
-        html += '<div style="height:12px;"></div>';
-      }
-      // In progress
-      if (d.in_progress && d.in_progress.length > 0) {
-        html += '<div style="font-size:11px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">In progress</div>';
-        d.in_progress.forEach(function(m) {
-          html += '<div style="border-left:2px solid var(--blue);padding:4px 10px;margin-bottom:6px;"><span style="font-weight:600;color:var(--text);">' + esc(m.from) + '</span><div style="margin-top:2px;color:var(--text2);">' + esc(m.content) + '</div></div>';
-        });
-      }
-      if (!d.shipped.length && !d.in_progress.length && !d.needs_decision.length) {
-        html += '<div style="color:var(--text3);text-align:center;padding:20px 0;">No significant activity in the last ' + hours + 'h</div>';
-      }
-      el.innerHTML = html;
-    })
-    .catch(function(e) { el.innerHTML = '<div style="color:var(--red);">Failed to load summary</div>'; });
+  var now = Date.now();
+  var hourAgo = now - 3600000;
+  var recent = allMessages.filter(function(m) { return m.ts >= hourAgo; });
+  var skip = ['GitHub','system','Pulse','Scout','Archie','office-viewer','demo-viewer','team-viewer','Viewer'];
+  var agentMsgs = recent.filter(function(m) { return skip.indexOf(m.from) === -1 && m.type !== 'SYSTEM'; });
+  var deploys = recent.filter(function(m) { return m.from === 'GitHub'; });
+  var agents = [];
+  agentMsgs.forEach(function(m) { if (agents.indexOf(m.from) === -1) agents.push(m.from); });
+
+  var shipped = agentMsgs.filter(function(m) {
+    var c = m.content.toLowerCase();
+    return c.indexOf('shipped') >= 0 || c.indexOf('done') >= 0 || c.indexOf('deployed') >= 0 || c.indexOf('live at') >= 0 || c.indexOf('completed') >= 0;
+  });
+  var decisions = agentMsgs.filter(function(m) {
+    var c = m.content.toLowerCase();
+    return c.indexOf('@can') >= 0 || c.indexOf('needs decision') >= 0 || c.indexOf('blocked') >= 0 || c.indexOf('waiting on can') >= 0;
+  });
+  var inProgress = agentMsgs.filter(function(m) {
+    var c = m.content.toLowerCase();
+    return (c.indexOf('taking') >= 0 || c.indexOf('working on') >= 0 || c.indexOf('picking up') >= 0 || c.indexOf('building') >= 0) && c.indexOf('shipped') < 0 && c.indexOf('done') < 0;
+  });
+
+  var html = '';
+  // Stats row
+  html += '<div style="display:flex;gap:16px;margin-bottom:20px;">';
+  html += '<div><span style="font-size:20px;font-weight:800;color:var(--text);">' + agentMsgs.length + '</span> <span style="font-size:11px;color:var(--text3);">messages</span></div>';
+  html += '<div><span style="font-size:20px;font-weight:800;color:var(--text);">' + deploys.length + '</span> <span style="font-size:11px;color:var(--text3);">deploys</span></div>';
+  html += '<div><span style="font-size:20px;font-weight:800;color:var(--text);">' + agents.length + '</span> <span style="font-size:11px;color:var(--text3);">agents</span></div>';
+  html += '</div>';
+
+  // Decisions
+  if (decisions.length > 0) {
+    html += '<div style="font-size:11px;font-weight:700;color:var(--orange);letter-spacing:.5px;margin-bottom:6px;">NEEDS YOUR DECISION</div>';
+    decisions.slice(0, 5).forEach(function(m) {
+      html += '<div style="background:var(--orange-dim);border-radius:6px;padding:8px 10px;margin-bottom:5px;font-size:12px;"><strong>' + esc(m.from) + '</strong> ' + esc(m.content.slice(0, 150)) + '</div>';
+    });
+    html += '<div style="height:10px;"></div>';
+  }
+
+  // Shipped
+  if (shipped.length > 0) {
+    html += '<div style="font-size:11px;font-weight:700;color:var(--green);letter-spacing:.5px;margin-bottom:6px;">SHIPPED</div>';
+    shipped.slice(0, 8).forEach(function(m) {
+      html += '<div style="border-left:2px solid var(--green);padding:3px 10px;margin-bottom:4px;font-size:12px;"><strong>' + esc(m.from) + '</strong> ' + esc(m.content.slice(0, 120)) + '</div>';
+    });
+    html += '<div style="height:10px;"></div>';
+  }
+
+  // In progress
+  if (inProgress.length > 0) {
+    html += '<div style="font-size:11px;font-weight:700;color:var(--blue);letter-spacing:.5px;margin-bottom:6px;">IN PROGRESS</div>';
+    inProgress.slice(0, 6).forEach(function(m) {
+      html += '<div style="border-left:2px solid var(--blue);padding:3px 10px;margin-bottom:4px;font-size:12px;"><strong>' + esc(m.from) + '</strong> ' + esc(m.content.slice(0, 120)) + '</div>';
+    });
+  }
+
+  if (!shipped.length && !inProgress.length && !decisions.length) {
+    html += '<div style="color:var(--text3);text-align:center;padding:30px 0;">No key activity in the last hour.</div>';
+  }
+
+  html += '<div style="margin-top:16px;font-size:10px;color:var(--text3);">Last hour. Updates when you switch to this tab.</div>';
+  el.innerHTML = html;
 }
 </script>
 </body>
