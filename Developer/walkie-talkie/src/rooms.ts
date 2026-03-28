@@ -416,24 +416,50 @@ export function isRoomPrivate(roomCode: string): boolean {
   return row ? row.is_private === 1 : false;
 }
 
-// Simple hash for room passwords — no crypto dep, uses Bun.hash
-function simpleHash(s: string): string {
+// Secure password hashing with salt using Bun's built-in crypto
+function hashPassword(password: string, salt?: string): { hash: string; salt: string } {
+  const s = salt || crypto.randomUUID();
+  const hasher = new Bun.CryptoHasher("sha256");
+  hasher.update(s + ":" + password);
+  return { hash: hasher.digest("hex"), salt: s };
+}
+
+// Legacy DJB2 hash for backwards compatibility with existing passwords
+function legacyHash(s: string): string {
   let h = 5381n;
   for (let i = 0; i < s.length; i++) h = (h * 33n ^ BigInt(s.charCodeAt(i))) & 0xffffffffffffffffn;
   return h.toString(16);
 }
 
 export function setRoomPassword(roomCode: string, password: string | null): void {
-  const hash = password ? simpleHash(password) : null;
-  db.prepare("UPDATE rooms SET room_password_hash = ?, is_private = ? WHERE code = ?").run(hash, password ? 1 : 0, roomCode);
+  if (!password) {
+    db.prepare("UPDATE rooms SET room_password_hash = ?, is_private = ? WHERE code = ?").run(null, 0, roomCode);
+    return;
+  }
+  const { hash, salt } = hashPassword(password);
+  // Store as "salt:hash" format so we can verify later
+  db.prepare("UPDATE rooms SET room_password_hash = ?, is_private = ? WHERE code = ?").run(`${salt}:${hash}`, 1, roomCode);
 }
 
 export function verifyRoomPassword(roomCode: string, password: string): boolean {
   const row = db.prepare("SELECT room_password_hash, is_private FROM rooms WHERE code = ?").get(roomCode) as any;
   if (!row) return false;
-  // No password set — open room
   if (!row.room_password_hash) return true;
-  return simpleHash(password) === row.room_password_hash;
+  const stored = row.room_password_hash as string;
+  // New format: "salt:hash"
+  if (stored.includes(":")) {
+    const [salt, expectedHash] = stored.split(":");
+    const { hash } = hashPassword(password, salt);
+    return hash === expectedHash;
+  }
+  // Legacy format: plain DJB2 hash — verify and upgrade
+  if (legacyHash(password) === stored) {
+    // Upgrade to new format on successful verify
+    const { hash, salt } = hashPassword(password);
+    db.prepare("UPDATE rooms SET room_password_hash = ? WHERE code = ?").run(`${salt}:${hash}`, roomCode);
+    return true;
+  }
+  return false;
 }
 
 export function getRoomPasswordHash(roomCode: string): string | null {
