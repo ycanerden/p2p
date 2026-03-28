@@ -354,17 +354,19 @@ export function joinRoom(code: string, name: string): boolean | null {
 
   const user = db.prepare("SELECT 1 FROM users WHERE room_code = ? AND name = ?").get(code, name);
   if (!user) {
-    db.prepare("INSERT INTO users (room_code, name, cursor, last_seen) VALUES (?, ?, 0, ?)")
-      .run(code, name, Date.now());
+    const maxRowidRow = db.prepare("SELECT MAX(rowid) as maxRowid FROM messages WHERE room_code = ?").get(code) as { maxRowid: number | null };
+    const initialCursor = maxRowidRow.maxRowid || 0;
+
+    db.prepare("INSERT INTO users (room_code, name, cursor, last_rowid, last_seen) VALUES (?, ?, ?, ?, ?)")
+      .run(code, name, 0, initialCursor, Date.now());
   } else {
     db.prepare("UPDATE users SET last_seen = ? WHERE room_code = ? AND name = ?")
       .run(Date.now(), code, name);
   }
-  
+
   db.prepare("UPDATE rooms SET last_activity = ? WHERE code = ?").run(Date.now(), code);
   return true as const;
 }
-
 export function getRoomCount(): number {
   const row = db.prepare("SELECT COUNT(*) as count FROM rooms").get() as { count: number };
   return row.count;
@@ -652,12 +654,19 @@ export function getRoomStatus(
   const room = db.prepare("SELECT 1 FROM rooms WHERE code = ?").get(code);
   if (!room) return { ok: false, error: "room_expired_or_not_found" };
 
+  const fiveMinsAgo = Date.now() - 5 * 60 * 1000;
+
   const partners = db.prepare(`
-    SELECT u.name, c.card_json 
+    SELECT u.name, c.card_json
     FROM users u
     LEFT JOIN agent_cards c ON u.room_code = c.room_code AND u.name = c.name
-    WHERE u.room_code = ? AND u.name != ?
-  `).all(code, name) as any[];
+    WHERE u.room_code = ? 
+      AND u.name != ?
+      AND u.last_seen > ?
+      AND u.name NOT LIKE '%viewer%'
+      AND u.name NOT LIKE 'Viewer%'
+      AND u.name NOT LIKE 'synthetic-%'
+  `).all(code, name, fiveMinsAgo) as any[];
 
   const partnersWithCards = partners.map(p => ({
     name: p.name,
@@ -673,7 +682,6 @@ export function getRoomStatus(
     message_count: countRow.count,
   };
 }
-
 // ── Message Admin ─────────────────────────────────────────────────────────────
 
 export function deleteMessage(messageId: string, roomCode: string): boolean {
