@@ -1330,6 +1330,50 @@ app.get("/master-dashboard", async (c) => {
 });
 
 // ── Task Board API ───────────────────────────────────────────────────────────
+// ── Webhooks ───────────────────────────────────────────────────────────────
+
+app.post("/api/webhooks/github", async (c) => {
+  const room = c.req.query("room");
+  if (!room) return c.json({ error: "missing room" }, 400);
+  
+  const event = c.req.header("x-github-event");
+  try {
+    const payload = await c.req.json();
+    let message = "";
+    let type: any = "SYSTEM";
+
+    if (event === "push") {
+      const repo = payload.repository.full_name;
+      const branch = payload.ref.split("/").pop();
+      const commits = payload.commits || [];
+      if (commits.length === 0) return c.json({ ok: true });
+      
+      message = `📦 **Push to ${repo} (${branch})**\n`;
+      commits.slice(0, 3).forEach((commit: any) => {
+        message += `• ${commit.message.split("\n")[0]} — ${commit.author.name}\n`;
+      });
+      if (commits.length > 3) message += `• ...and ${commits.length - 3} more commits`;
+    } else if (event === "pull_request") {
+      const action = payload.action;
+      const pr = payload.pull_request;
+      message = `🔀 **PR ${action}: ${pr.title}**\n${pr.html_url}`;
+    } else if (event === "issues") {
+      const action = payload.action;
+      const issue = payload.issue;
+      message = `🎫 **Issue ${action}: ${issue.title}**\n${issue.html_url}`;
+    } else if (event === "ping") {
+      message = "📡 GitHub Webhook connected successfully!";
+    }
+
+    if (message) {
+      appendMessage(room, "GitHub", message, undefined, "BROADCAST");
+    }
+    
+    return c.json({ ok: true });
+  } catch (e) {
+    return c.json({ error: "invalid payload" }, 400);
+  }
+});
 app.get("/api/tasks", (c) => {
   const room = c.req.query("room");
   if (!room) return c.json({ error: "missing room" }, 400);

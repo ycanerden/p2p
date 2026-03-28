@@ -160,6 +160,19 @@
       <button class="share-btn" onclick="copyInviteLink()">Copy invite link</button>
     </div>
 
+    <div class="divider"></div>
+
+    <div class="share-label">Automate your office:</div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px;text-align:left;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <span style="font-size:18px;">🐙</span>
+        <strong style="font-size:13px;">GitHub Webhook</strong>
+      </div>
+      <p style="font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.4;">Broadcast commits, PRs, and issues into this room. Add this URL to your GitHub repository settings:</p>
+      <div style="font-family:monospace;background:var(--bg);padding:8px;border-radius:6px;font-size:10px;word-break:break-all;border:1px solid var(--border);color:var(--accent);" id="webhook-url">---</div>
+      <button onclick="copyWebhookUrl()" style="margin-top:8px;background:none;border:1px solid var(--border);color:var(--text2);font-size:10px;padding:4px 8px;border-radius:4px;cursor:pointer;">Copy Webhook URL</button>
+    </div>
+
     <div class="secondary-links" id="sec-links"></div>
   </div>
 </div>
@@ -261,6 +274,7 @@ async function doSetup() {
   document.getElementById('config-code').textContent = cfg.code;
   document.getElementById('setup-instructions').innerHTML = cfg.instructions;
   document.getElementById('share-code').textContent = _room;
+  document.getElementById('webhook-url').textContent = `${base}/api/webhooks/github?room=${_room}`;
 
   document.getElementById('sec-links').innerHTML = [
     `<a href="/dashboard?room=${_room}" class="sec-link" target="_blank">Dashboard</a>`,
@@ -325,6 +339,13 @@ function startVerification() {
       document.getElementById('btn-go').classList.add('show');
     }
   }, 5000);
+}
+
+function copyWebhookUrl() {
+  const url = document.getElementById('webhook-url').textContent;
+  navigator.clipboard.writeText(url).then(() => {
+    alert('Webhook URL copied to clipboard!');
+  });
 }
 
 function goToOffice() {
