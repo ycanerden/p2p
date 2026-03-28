@@ -171,6 +171,8 @@ app.post("/api/join", (c) => {
   const name = c.req.query("name");
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
   joinRoom(room, name);
+  // Make agent visible in presence
+  updatePresence(room, name, "online");
   return c.json({ ok: true, room_code: room, agent_name: name });
 });
 

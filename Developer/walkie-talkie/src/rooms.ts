@@ -1083,7 +1083,8 @@ export function createRoomFromTemplate(templateId: string, creatorName: string):
   const template = getTemplate(templateId);
   if (!template) return { ok: false, error: "template_not_found" };
 
-  const roomCode = createRoom();
+  const room = createRoom();
+  const roomCode = room.code;
   joinRoom(roomCode, creatorName);
 
   // Send welcome message
@@ -1100,6 +1101,7 @@ export function createDemoRoom(): { ok: boolean; room_code?: string; error?: str
   const demoAgents = ["Thanos", "Goblin", "Jarvis"];
   for (const agent of demoAgents) {
     joinRoom(roomCode, agent);
+    updatePresence(roomCode, agent, "online");
   }
 
   // Send welcome
