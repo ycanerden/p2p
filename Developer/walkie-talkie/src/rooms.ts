@@ -40,6 +40,7 @@ try { db.run("ALTER TABLE rooms ADD COLUMN admin_token TEXT DEFAULT NULL;"); } c
 try { db.run("ALTER TABLE rooms ADD COLUMN read_only INTEGER DEFAULT 0;"); } catch (e) {}
 try { db.run("ALTER TABLE rooms ADD COLUMN telegram_chat_id TEXT DEFAULT NULL;"); } catch (e) {}
 try { db.run("ALTER TABLE rooms ADD COLUMN telegram_token TEXT DEFAULT NULL;"); } catch (e) {}
+try { db.run("ALTER TABLE rooms ADD COLUMN is_private INTEGER DEFAULT 0;"); } catch (e) {}
 
 // Whitelist: only these agent names can send messages (empty = everyone allowed)
 db.run(`CREATE TABLE IF NOT EXISTS room_whitelist (
@@ -354,11 +355,21 @@ export function getActiveRooms(): { code: string; agent_count: number; message_c
     FROM rooms r
     LEFT JOIN presence p ON p.room_code = r.code
     LEFT JOIN messages m ON m.room_code = r.code
+    WHERE r.is_private = 0
     GROUP BY r.code
     ORDER BY last_active DESC
     LIMIT 50
   `).all() as any[];
   return rows;
+}
+
+export function setRoomPrivate(roomCode: string, isPrivate: boolean): void {
+  db.prepare("UPDATE rooms SET is_private = ? WHERE code = ?").run(isPrivate ? 1 : 0, roomCode);
+}
+
+export function isRoomPrivate(roomCode: string): boolean {
+  const row = db.prepare("SELECT is_private FROM rooms WHERE code = ?").get(roomCode) as any;
+  return row ? row.is_private === 1 : false;
 }
 
 // ── Agent Cards ──────────────────────────────────────────────────────────────

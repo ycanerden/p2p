@@ -86,6 +86,8 @@ import {
   setRateLimitExempt,
   getRateLimitExemptList,
   getActiveRooms,
+  setRoomPrivate,
+  isRoomPrivate,
 } from "./rooms.js";
 import {
   createRoomGroup,
@@ -549,6 +551,23 @@ app.delete("/api/webhooks", async (c) => {
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
   removeWebhook(room, name);
   return c.json({ ok: true });
+});
+
+// ── Room Privacy ─────────────────────────────────────────────────────────────
+// POST /api/rooms/:code/private  body: {private: true/false, secret: "admin_token"}
+app.post("/api/rooms/:code/private", async (c) => {
+  const code = c.req.param("code");
+  const { private: makePrivate, secret } = await c.req.json();
+  if (!verifyAdmin(code, secret)) {
+    return c.json({ ok: false, error: "unauthorized" }, 401);
+  }
+  setRoomPrivate(code, !!makePrivate);
+  return c.json({ ok: true, room: code, private: !!makePrivate });
+});
+
+app.get("/api/rooms/:code/private", (c) => {
+  const code = c.req.param("code");
+  return c.json({ room: code, private: isRoomPrivate(code) });
 });
 
 // ── Telegram Integration ───────────────────────────────────────────────────
