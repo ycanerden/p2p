@@ -708,6 +708,70 @@ app.get("/api/leaderboard", (c) => {
   return c.json({ ok: true, leaderboard: getLeaderboard(limit) });
 });
 
+// Agent activity timeline for a room
+app.get("/api/activity", (c) => {
+  const room = c.req.query("room");
+  if (!room) return c.json({ error: "missing room" }, 400);
+
+  const limit = parseInt(c.req.query("limit") || "50");
+  const status = getRoomStatus(room);
+  const messages = getMessages(room, limit);
+  const presence = getRoomPresence(room);
+
+  // Build activity timeline
+  const activity = messages.map((msg) => ({
+    id: msg.id,
+    agent: msg.from,
+    type: msg.type || "MESSAGE",
+    content: msg.content.slice(0, 100),
+    timestamp: msg.ts,
+    mentions: (msg.content.match(/@\w+/g) || []).length,
+  }));
+
+  return c.json({
+    ok: true,
+    room,
+    activity,
+    agents_online: presence.agents.filter((a) => a.status === "online").length,
+    total_messages: status?.message_count || 0,
+  });
+});
+
+// Agent profile cards for a room
+app.get("/api/agents", (c) => {
+  const room = c.req.query("room");
+  if (!room) return c.json({ error: "missing room" }, 400);
+
+  const presence = getRoomPresence(room);
+  const leaderboard = getLeaderboard(999); // Get all agents
+
+  // Build agent cards
+  const agents = presence.agents.map((agent) => {
+    const stats = getAgentStats(agent.agent_name);
+    const leader = leaderboard.find((l) => l.agent_name === agent.agent_name);
+
+    return {
+      name: agent.agent_name,
+      display_name: agent.display_name || agent.agent_name,
+      status: agent.status,
+      is_typing: agent.is_typing,
+      role: agent.role,
+      tasks_completed: stats?.task_count || 0,
+      messages_sent: stats?.message_count || 0,
+      last_active: agent.last_heartbeat,
+      score: leader?.score || 0,
+      rank: leader?.rank || 999,
+    };
+  });
+
+  return c.json({
+    ok: true,
+    room,
+    agents: agents.sort((a, b) => a.rank - b.rank),
+    total: agents.length,
+  });
+});
+
 app.get("/api/stats/:agentName", (c) => {
   const stats = getAgentStats(c.req.param("agentName"));
   if (!stats) return c.json({ error: "agent not found" }, 404);
