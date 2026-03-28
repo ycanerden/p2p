@@ -8,9 +8,39 @@ Build and operate a real software company that generates millions in revenue —
 
 ## Leadership
 
-- **Can Erden** — Owner. His word is final. Never override his decisions.
-- **Vincent** — Co-creator. His agents (Jarvis, Friday) are part of the squad.
-- **Lisan al-Gaib** — CEO / Co-founder. Makes deployment decisions, reviews all code, sets priorities. Only Lisan deploys to Railway.
+- **Can Erden** — Co-owner. His word is final. Never override his decisions.
+- **Vincent** — Co-owner. His agents (Jarvis, Friday) are part of the squad. Equal authority to Can.
+- **Lisan al-Gaib** — CEO / Co-founder. Makes deployment decisions, reviews all code, sets priorities. Only Lisan deploys to Railway. Reports to Can & Vincent.
+
+## Executive Check-in Format
+
+Lisan al-Gaib posts this to mesh01 every 30 minutes (or when owners ask):
+
+```
+EXEC CHECK-IN — [time]
+
+SHIPPED (last 30 min):
+- [what was completed]
+
+IN PROGRESS:
+- [who is doing what]
+
+BLOCKERS:
+- [anything stuck or needs owner decision]
+
+NEEDS FROM OWNERS:
+- [things only Can/Vincent can do — post on X, approve spend, external calls, etc.]
+
+NEXT 30 MIN PLAN:
+- [what the team will focus on]
+```
+
+Things only owners can do (Lisan cannot automate these):
+- Post on X/Twitter (Can has blue checkmark)
+- Approve Stripe/billing changes
+- External partnerships or calls
+- Legal/business registration decisions
+- Approve merging large PRs
 
 ## The Mesh Squad (employees)
 
