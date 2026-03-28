@@ -377,6 +377,235 @@ app.get("/api/skills/:skillId", (c) => {
   return c.json({ ok: true, skill });
 });
 
+type RecipientType = "agent" | "user";
+type SlashCommandResult = {
+  ok: boolean;
+  command: string;
+  result?: any;
+  error?: string;
+  audit: string;
+};
+
+function parseTargetMention(message: string): { to?: string; to_type?: RecipientType } {
+  // Explicit tagging syntax for clean separation:
+  //   @agent:Name
+  //   @user:Name
+  const mention = message.match(/@(?:(agent|user):)([A-Za-z0-9 _.-]{1,64})/i);
+  if (!mention) return {};
+  const kind = mention[1]?.toLowerCase() as RecipientType;
+  const targetName = mention[2]?.trim();
+  if (!targetName) return {};
+  return { to: targetName, to_type: kind };
+}
+
+function normalizeRecipient(rawTo?: string, rawType?: string): { to?: string; to_type?: RecipientType } {
+  if (!rawTo) return {};
+  const prefixed = rawTo.match(/^(agent|user):(.*)$/i);
+  if (prefixed) {
+    const kind = prefixed[1].toLowerCase() as RecipientType;
+    const targetName = prefixed[2].trim();
+    if (!targetName) return {};
+    return { to: targetName, to_type: kind };
+  }
+  const normalizedType = rawType && (rawType.toLowerCase() === "agent" || rawType.toLowerCase() === "user")
+    ? (rawType.toLowerCase() as RecipientType)
+    : undefined;
+  return { to: rawTo.trim(), to_type: normalizedType };
+}
+
+function runSlashCommand(input: {
+  room: string;
+  actorName: string;
+  actorDisplayName: string;
+  message: string;
+}): SlashCommandResult | null {
+  const raw = input.message.trim();
+  if (!raw.startsWith("/")) return null;
+
+  const [firstToken] = raw.split(/\s+/, 1);
+  const command = firstToken.slice(1).toLowerCase();
+
+  if (command === "help") {
+    const commands = [
+      "/help",
+      "/status",
+      "/presence",
+      "/tasks",
+      "/assign <agent> <task_id> <task_title...>",
+      "/done <task_id>",
+      "/msg @agent:Name <text...>",
+      "/msg @user:Name <text...>",
+    ];
+    return {
+      ok: true,
+      command,
+      result: { commands },
+      audit: `help requested`,
+    };
+  }
+
+  if (command === "status") {
+    const status = getRoomStatus(input.room, input.actorName);
+    if (!status.ok) {
+      return {
+        ok: false,
+        command,
+        error: status.error,
+        audit: `status failed (${status.error})`,
+      };
+    }
+    return {
+      ok: true,
+      command,
+      result: status,
+      audit: `status checked (${status.message_count} msgs, ${status.partners.length} partners)`,
+    };
+  }
+
+  if (command === "presence") {
+    const agents = getRoomPresence(input.room);
+    const online = agents.filter((a: any) => a.status === "online" || a.is_typing).length;
+    return {
+      ok: true,
+      command,
+      result: { agents, count: agents.length, online },
+      audit: `presence checked (${online}/${agents.length} online)`,
+    };
+  }
+
+  if (command === "tasks") {
+    const roomTasks = getRoomTasks(input.room);
+    const myTasks = getAgentTasks(input.room, input.actorName);
+    return {
+      ok: true,
+      command,
+      result: {
+        room_tasks: roomTasks,
+        my_tasks: myTasks,
+        room_count: roomTasks.length,
+        my_count: myTasks.length,
+      },
+      audit: `tasks checked (${myTasks.length} mine, ${roomTasks.length} room)`,
+    };
+  }
+
+  if (command === "assign") {
+    const m = raw.match(/^\/assign\s+(\S+)\s+(\S+)\s+(.+)$/i);
+    if (!m) {
+      return {
+        ok: false,
+        command,
+        error: "usage: /assign <agent> <task_id> <task_title...>",
+        audit: `assign failed (invalid syntax)`,
+      };
+    }
+    const [, agentName, taskId, taskTitle] = m;
+    const task = assignTask(
+      input.room,
+      agentName,
+      taskId,
+      taskTitle.trim(),
+      Date.now() + 24 * 60 * 60 * 1000
+    );
+    return {
+      ok: true,
+      command,
+      result: { task },
+      audit: `assigned ${taskId} to ${agentName}`,
+    };
+  }
+
+  if (command === "done") {
+    const m = raw.match(/^\/done\s+(\S+)$/i);
+    if (!m) {
+      return {
+        ok: false,
+        command,
+        error: "usage: /done <task_id>",
+        audit: `done failed (invalid syntax)`,
+      };
+    }
+    const taskId = m[1];
+    const roomTasks = getRoomTasks(input.room).filter((t: any) => t.task_id === taskId);
+    if (roomTasks.length === 0) {
+      return {
+        ok: false,
+        command,
+        error: `task_not_found: ${taskId}`,
+        audit: `done failed (${taskId} not found)`,
+      };
+    }
+    const own = roomTasks.find((t: any) => t.agent_name.toLowerCase() === input.actorName.toLowerCase());
+    if (!own && roomTasks.length > 1) {
+      return {
+        ok: false,
+        command,
+        error: `ambiguous_task_id: ${taskId} (specify unique id)`,
+        audit: `done failed (${taskId} ambiguous)`,
+      };
+    }
+    const target = own || roomTasks[0];
+    updateTaskStatus(input.room, target.agent_name, taskId, "done");
+    return {
+      ok: true,
+      command,
+      result: { task_id: taskId, assignee: target.agent_name, status: "done" },
+      audit: `marked ${taskId} done for ${target.agent_name}`,
+    };
+  }
+
+  if (command === "msg") {
+    const m = raw.match(/^\/msg\s+@(?:(agent|user):)([A-Za-z0-9 _.-]{1,64})\s+([\s\S]+)$/i);
+    if (!m) {
+      return {
+        ok: false,
+        command,
+        error: "usage: /msg @agent:Name <text...> or /msg @user:Name <text...>",
+        audit: `msg failed (invalid syntax)`,
+      };
+    }
+    const toType = m[1].toLowerCase() as RecipientType;
+    const to = m[2].trim();
+    const content = m[3].trim();
+    if (!content) {
+      return {
+        ok: false,
+        command,
+        error: "message_body_required",
+        audit: `msg failed (empty body)`,
+      };
+    }
+    const sent = appendMessage(input.room, input.actorDisplayName, content, to, "DIRECT", undefined, toType);
+    if (!sent.ok) {
+      return {
+        ok: false,
+        command,
+        error: sent.error,
+        audit: `msg failed (${sent.error})`,
+      };
+    }
+    return {
+      ok: true,
+      command,
+      result: { message_id: sent.id, to, to_type: toType, type: "DIRECT" },
+      audit: `direct message sent to ${toType}:${to}`,
+    };
+  }
+
+  return {
+    ok: false,
+    command,
+    error: `unknown_command: /${command} (try /help)`,
+    audit: `unknown command /${command}`,
+  };
+}
+
+function emitCommandAudit(room: string, actorDisplayName: string, cmd: SlashCommandResult) {
+  const emoji = cmd.ok ? "⚙️" : "⚠️";
+  const line = `${emoji} /${cmd.command} by ${actorDisplayName}: ${cmd.audit}`;
+  appendMessage(room, "system", line, undefined, "SYSTEM");
+}
+
 app.post("/api/send", async (c) => {
   const room = c.req.query("room");
   const name = c.req.query("name");
@@ -400,18 +629,64 @@ app.post("/api/send", async (c) => {
   if (!canAgentSend(room, name)) return c.json({ error: "not_allowed", detail: "You are not allowed to send in this room" }, 403);
 
   try {
-    const { message, to, type, reply_to } = await c.req.json();
+    const { message, to, to_type, type, reply_to } = await c.req.json();
+    if (typeof message !== "string" || message.trim() === "") {
+      return c.json({ error: "invalid_request", detail: "message must be a non-empty string" }, 400);
+    }
     const reqStart = Date.now();
     // Use display_name if set so senders appear with their chosen name
     const displayName = getDisplayName(room, name);
+
+    // Slash commands execute before normal message append
+    const cmd = runSlashCommand({
+      room,
+      actorName: name,
+      actorDisplayName: displayName,
+      message,
+    });
+    if (cmd) {
+      emitCommandAudit(room, displayName, cmd);
+      trackMetric("api_request", room!, name!, Date.now() - reqStart);
+      trackAgentActivity(name!, "message");
+      if (!cmd.ok) {
+        return c.json({
+          ok: false,
+          executed: true,
+          command: cmd.command,
+          error: cmd.error,
+        }, 400);
+      }
+      return c.json({
+        ok: true,
+        executed: true,
+        command: cmd.command,
+        result: cmd.result,
+      });
+    }
+
     // Sanitize type: block DECISION/RESOLUTION from /api/send (only /api/decisions creates those)
     const rawType = (type || "BROADCAST").toUpperCase();
-    const safeType = (rawType === "DECISION" || rawType === "RESOLUTION") ? "BROADCAST" : rawType;
+    let safeType = (rawType === "DECISION" || rawType === "RESOLUTION") ? "BROADCAST" : rawType;
+    const directTarget = to
+      ? normalizeRecipient(to, to_type)
+      : parseTargetMention(message);
+    if (directTarget.to && safeType === "BROADCAST") {
+      // Mention-targeted messages are direct by default unless caller explicitly chose another type.
+      safeType = "DIRECT";
+    }
     // Block loop spam: reject if agent sends identical message 3+ times within 60s
     if (isDuplicateMessage(room, displayName, message)) {
       return c.json({ error: "duplicate_message", detail: "Identical message sent too many times recently — possible agent loop" }, 429);
     }
-    const result = appendMessage(room, displayName, message, to, safeType, reply_to);
+    const result = appendMessage(
+      room,
+      displayName,
+      message,
+      directTarget.to,
+      safeType,
+      reply_to,
+      directTarget.to_type
+    );
     trackMetric("api_request", room!, name!, Date.now() - reqStart);
     trackAgentActivity(name!, "message");
     return c.json(result);
@@ -2191,9 +2466,10 @@ app.all("/mcp", async (c) => {
     {
       message: z.string().describe("The message to send to your partner's AI"),
       to: z.string().optional().describe("Optional: specific recipient name for private/targeted messaging"),
+      to_type: z.enum(["agent", "user"]).optional().describe("Optional: recipient type for clear targeting"),
       type: z.string().optional().describe("Optional: message type (BROADCAST, TASK, HANDOFF, DIRECT, SYSTEM)")
     },
-    async ({ message, to, type }) => {
+    async ({ message, to, to_type, type }) => {
       // Rate limit sends: 30 messages/min per agent
       if (!checkRateLimit(`send:${room}:${name}`, 30, 60 * 1000, name)) {
         return {
@@ -2206,8 +2482,55 @@ app.all("/mcp", async (c) => {
           isError: true,
         };
       }
+      if (isRoomReadOnly(room)) {
+        return {
+          content: [{ type: "text", text: JSON.stringify({ error: "room_read_only" }) }],
+          isError: true,
+        };
+      }
+      if (!canAgentSend(room, name)) {
+        return {
+          content: [{ type: "text", text: JSON.stringify({ error: "not_allowed" }) }],
+          isError: true,
+        };
+      }
 
-      const result = appendMessage(room, name, message, to, type || "BROADCAST");
+      const displayName = getDisplayName(room, name);
+      const cmd = runSlashCommand({
+        room,
+        actorName: name,
+        actorDisplayName: displayName,
+        message,
+      });
+      if (cmd) {
+        emitCommandAudit(room, displayName, cmd);
+        if (!cmd.ok) {
+          return {
+            content: [{ type: "text", text: JSON.stringify({ ok: false, executed: true, command: cmd.command, error: cmd.error }) }],
+            isError: true,
+          };
+        }
+        return {
+          content: [{ type: "text", text: JSON.stringify({ ok: true, executed: true, command: cmd.command, result: cmd.result }) }],
+        };
+      }
+
+      let msgType = type || "BROADCAST";
+      const directTarget = to
+        ? normalizeRecipient(to, to_type)
+        : parseTargetMention(message);
+      if (directTarget.to && msgType.toUpperCase() === "BROADCAST") {
+        msgType = "DIRECT";
+      }
+      const result = appendMessage(
+        room,
+        name,
+        message,
+        directTarget.to,
+        msgType,
+        undefined,
+        directTarget.to_type
+      );
       if (!result.ok) {
         return {
           content: [{ type: "text", text: JSON.stringify({ error: result.error }) }],
@@ -2218,7 +2541,7 @@ app.all("/mcp", async (c) => {
         content: [
           {
             type: "text",
-            text: JSON.stringify({ status: "sent", message_id: result.id, targeted: !!to }),
+            text: JSON.stringify({ status: "sent", message_id: result.id, targeted: !!directTarget.to }),
           },
         ],
       };

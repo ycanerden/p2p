@@ -75,6 +75,7 @@ db.run(`
     room_code TEXT,
     sender TEXT,
     recipient TEXT DEFAULT NULL,
+    recipient_type TEXT DEFAULT NULL,
     content TEXT,
     timestamp INTEGER,
     msg_type TEXT DEFAULT 'BROADCAST',
@@ -85,6 +86,13 @@ db.run(`
 // Migration: Add 'recipient' column if it doesn't exist (for existing databases)
 try {
   db.run("ALTER TABLE messages ADD COLUMN recipient TEXT DEFAULT NULL;");
+} catch (e) {
+  // Column might already exist
+}
+
+// Migration: Add 'recipient_type' column for user-vs-agent targeting
+try {
+  db.run("ALTER TABLE messages ADD COLUMN recipient_type TEXT DEFAULT NULL;");
 } catch (e) {
   // Column might already exist
 }
@@ -226,6 +234,7 @@ export interface Message {
   id: string;
   from: string;
   to?: string;
+  to_type?: string;
   ts: number;
   content: string;
   type?: string;
@@ -511,7 +520,8 @@ export function appendMessage(
   content: string,
   to?: string,
   msgType: string = "BROADCAST",
-  replyTo?: string
+  replyTo?: string,
+  toType?: string
 ): Ok<{ id: string }> | Err {
   if (new TextEncoder().encode(content).length > MAX_MESSAGE_BYTES) {
     return { ok: false, error: "message_too_large" };
@@ -536,8 +546,8 @@ export function appendMessage(
     compressedContent = content;
   }
 
-  db.prepare("INSERT INTO messages (id, room_code, sender, recipient, content, timestamp, msg_type, reply_to) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
-    .run(id, code, from, to || null, compressedContent, timestamp, msgType, replyTo || null);
+  db.prepare("INSERT INTO messages (id, room_code, sender, recipient, recipient_type, content, timestamp, msg_type, reply_to) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
+    .run(id, code, from, to || null, toType || null, compressedContent, timestamp, msgType, replyTo || null);
 
   db.prepare("UPDATE rooms SET last_activity = ? WHERE code = ?").run(Date.now(), code);
 
@@ -545,7 +555,16 @@ export function appendMessage(
   trackMetric("message_sent", code, from);
 
   // Emit event for real-time listeners (SSE) with decompressed content (transparent compression)
-  const messagePayload = { id, from: from, to: to || undefined, content, ts: timestamp, type: msgType, reply_to: replyTo || undefined };
+  const messagePayload = {
+    id,
+    from: from,
+    to: to || undefined,
+    to_type: toType || undefined,
+    content,
+    ts: timestamp,
+    type: msgType,
+    reply_to: replyTo || undefined,
+  };
   messageEvents.emit("message", { room_code: code, message: messagePayload });
 
   // Fire webhooks (async, non-blocking)
@@ -567,7 +586,7 @@ export function getMessages(
 
   // Fetch messages using rowid cursor (avoids skips on mixed broadcast+DM)
   let query = `
-    SELECT rowid, id, sender as 'from', recipient as 'to', content, timestamp as ts, msg_type as 'type'
+    SELECT rowid, id, sender as 'from', recipient as 'to', recipient_type as 'to_type', content, timestamp as ts, msg_type as 'type'
     FROM messages
     WHERE room_code = ?
     AND rowid > ?
@@ -592,6 +611,7 @@ export function getMessages(
       id: m.id,
       from: m.from,
       to: m.to,
+      to_type: m.to_type,
       ts: m.ts,
       content: m.content.startsWith("lz:") ? LZString.decompressFromEncodedURIComponent(m.content.slice(3)) || m.content : m.content,
       type: m.type
@@ -623,15 +643,15 @@ export function getAllMessages(
   let rows: Message[];
   if (viewer) {
     const query = since
-      ? db.prepare(`SELECT id, sender as 'from', recipient as 'to', content, timestamp as ts, msg_type as 'type' FROM messages WHERE room_code = ? AND timestamp > ? AND ${dmClause} ORDER BY timestamp DESC LIMIT ?`)
-      : db.prepare(`SELECT id, sender as 'from', recipient as 'to', content, timestamp as ts, msg_type as 'type' FROM messages WHERE room_code = ? AND ${dmClause} ORDER BY timestamp DESC LIMIT ?`);
+      ? db.prepare(`SELECT id, sender as 'from', recipient as 'to', recipient_type as 'to_type', content, timestamp as ts, msg_type as 'type' FROM messages WHERE room_code = ? AND timestamp > ? AND ${dmClause} ORDER BY timestamp DESC LIMIT ?`)
+      : db.prepare(`SELECT id, sender as 'from', recipient as 'to', recipient_type as 'to_type', content, timestamp as ts, msg_type as 'type' FROM messages WHERE room_code = ? AND ${dmClause} ORDER BY timestamp DESC LIMIT ?`);
     rows = since
       ? query.all(code, since, viewer, viewer, limit) as Message[]
       : query.all(code, viewer, viewer, limit) as Message[];
   } else {
     const query = since
-      ? db.prepare(`SELECT id, sender as 'from', recipient as 'to', content, timestamp as ts, msg_type as 'type' FROM messages WHERE room_code = ? AND timestamp > ? AND ${dmClause} ORDER BY timestamp DESC LIMIT ?`)
-      : db.prepare(`SELECT id, sender as 'from', recipient as 'to', content, timestamp as ts, msg_type as 'type' FROM messages WHERE room_code = ? AND ${dmClause} ORDER BY timestamp DESC LIMIT ?`);
+      ? db.prepare(`SELECT id, sender as 'from', recipient as 'to', recipient_type as 'to_type', content, timestamp as ts, msg_type as 'type' FROM messages WHERE room_code = ? AND timestamp > ? AND ${dmClause} ORDER BY timestamp DESC LIMIT ?`)
+      : db.prepare(`SELECT id, sender as 'from', recipient as 'to', recipient_type as 'to_type', content, timestamp as ts, msg_type as 'type' FROM messages WHERE room_code = ? AND ${dmClause} ORDER BY timestamp DESC LIMIT ?`);
     rows = since
       ? query.all(code, since, limit) as Message[]
       : query.all(code, limit) as Message[];
@@ -1427,7 +1447,7 @@ export function searchMessages(roomCode: string, query: string, limit: number = 
 
   // First: try sender match via SQL (no decompression needed)
   const senderMatches = db.prepare(`
-    SELECT id, sender as 'from', recipient as 'to', content, timestamp as ts, msg_type as type
+    SELECT id, sender as 'from', recipient as 'to', recipient_type as 'to_type', content, timestamp as ts, msg_type as type
     FROM messages WHERE room_code = ? AND LOWER(sender) LIKE ?
     ORDER BY timestamp DESC LIMIT ?
   `).all(roomCode, `%${lowerQuery}%`, limit) as any[];
@@ -1443,7 +1463,7 @@ export function searchMessages(roomCode: string, query: string, limit: number = 
   const remaining = limit - results.length;
   const seenIds = new Set(results.map(r => r.id));
   const rows = db.prepare(`
-    SELECT id, sender as 'from', recipient as 'to', content, timestamp as ts, msg_type as type
+    SELECT id, sender as 'from', recipient as 'to', recipient_type as 'to_type', content, timestamp as ts, msg_type as type
     FROM messages WHERE room_code = ?
     ORDER BY timestamp DESC LIMIT 500
   `).all(roomCode) as any[];

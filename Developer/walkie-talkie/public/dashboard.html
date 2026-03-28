@@ -447,6 +447,18 @@
     .msg.dm { border-left: 2px solid var(--accent2); padding-left: 10px; }
     .msg.dm-to-me { border-left-color: var(--orange); background: rgba(251,146,60,.04); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
     .msg.dm-to-me .msg-to { color: var(--orange); font-weight: 600; }
+    .msg-to-kind {
+      display: inline-block;
+      margin-right: 6px;
+      padding: 1px 6px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .02em;
+    }
+    .msg-to-kind.agent { background: var(--blue-dim); color: var(--blue); }
+    .msg-to-kind.user { background: var(--green-dim); color: var(--green); }
 
     .date-sep {
       text-align: center; font-size: 11px; color: var(--text2);
@@ -503,6 +515,19 @@
     }
     .composer-input:focus { border-color: var(--accent); }
     .composer-input::placeholder { color: var(--text3); }
+    .composer-hint {
+      margin-top: 6px;
+      font-size: 11px;
+      color: var(--text2);
+    }
+    .composer-hint code {
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--surface3);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 1px 5px;
+      color: var(--text);
+    }
     .send-btn {
       width: 40px; height: 40px; border-radius: var(--radius-sm);
       background: var(--accent);
@@ -848,6 +873,7 @@
           </div>
           <div class="composer-body">
             <textarea class="composer-input" id="msg-input" placeholder="Send a message to the mesh..." rows="1"></textarea>
+            <div class="composer-hint">Targets: <code>@agent:ICEMAN</code> / <code>@user:Kris</code> · Commands: <code>/help</code> <code>/status</code> <code>/presence</code> <code>/tasks</code> <code>/assign</code> <code>/done</code> <code>/msg</code></div>
           </div>
           <button class="send-btn" id="send-btn">&#x27A4;</button>
         </div>
@@ -961,12 +987,49 @@
   function formatContent(s, viewerName) {
     if (!s) return '';
     const escaped = esc(s);
-    // Highlight @mentions — self = accent bg, others = subtle
-    return escaped.replace(/@([\w\- ]+)/g, function(match, name) {
-      const isSelf = viewerName && name.trim().toLowerCase() === viewerName.toLowerCase();
-      if (isSelf) return '<span class="mention mention-self">@' + esc(name) + '</span>';
-      return '<span class="mention">@' + esc(name) + '</span>';
+    // Highlight explicit and legacy mentions:
+    // - @agent:Name
+    // - @user:Name
+    // - @Name
+    return escaped.replace(/@(?:(agent|user):)?([A-Za-z0-9_\- ]{1,64})/gi, function(match, kind, name) {
+      const normalized = String(name || '').trim().toLowerCase();
+      const isSelf = viewerName && normalized === viewerName.toLowerCase();
+      const label = '@' + (kind ? (String(kind).toLowerCase() + ':') : '') + String(name || '').trim();
+      if (isSelf) return '<span class="mention mention-self">' + esc(label) + '</span>';
+      return '<span class="mention">' + esc(label) + '</span>';
     });
+  }
+
+  function extractTargetMention(text) {
+    if (!text) return null;
+    const m = String(text).match(/@(?:(agent|user):)([A-Za-z0-9 _.-]{1,64})/i);
+    if (!m) return null;
+    return {
+      to_type: String(m[1]).toLowerCase(),
+      to: String(m[2]).trim(),
+    };
+  }
+
+  function extractSlashMsgTarget(text) {
+    if (!text) return null;
+    const m = String(text).match(/^\/msg\s+@(?:(agent|user):)([A-Za-z0-9 _.-]{1,64})\s+.+$/i);
+    if (!m) return null;
+    return {
+      to_type: String(m[1]).toLowerCase(),
+      to: String(m[2]).trim(),
+    };
+  }
+
+  function isMentionOfViewer(content, viewerName) {
+    if (!content || !viewerName) return false;
+    const viewer = viewerName.trim().toLowerCase();
+    const mentionRe = /@(?:(agent|user):)?([A-Za-z0-9_\- ]{1,64})/gi;
+    let match;
+    while ((match = mentionRe.exec(content)) !== null) {
+      const candidate = String(match[2] || '').trim().toLowerCase();
+      if (candidate === viewer) return true;
+    }
+    return false;
   }
 
   // === DOM refs ===
@@ -1210,7 +1273,7 @@
       for (const m of newMsgs) {
         if (m.from === (senderInput.value.trim() || VIEWER_DEFAULT)) continue;
         const content = m.content || '';
-        const isMention = content.toLowerCase().includes('@' + viewerName);
+        const isMention = isMentionOfViewer(content, viewerName);
         if (isMention || !document.hasFocus()) {
           showToast(m.from, content, isMention);
           if (isMention && Notification.permission === 'granted') {
@@ -1349,6 +1412,18 @@
 
     sendBtn.disabled = true;
     const body = { message: msg, type: type };
+    const slashTarget = extractSlashMsgTarget(msg);
+    if (slashTarget && slashTarget.to) {
+      body.to = slashTarget.to;
+      body.to_type = slashTarget.to_type;
+      if (body.type === 'BROADCAST') body.type = 'DIRECT';
+    }
+    const taggedTarget = extractTargetMention(msg);
+    if (taggedTarget && taggedTarget.to) {
+      body.to = taggedTarget.to;
+      body.to_type = taggedTarget.to_type;
+      if (body.type === 'BROADCAST') body.type = 'DIRECT';
+    }
     await api('/api/send?room=' + encodeURIComponent(ROOM) + '&name=' + encodeURIComponent(name), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1414,7 +1489,14 @@
       html += '<div class="msg-body">' + formatContent(content, viewerName) + '</div>';
 
       if (m.to) {
-        html += '<div class="msg-to">To: ' + esc(m.to) + '</div>';
+        const toType = (m.to_type || '').toLowerCase();
+        const targetKind = toType === 'agent' || toType === 'user' ? toType : '';
+        const toLabel = targetKind ? (targetKind.charAt(0).toUpperCase() + targetKind.slice(1)) : 'Recipient';
+        html += '<div class="msg-to">';
+        if (targetKind) {
+          html += '<span class="msg-to-kind ' + esc(targetKind) + '">' + esc(toLabel) + '</span>';
+        }
+        html += 'To: ' + esc(m.to) + '</div>';
       }
 
       html += '</div>';
