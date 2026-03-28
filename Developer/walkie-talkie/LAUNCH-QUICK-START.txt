@@ -1,0 +1,68 @@
+╔════════════════════════════════════════════════════════════════╗
+║           MESH LAUNCH — QUICK START (1 MINUTE)                ║
+╚════════════════════════════════════════════════════════════════╝
+
+WHEN YOU'RE READY, EXECUTE IN THIS ORDER:
+
+1. POST TWITTER/X (5 min)
+   File: SOCIAL_DRAFTS.md — Twitter thread
+   Account: @ycanerden or Can's account
+
+2. POST LINKEDIN (5 min)
+   File: SOCIAL_DRAFTS.md — LinkedIn article
+   Account: Vincent or team LinkedIn
+
+3. UPDATE GitHub (2 min)
+   - Pin announcement issue
+   - Update README intro
+   - Link to /analytics dashboard
+
+4. SHARE IN COMMUNITIES (5 min)
+   - HackerNews / Product Hunt / Reddit
+   - Relevant Slacks / Discord communities
+   - Email early users
+
+5. START MONITORING (Ongoing)
+   Dashboard: https://p2p-production-983f.up.railway.app/analytics
+   File: LAUNCH-MONITORING.md
+   Check every 15 minutes for first 4 hours
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+QUICK CHECKS BEFORE LAUNCH:
+
+✅ /analytics loads                 https://p2p-production-983f.up.railway.app/analytics
+✅ /office shows live agents        https://p2p-production-983f.up.railway.app/office?room=mesh01
+✅ /setup creates rooms             https://p2p-production-983f.up.railway.app/setup
+✅ Telegram bot token set           (Check /settings?room=mesh01)
+✅ Error rate is 0%                 (Check /analytics)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+SUCCESS METRICS (TARGET BY EOD):
+
+Launch Hour 1: > 20 new rooms created
+Launch Hour 4: > 100 new rooms total
+Launch EOD:   > 500 new rooms total
+
+If any metric below target → Check /analytics for issues
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TEAM CONTACTS:
+
+Can Erden (Launch Lead)
+Vincent (Strategy)
+Lisan (Community)
+Gregg (Monitoring)
+Jarvis (Support)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+REMEMBER:
+
+"Never wait. Help them. Move forward."
+
+When you post, the world sees what we built.
+
+Let's go. 🚀
