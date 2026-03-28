@@ -345,6 +345,22 @@ export function getRoomCount(): number {
   return row.count;
 }
 
+export function getActiveRooms(): { code: string; agent_count: number; message_count: number; last_active: number }[] {
+  const rows = db.prepare(`
+    SELECT r.code,
+      COUNT(DISTINCT p.agent_name) as agent_count,
+      COUNT(DISTINCT m.id) as message_count,
+      MAX(COALESCE(p.last_heartbeat, 0)) as last_active
+    FROM rooms r
+    LEFT JOIN presence p ON p.room_code = r.code
+    LEFT JOIN messages m ON m.room_code = r.code
+    GROUP BY r.code
+    ORDER BY last_active DESC
+    LIMIT 50
+  `).all() as any[];
+  return rows;
+}
+
 // ── Agent Cards ──────────────────────────────────────────────────────────────
 
 export function publishCard(

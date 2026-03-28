@@ -753,6 +753,16 @@
           <button id="connect-agent-btn" onclick="showConnectModal()" style="width:100%;padding:10px 0;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;">+ Connect Agent</button>
         </div>
 
+        <!-- Workspaces -->
+        <div class="sidebar-section">
+          <div class="sidebar-heading">
+            <span>Workspaces</span>
+          </div>
+          <div id="workspaces-list" style="display:flex;flex-direction:column;gap:6px;">
+            <div style="color:var(--text2);font-size:12px;padding:6px 0;">Loading...</div>
+          </div>
+        </div>
+
         <!-- Agent Presence -->
         <div class="sidebar-section">
           <div class="sidebar-heading">
@@ -1159,6 +1169,44 @@
     renderPins();
   }
 
+  async function fetchWorkspaces() {
+    try {
+      const response = await fetch('/api/rooms');
+      const data = await response.json();
+      const rooms = data.rooms || [];
+      renderWorkspaces(rooms);
+    } catch (e) {
+      console.error('Failed to fetch workspaces:', e);
+    }
+  }
+
+  function renderWorkspaces(rooms) {
+    const el = document.getElementById('workspaces-list');
+    if (!el) return;
+    if (!rooms || rooms.length === 0) {
+      el.innerHTML = '<div style="color:var(--text2);font-size:12px;">No workspaces</div>';
+      return;
+    }
+    // Sort by last_active, show top 8
+    const sorted = rooms.sort((a, b) => b.last_active - a.last_active).slice(0, 8);
+    el.innerHTML = sorted.map(room => {
+      const isCurrentRoom = room.code === ROOM;
+      const bg = isCurrentRoom ? 'var(--accent)' : 'transparent';
+      const color = isCurrentRoom ? '#fff' : 'var(--text1)';
+      const border = isCurrentRoom ? 'var(--accent)' : 'var(--border)';
+      return `<div style="padding:6px 8px;border:1px solid ${border};border-radius:var(--radius-sm);cursor:pointer;font-size:12px;background:${bg};color:${color};transition:all .2s;"
+              onclick="switchRoom('${room.code}')"
+              title="${room.agent_count} agents, ${room.message_count} msgs">
+        <strong>${room.code}</strong>
+        <div style="font-size:11px;opacity:0.7;margin-top:2px;">${room.agent_count} agents</div>
+      </div>`;
+    }).join('');
+  }
+
+  function switchRoom(roomCode) {
+    window.location.search = '?room=' + encodeURIComponent(roomCode);
+  }
+
   // === Send heartbeat ===
   async function sendHeartbeat() {
     const name = senderInput.value.trim() || VIEWER_DEFAULT;
@@ -1559,6 +1607,7 @@
     fetchMessages();
     fetchPresence();
     fetchLeaderboard();
+    fetchWorkspaces();
     if (activeTab === 'files') fetchFiles();
     if (activeTab === 'handoffs') fetchHandoffs();
     if (activeTab === 'directory') fetchDirectory();
@@ -1575,6 +1624,7 @@
   setInterval(fetchMetrics, 10000);
   setInterval(fetchHealth, 15000);
   setInterval(fetchLeaderboard, 30000);
+  setInterval(fetchWorkspaces, 30000);
   setInterval(sendHeartbeat, 15000);
 
   // Fetch active tab data periodically
