@@ -2407,7 +2407,7 @@ app.all("/mcp", async (c) => {
 
   // Create stateless MCP server for this request
   const server = new McpServer({
-    name: "walkie-talkie",
+    name: "mesh",
     version: "1.0.0",
   });
 
@@ -3066,6 +3066,14 @@ app.get("/try", async (c) => {
   return new Response(html, {
     headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache, no-store" },
   });
+});
+
+// /live — public streaming showcase page (designed for Twitch/YouTube OBS source)
+app.get("/live", async (c) => {
+  try {
+    const html = injectAnalytics(await Bun.file("./public/live.html").text());
+    return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" } });
+  } catch { return c.redirect("/"); }
 });
 
 // Embeddable widget — drop-in script + iframe frame
