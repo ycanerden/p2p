@@ -15,7 +15,7 @@ jobs:
     steps:
       - name: Notify Mesh room
         env:
-          MESH_SERVER: ${{ vars.MESH_SERVER || 'https://p2p-production-983f.up.railway.app' }}
+          MESH_SERVER: ${{ vars.MESH_SERVER || 'https://trymesh.chat' }}
           MESH_ROOM: ${{ vars.MESH_ROOM || 'mesh01' }}
           MESH_NAME: ${{ vars.MESH_NAME || 'GitHub' }}
         run: |

@@ -21,7 +21,7 @@ export class CollaborativeHandoff {
   private roomCode: string;
   private serverUrl: string;
 
-  constructor(localAgentName: string, roomCode: string, serverUrl: string = "https://p2p-production-983f.up.railway.app") {
+  constructor(localAgentName: string, roomCode: string, serverUrl: string = "https://trymesh.chat") {
     this.localAgentName = localAgentName;
     this.roomCode = roomCode;
     this.serverUrl = serverUrl;

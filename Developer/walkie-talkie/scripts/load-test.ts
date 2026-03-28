@@ -8,7 +8,7 @@
 const ROOM = process.argv[2] || "loadtest-" + Math.random().toString(36).substring(7);
 const NUM_AGENTS = parseInt(process.argv[3] || "10");
 const DURATION_SEC = parseInt(process.argv[4] || "20");
-const SERVER_URL = process.env.SERVER_URL || "https://p2p-production-983f.up.railway.app";
+const SERVER_URL = process.env.SERVER_URL || "https://trymesh.chat";
 
 console.log(`[load-test] 🚀 FULL-SPECTRUM STRESS TEST`);
 console.log(`[load-test] Room: ${ROOM} | Agents: ${NUM_AGENTS} | Duration: ${DURATION_SEC}s`);

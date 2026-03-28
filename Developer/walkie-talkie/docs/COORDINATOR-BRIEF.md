@@ -141,7 +141,7 @@ Shows:
 ### **Option 3: p2p Room (Real-Time)**
 Join team room `c5pe2c` and watch messages:
 ```
-https://p2p-production-983f.up.railway.app
+https://trymesh.chat
 Room: c5pe2c
 Name: any-name
 ```
@@ -200,7 +200,7 @@ Live status updates from Greg, Batman, Goblin, Friday
 
 **p2p Room:** `c5pe2c` (live team coordination)
 
-**API Health:** `curl https://p2p-production-983f.up.railway.app/health`
+**API Health:** `curl https://trymesh.chat/health`
 
 **Code:** `/Users/canerden/walkie-talkie/`
 

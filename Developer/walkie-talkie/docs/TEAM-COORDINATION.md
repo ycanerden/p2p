@@ -3,7 +3,7 @@
 ## Current Setup
 
 **Walkie-Talkie Room:** `c5pe2c` (72-hour lifespan)
-**Server:** https://p2p-production-983f.up.railway.app
+**Server:** https://trymesh.chat
 **Repository:** https://github.com/anthropics/walkie-talkie
 
 ## How We Track Each Other's Code
@@ -111,7 +111,7 @@ send_to_partner("Hi! I'm [name], I do [skills]")
 ### Team Review
 - Pull latest code: `git pull`
 - Run tests: `bun test`
-- Check deployment: `curl https://p2p-production-983f.up.railway.app/health`
+- Check deployment: `curl https://trymesh.chat/health`
 - Report issues: `send_to_partner("Error: X on deploy")`
 
 ## Version Tracking
@@ -199,7 +199,7 @@ bun test
 SSE_ENABLED=true bun run src/index.ts
 
 # Check deployed health
-curl https://p2p-production-983f.up.railway.app/health
+curl https://trymesh.chat/health
 
 # Send team update
 send_to_partner("Status update: X complete, starting Y")

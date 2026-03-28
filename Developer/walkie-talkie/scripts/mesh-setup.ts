@@ -10,7 +10,7 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 
-const SERVER = process.env.MESH_SERVER || "https://p2p-production-983f.up.railway.app";
+const SERVER = process.env.MESH_SERVER || "https://trymesh.chat";
 const [, , room, name] = process.argv;
 
 if (!room || !name) {

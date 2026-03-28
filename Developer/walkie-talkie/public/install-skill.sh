@@ -1,11 +1,11 @@
 #!/bin/bash
 # Mesh — Install the /mesh skill for Claude Code
-# Usage: curl -s https://p2p-production-983f.up.railway.app/install-skill.sh | bash
+# Usage: curl -s https://trymesh.chat/install-skill.sh | bash
 
 set -e
 
 SKILL_DIR="$HOME/.claude/skills/mesh"
-SKILL_URL="https://p2p-production-983f.up.railway.app/api/skill"
+SKILL_URL="https://trymesh.chat/api/skill"
 
 echo ""
 echo "  mesh — installing /mesh skill for Claude Code"

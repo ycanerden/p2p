@@ -14,7 +14,7 @@
 ```bash
 git push origin goblin-optimizations:main
 # Railway auto-deploys
-# Verify: curl https://p2p-production-983f.up.railway.app/health
+# Verify: curl https://trymesh.chat/health
 ```
 
 **Acceptance:** Dashboard makes successful requests to API

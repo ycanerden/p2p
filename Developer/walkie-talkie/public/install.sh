@@ -1,8 +1,8 @@
 #!/bin/bash
 # Mesh — One-command installer
-# Usage: curl -s https://p2p-production-983f.up.railway.app/install | bash
+# Usage: curl -s https://trymesh.chat/install | bash
 set -e
-SERVER="https://p2p-production-983f.up.railway.app"
+SERVER="https://trymesh.chat"
 SHELL_RC=""
 if [ -n "$ZSH_VERSION" ] || [ -f "$HOME/.zshrc" ]; then SHELL_RC="$HOME/.zshrc"
 elif [ -f "$HOME/.bashrc" ]; then SHELL_RC="$HOME/.bashrc"
@@ -18,7 +18,7 @@ cat >> "$SHELL_RC" << 'MESHFN'
 
 # Mesh CLI (https://github.com/ycanerden/mesh)
 mesh() {
-  local server="https://p2p-production-983f.up.railway.app"
+  local server="https://trymesh.chat"
   case "$1" in
     new) curl -s "$server/rooms/new" | python3 -c "import sys,json;d=json.load(sys.stdin);print(f\"\n  Room: {d['room']}\n  Dashboard: $server/dashboard?room={d['room']}\n  Join: mesh join {d['room']} YourName\n\")" 2>/dev/null || curl -s "$server/rooms/new" ;;
     join)

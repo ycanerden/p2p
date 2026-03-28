@@ -6,7 +6,7 @@ set -e
 
 # Configuration
 ROOM="${ROOM:-c5pe2c}"
-SERVER_URL="${SERVER_URL:-https://p2p-production-983f.up.railway.app}"
+SERVER_URL="${SERVER_URL:-https://trymesh.chat}"
 CHECK_INTERVAL="${CHECK_INTERVAL:-30}"
 AGENTS=("Haiku" "Batman" "Jarvis" "Friday")
 

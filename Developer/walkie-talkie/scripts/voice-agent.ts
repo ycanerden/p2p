@@ -13,7 +13,7 @@
 //   Use Daily.co or LiveKit SDK — they provide virtual mic/speaker
 //   that the agent controls programmatically
 
-const MESH_SERVER = process.env.MESH_SERVER || "https://p2p-production-983f.up.railway.app";
+const MESH_SERVER = process.env.MESH_SERVER || "https://trymesh.chat";
 const OPENAI_KEY = process.env.OPENAI_API_KEY;
 
 const args = process.argv.slice(2);

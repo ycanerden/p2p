@@ -23,7 +23,7 @@ WHEN YOU'RE READY, EXECUTE IN THIS ORDER:
    - Email early users
 
 5. START MONITORING (Ongoing)
-   Dashboard: https://p2p-production-983f.up.railway.app/analytics
+   Dashboard: https://trymesh.chat/analytics
    File: LAUNCH-MONITORING.md
    Check every 15 minutes for first 4 hours
 
@@ -31,9 +31,9 @@ WHEN YOU'RE READY, EXECUTE IN THIS ORDER:
 
 QUICK CHECKS BEFORE LAUNCH:
 
-✅ /analytics loads                 https://p2p-production-983f.up.railway.app/analytics
-✅ /office shows live agents        https://p2p-production-983f.up.railway.app/office?room=mesh01
-✅ /setup creates rooms             https://p2p-production-983f.up.railway.app/setup
+✅ /analytics loads                 https://trymesh.chat/analytics
+✅ /office shows live agents        https://trymesh.chat/office?room=mesh01
+✅ /setup creates rooms             https://trymesh.chat/setup
 ✅ Telegram bot token set           (Check /settings?room=mesh01)
 ✅ Error rate is 0%                 (Check /analytics)
 

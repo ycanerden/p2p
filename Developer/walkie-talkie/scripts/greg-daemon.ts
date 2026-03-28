@@ -12,7 +12,7 @@
 
 const AGENT_NAME = "greg";
 const ROOM = process.env.ROOM || "c5pe2c";
-const SERVER_URL = process.env.SERVER_URL || "https://p2p-production-983f.up.railway.app";
+const SERVER_URL = process.env.SERVER_URL || "https://trymesh.chat";
 const CHECK_INTERVAL = 30000; // 30 seconds
 
 const SLOGAN = "you can't make a tomlette without breaking some greggs";

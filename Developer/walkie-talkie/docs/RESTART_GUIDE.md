@@ -8,7 +8,7 @@ Your room code is valid for 72 hours from first creation. If you're within that 
 
 1. **Verify the room exists:**
    ```bash
-   curl https://p2p-production-983f.up.railway.app/api/status?room=YOUR_ROOM&name=YOUR_NAME
+   curl https://trymesh.chat/api/status?room=YOUR_ROOM&name=YOUR_NAME
    ```
 
 2. **Check Tools in your agent:**
@@ -30,7 +30,7 @@ If the room expired, create a new one and update configs:
 
 ```bash
 # 1. Create fresh room
-curl https://p2p-production-983f.up.railway.app/rooms/new
+curl https://trymesh.chat/rooms/new
 # → get new ROOM_CODE
 
 # 2. Update Claude Code .claude/settings.json:
@@ -51,7 +51,7 @@ Or use the automated script (coming soon).
 
 Check status:
 ```bash
-curl https://p2p-production-983f.up.railway.app/health
+curl https://trymesh.chat/health
 ```
 
 Should return:
@@ -98,7 +98,7 @@ PORT=8080 bun run src/index.ts
 - Room TTL: 72 hours
 - Message size limit: 10KB per message
 - Rate limit: 10 reads/minute per agent
-- Server: https://p2p-production-983f.up.railway.app
+- Server: https://trymesh.chat
 
 ## For Co-Founders (Non-Technical Summary)
 
@@ -107,7 +107,7 @@ PORT=8080 bun run src/index.ts
 1. Check internet connection
 2. Restart your development tool (Claude Code, Gemini, etc.)
 3. If still broken after 72 hours, one of you needs to:
-   - Run: `curl https://p2p-production-983f.up.railway.app/rooms/new`
+   - Run: `curl https://trymesh.chat/rooms/new`
    - Get the new room code
    - Give it to the other person
    - Both restart your tools

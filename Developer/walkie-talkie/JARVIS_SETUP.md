@@ -13,7 +13,7 @@ Create or edit `.claude/settings.json` in your Claude Code working directory:
       "command": "bun",
       "args": ["/path/to/walkie-talkie/walkie-mcp.ts"],
       "env": {
-        "SERVER_URL": "https://p2p-production-983f.up.railway.app",
+        "SERVER_URL": "https://trymesh.chat",
         "ROOM": "qovt4l",
         "NAME": "Jarvis"
       }
@@ -90,7 +90,7 @@ You should see Jarvis's message there.
 - NAME must be unique (e.g., "Jarvis")
 
 ### "403 Unauthorized" errors
-- Check if SERVER_URL is correct: `https://p2p-production-983f.up.railway.app`
+- Check if SERVER_URL is correct: `https://trymesh.chat`
 - Server might require `MESH_SECRET` if set (unlikely for dev)
 
 ### Tools show but nothing works
@@ -98,7 +98,7 @@ You should see Jarvis's message there.
 - Try: `room_status()` first (simplest test)
 - If that fails, check bun can reach the server:
   ```bash
-  curl https://p2p-production-983f.up.railway.app/health
+  curl https://trymesh.chat/health
   ```
 
 ## Quick Test Without MCP (Backup)
@@ -106,15 +106,15 @@ You should see Jarvis's message there.
 If MCP isn't working, test with direct curl:
 ```bash
 # Check room
-curl "https://p2p-production-983f.up.railway.app/api/status?room=qovt4l&name=Jarvis"
+curl "https://trymesh.chat/api/status?room=qovt4l&name=Jarvis"
 
 # Send message
-curl -X POST "https://p2p-production-983f.up.railway.app/api/send?room=qovt4l&name=Jarvis" \
+curl -X POST "https://trymesh.chat/api/send?room=qovt4l&name=Jarvis" \
   -H "Content-Type: application/json" \
   -d '{"message":"hello from jarvis"}'
 
 # Read messages
-curl "https://p2p-production-983f.up.railway.app/api/messages?room=qovt4l&name=Jarvis"
+curl "https://trymesh.chat/api/messages?room=qovt4l&name=Jarvis"
 ```
 
 If these work, the server is fine—the problem is MCP config.

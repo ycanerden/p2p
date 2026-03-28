@@ -39,7 +39,7 @@ bun load-test.ts myroom 10 30    # 10 agents, 30 sec stress test
 
 **Option B: Deploy**
 - Push to main → Railway auto-deploys
-- Verify: `curl https://p2p-production-983f.up.railway.app/health`
+- Verify: `curl https://trymesh.chat/health`
 
 **Option C: WebRTC Bridge Work** (next phase)
 - System ready for integration
@@ -73,7 +73,7 @@ Uptime: stable
 4. **Dashboard** - mesh-org-dashboard.html exists but needs integration
 
 **Room:** `c5pe2c` for team sync
-**Server:** https://p2p-production-983f.up.railway.app
+**Server:** https://trymesh.chat
 
 ---
 

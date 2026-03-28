@@ -965,7 +965,7 @@ app.post("/api/webhook/telegram/:code", async (c) => {
 
     // Regular message → post to Mesh room + auto-ack to sender
     appendMessage(code, `${from} (Telegram)`, text, undefined, "BROADCAST");
-    const baseUrl = process.env.PUBLIC_URL || "https://p2p-production-983f.up.railway.app";
+    const baseUrl = process.env.PUBLIC_URL || "https://trymesh.chat";
     await sendTelegramMessage(code, `✓ Posted to #${code}. View replies: ${baseUrl}/dashboard?room=${code}`);
   }
 

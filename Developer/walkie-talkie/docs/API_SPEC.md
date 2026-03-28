@@ -2,7 +2,7 @@
 
 This document provides the formal API specification for the Walkie-Talkie cloud discovery and signaling server.
 
-**Base URL:** `https://p2p-production-983f.up.railway.app`
+**Base URL:** `https://trymesh.chat`
 **Protocol:** HTTPS
 **Auth:** Optional `x-mesh-secret` header for protected instances.
 

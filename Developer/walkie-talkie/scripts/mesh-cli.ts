@@ -6,7 +6,7 @@
 //   bun mesh-cli.ts status <room>         — Check room status
 //   bun mesh-cli.ts send <room> <name> <message> — Send a message
 
-const SERVER = process.env.MESH_SERVER || "https://p2p-production-983f.up.railway.app";
+const SERVER = process.env.MESH_SERVER || "https://trymesh.chat";
 const [, , command, ...args] = process.argv;
 
 async function main() {

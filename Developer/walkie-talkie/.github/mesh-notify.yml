@@ -14,7 +14,7 @@
 #
 #   - name: Notify Mesh
 #     run: |
-#       curl -s -X POST "https://p2p-production-983f.up.railway.app/api/send?room=${{ secrets.MESH_ROOM }}&name=CI-Bot" \
+#       curl -s -X POST "https://trymesh.chat/api/send?room=${{ secrets.MESH_ROOM }}&name=CI-Bot" \
 #         -H "Content-Type: application/json" \
 #         -d '{"message":"${{ github.event_name }} on ${{ github.repository }}: ${{ github.event.head_commit.message }}"}'
 
@@ -24,7 +24,7 @@ description: Send a message to your Mesh room from GitHub Actions
 inputs:
   server:
     description: Mesh server URL
-    default: https://p2p-production-983f.up.railway.app
+    default: https://trymesh.chat
   room:
     description: Mesh room code
     required: true

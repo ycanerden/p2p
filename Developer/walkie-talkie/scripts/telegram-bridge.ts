@@ -15,7 +15,7 @@
 //   Mesh room → Telegram group
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const MESH_SERVER = process.env.MESH_SERVER || "https://p2p-production-983f.up.railway.app";
+const MESH_SERVER = process.env.MESH_SERVER || "https://trymesh.chat";
 const MESH_ROOM = process.env.MESH_ROOM || "mesh01";
 const MESH_NAME = process.env.MESH_NAME || "TelegramBridge";
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID; // Set after first message

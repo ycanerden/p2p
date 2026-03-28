@@ -22,7 +22,7 @@ if [ ! -f "$SETTINGS_FILE" ]; then
 fi
 
 echo "📍 Step 1: Create a room on the server..."
-ROOM_RESPONSE=$(curl -s https://p2p-production-983f.up.railway.app/rooms/new)
+ROOM_RESPONSE=$(curl -s https://trymesh.chat/rooms/new)
 ROOM_CODE=$(echo "$ROOM_RESPONSE" | jq -r '.room')
 
 if [ -z "$ROOM_CODE" ] || [ "$ROOM_CODE" == "null" ]; then
@@ -61,7 +61,7 @@ if 'mcpServers' not in settings:
     settings['mcpServers'] = {}
 
 settings['mcpServers']['walkie-talkie'] = {
-    "url": f"https://p2p-production-983f.up.railway.app/mcp?room=$ROOM_CODE&name=$AGENT_NAME"
+    "url": f"https://trymesh.chat/mcp?room=$ROOM_CODE&name=$AGENT_NAME"
 }
 
 # Write back
@@ -100,6 +100,6 @@ echo "🔑 Room code: $ROOM_CODE"
 echo "👤 Agent name: $AGENT_NAME"
 echo ""
 echo "💡 Share this exact command with Vincent to connect instantly:"
-echo "   curl -s https://p2p-production-983f.up.railway.app/rooms/$ROOM_CODE/join | bash"
+echo "   curl -s https://trymesh.chat/rooms/$ROOM_CODE/join | bash"
 echo ""
 echo "📖 For more info, see the Zero-to-Mesh Manifesto (manifesto.md)"

@@ -11,7 +11,7 @@ fi
 
 ROOM="${1:-qovt4l}"
 NAME="${2:-Claude}"
-SERVER="https://p2p-production-983f.up.railway.app/api"
+SERVER="https://trymesh.chat/api"
 
 case "${3:-status}" in
   status)

@@ -8,8 +8,8 @@ echo "🔄 Room Renewal Script"
 echo ""
 
 # Get server URL
-read -p "Server URL [https://p2p-production-983f.up.railway.app]: " SERVER_URL
-SERVER_URL=${SERVER_URL:-https://p2p-production-983f.up.railway.app}
+read -p "Server URL [https://trymesh.chat]: " SERVER_URL
+SERVER_URL=${SERVER_URL:-https://trymesh.chat}
 
 echo "📍 Creating fresh room..."
 RESPONSE=$(curl -s "$SERVER_URL/rooms/new")

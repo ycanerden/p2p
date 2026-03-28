@@ -2,7 +2,7 @@
 
 **Purpose:** Real-time health checks during launch day
 
-**Monitoring URL:** https://p2p-production-983f.up.railway.app/analytics
+**Monitoring URL:** https://trymesh.chat/analytics
 
 ---
 
@@ -12,7 +12,7 @@ Run these commands or visit `/analytics`:
 
 ```bash
 # System metrics
-curl -s https://p2p-production-983f.up.railway.app/api/metrics | jq '.'
+curl -s https://trymesh.chat/api/metrics | jq '.'
 
 # Sample output should look like:
 # {

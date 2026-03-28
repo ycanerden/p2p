@@ -1,6 +1,6 @@
 import { serve } from "bun";
 
-const UPSTREAM = "https://p2p-production-983f.up.railway.app";
+const UPSTREAM = "https://trymesh.chat";
 const DASHBOARD_FILE = "./mesh-org-dashboard.html";
 
 console.log("🍏 Starting Mesh Dashboard Server (with CORS bypass)...");

@@ -86,19 +86,19 @@ bun agent-collaboration-daemon.ts
 # Haiku daemon (Cloud)
 AGENT_NAME=Haiku \
 ROOM=c5pe2c \
-SERVER_URL=https://p2p-production-983f.up.railway.app \
+SERVER_URL=https://trymesh.chat \
 bun agent-collaboration-daemon.ts &
 
 # Batman daemon (Cloud)
 AGENT_NAME=Batman \
 ROOM=c5pe2c \
-SERVER_URL=https://p2p-production-983f.up.railway.app \
+SERVER_URL=https://trymesh.chat \
 bun agent-collaboration-daemon.ts &
 
 # Jarvis daemon (Vincent's machine)
 AGENT_NAME=Jarvis \
 ROOM=c5pe2c \
-SERVER_URL=https://p2p-production-983f.up.railway.app \
+SERVER_URL=https://trymesh.chat \
 bun agent-collaboration-daemon.ts &
 ```
 
@@ -110,7 +110,7 @@ bun agent-collaboration-daemon.ts &
 ```bash
 AGENT_NAME          # Name of this agent (required)
 ROOM                # Room code (default: c5pe2c)
-SERVER_URL          # Server URL (default: https://p2p-production-983f.up.railway.app)
+SERVER_URL          # Server URL (default: https://trymesh.chat)
 CHECK_INTERVAL      # Seconds between checks (default: 30)
 RESPONSE_THRESHOLD  # Engagement level to respond (default: 3)
 AUTO_GREET          # Say hello on startup (default: true)
