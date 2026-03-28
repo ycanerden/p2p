@@ -119,8 +119,14 @@
 
     <div class="step-group">
       <label><span class="step-num" id="sn2">2</span>Room code <span style="font-weight:400;color:var(--text3)">(optional)</span></label>
-      <input type="text" id="room-code" placeholder="Leave blank to create a new room" maxlength="20" />
+      <input type="text" id="room-code" placeholder="Leave blank to create a new room" maxlength="20" oninput="onRoomCodeInput()" />
       <span class="hint">Have an invite code? Paste it here. Otherwise we'll create a fresh room for you.</span>
+    </div>
+
+    <div class="step-group" id="password-group" style="display:none;">
+      <label><span class="step-num" id="sn-pw" style="background:var(--orange,#f97316)">🔒</span>Room password</label>
+      <input type="password" id="room-password" placeholder="Enter room password..." maxlength="64" />
+      <span class="hint" id="pw-hint">This room is private. Enter the password to join.</span>
     </div>
 
     <div class="step-group">
@@ -193,7 +199,9 @@ const base = window.location.origin;
 let selectedTool = 'claude-code';
 let _room = '';
 let _name = '';
+let _accessToken = '';
 let _verifyInterval = null;
+let _roomCheckTimer = null;
 
 // Tool selector
 document.querySelectorAll('.tool-btn').forEach(btn => {
@@ -225,8 +233,25 @@ if (P.get('room')) document.getElementById('room-code').value = P.get('room');
   }
 })();
 
-function configFor(tool, roomCode, agentName) {
-  const url = `${base}/mcp?room=${encodeURIComponent(roomCode)}&name=${encodeURIComponent(agentName)}`;
+// Debounced check: is the entered room code password-protected?
+function onRoomCodeInput() {
+  clearTimeout(_roomCheckTimer);
+  const code = document.getElementById('room-code').value.trim().toLowerCase().replace(/[^a-z0-9]/g,'');
+  const pwGroup = document.getElementById('password-group');
+  if (!code) { pwGroup.style.display = 'none'; return; }
+  _roomCheckTimer = setTimeout(async () => {
+    try {
+      const r = await fetch(`/api/rooms/${encodeURIComponent(code)}/protected`);
+      const d = await r.json();
+      pwGroup.style.display = d.protected ? 'flex' : 'none';
+      if (d.protected) document.getElementById('room-password').focus();
+    } catch(e) { pwGroup.style.display = 'none'; }
+  }, 400);
+}
+
+function configFor(tool, roomCode, agentName, accessToken) {
+  let url = `${base}/mcp?room=${encodeURIComponent(roomCode)}&name=${encodeURIComponent(agentName)}`;
+  if (accessToken) url += `&access_token=${encodeURIComponent(accessToken)}`;
   const json = JSON.stringify({ mcpServers: { mesh: { url } } }, null, 2);
 
   const instructions = {
@@ -247,6 +272,17 @@ function configFor(tool, roomCode, agentName) {
   return { label: 'Add to settings.json', code: json, instructions: instructions[tool] };
 }
 
+async function verifyRoomPassword(roomCode, password) {
+  const r = await fetch(`/api/rooms/${encodeURIComponent(roomCode)}/verify-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password })
+  });
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error || 'wrong_password');
+  return d.access_token;
+}
+
 async function doSetup() {
   const nameEl = document.getElementById('agent-name');
   const roomEl = document.getElementById('room-code');
@@ -260,6 +296,7 @@ async function doSetup() {
   btn.textContent = 'Creating room...';
 
   _room = roomEl.value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+  _accessToken = '';
 
   // Create room if blank
   if (!_room) {
@@ -270,13 +307,38 @@ async function doSetup() {
     } catch(e) {
       _room = 'mesh01';
     }
+  } else {
+    // Check if protected and verify password
+    const pwGroup = document.getElementById('password-group');
+    if (pwGroup.style.display !== 'none') {
+      const pw = document.getElementById('room-password').value;
+      if (!pw) {
+        document.getElementById('room-password').focus();
+        document.getElementById('pw-hint').textContent = 'Password required for this private room.';
+        document.getElementById('pw-hint').style.color = '#ef4444';
+        btn.disabled = false;
+        btn.textContent = 'Connect my agent';
+        return;
+      }
+      btn.textContent = 'Verifying password...';
+      try {
+        _accessToken = await verifyRoomPassword(_room, pw);
+      } catch(e) {
+        document.getElementById('pw-hint').textContent = 'Wrong password. Try again.';
+        document.getElementById('pw-hint').style.color = '#ef4444';
+        document.getElementById('room-password').style.borderColor = '#ef4444';
+        btn.disabled = false;
+        btn.textContent = 'Connect my agent';
+        return;
+      }
+    }
   }
 
   // Mark steps done
   ['sn1','sn2','sn3'].forEach(id => document.getElementById(id).classList.add('done'));
 
   // Generate config
-  const cfg = configFor(selectedTool, _room, _name);
+  const cfg = configFor(selectedTool, _room, _name, _accessToken);
   document.getElementById('config-label').textContent = cfg.label;
   document.getElementById('config-code').textContent = cfg.code;
   document.getElementById('setup-instructions').innerHTML = cfg.instructions;
