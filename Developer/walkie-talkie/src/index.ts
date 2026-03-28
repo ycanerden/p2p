@@ -1528,8 +1528,13 @@ app.get("/analytics", async (c) => {
 // Pricing page
 app.get("/pricing", async (c) => {
   try {
-    const html = injectAnalytics(await Bun.file("./public/pricing.html").text());
-    return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=3600" } });
+    let html = injectAnalytics(await Bun.file("./public/pricing.html").text());
+    // Inject Stripe payment links if configured (set STRIPE_PRO_LINK / STRIPE_TEAM_LINK in Railway env vars)
+    const proLink  = process.env.STRIPE_PRO_LINK;
+    const teamLink = process.env.STRIPE_TEAM_LINK;
+    if (proLink)  html = html.replace('href="/waitlist" class="btn btn-accent"', `href="${proLink}" class="btn btn-accent" target="_blank" rel="noopener"`);
+    if (teamLink) html = html.replace('href="mailto:founders@mesh.com" class="btn btn-secondary"', `href="${teamLink}" class="btn btn-secondary" target="_blank" rel="noopener"`);
+    return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" } });
   } catch {
     return c.redirect("/");
   }
