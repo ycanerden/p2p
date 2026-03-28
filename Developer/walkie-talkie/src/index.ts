@@ -145,6 +145,62 @@ app.use("*", async (c, next) => {
   await next();
 });
 
+// ── Admin page protection ────────────────────────────────────────────────────
+// Set ADMIN_PASSWORD env var on Railway. Admin pages require this password.
+// Password is checked via cookie (set on /admin-login).
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "";
+const ADMIN_PAGES = ["/dashboard", "/analytics", "/settings", "/compact"];
+
+function getAdminLoginPage(redirectTo: string = "/dashboard") {
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mesh — Admin Login</title>
+<style>body{font-family:'Inter',system-ui,sans-serif;background:#1a1a1e;color:#e8e8ed;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}
+.box{background:#242428;border:1px solid #333338;border-radius:12px;padding:32px;width:100%;max-width:360px;text-align:center;}
+h1{font-size:18px;margin-bottom:4px;}
+p{font-size:12px;color:#9898a0;margin-bottom:20px;}
+input{width:100%;padding:10px;background:#1a1a1e;border:1px solid #333338;border-radius:8px;color:#e8e8ed;font-size:14px;outline:none;margin-bottom:12px;box-sizing:border-box;}
+input:focus{border-color:#8b5cf6;}
+button{width:100%;padding:10px;background:#8b5cf6;border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:600;cursor:pointer;}
+button:hover{opacity:.88;}
+.err{color:#f87171;font-size:12px;margin-bottom:8px;display:none;}
+a{color:#8b5cf6;font-size:12px;text-decoration:none;}</style></head>
+<body><div class="box"><h1>Mesh Admin</h1><p>This page is restricted to team admins.</p>
+<div class="err" id="err">Wrong password</div>
+<form onsubmit="return doLogin()"><input type="password" id="pw" placeholder="Admin password" autofocus>
+<button type="submit">Enter</button></form>
+<p style="margin-top:16px"><a href="/">Back to home</a></p></div>
+<script>function doLogin(){var p=document.getElementById('pw').value;
+fetch('/admin-login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:p})})
+.then(r=>{if(r.ok){location.href='${redirectTo}'}else{document.getElementById('err').style.display='block'}});return false;}</script></body></html>`;
+}
+
+app.post("/admin-login", async (c) => {
+  if (!ADMIN_PASSWORD) return c.json({ error: "ADMIN_PASSWORD not configured" }, 503);
+  const { password } = await c.req.json().catch(() => ({ password: "" }));
+  if (password !== ADMIN_PASSWORD) return c.json({ error: "wrong password" }, 401);
+  // Set a signed cookie that lasts 24 hours
+  const token = Buffer.from(`mesh-admin:${Date.now()}`).toString("base64");
+  return new Response(JSON.stringify({ ok: true }), {
+    status: 200,
+    headers: {
+      "Content-Type": "application/json",
+      "Set-Cookie": `mesh_admin=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400; Secure`,
+    },
+  });
+});
+
+// Middleware: protect admin pages
+app.use("*", async (c, next) => {
+  if (!ADMIN_PASSWORD) { await next(); return; } // no password = no protection (dev mode)
+  const path = new URL(c.req.url).pathname;
+  if (!ADMIN_PAGES.some(p => path === p || path.startsWith(p + "?"))) { await next(); return; }
+  const cookie = c.req.header("cookie") || "";
+  const hasAdmin = cookie.includes("mesh_admin=");
+  if (hasAdmin) { await next(); return; }
+  // Show login page
+  return new Response(getAdminLoginPage(path), { headers: { "Content-Type": "text/html; charset=utf-8" } });
+});
+
 // ── Phase 3: Compression ──────────────────────────────────────────────────────
 // Enable Gzip/Brotli compression for all responses
 app.use("*", compress());
