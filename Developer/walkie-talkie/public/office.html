@@ -381,7 +381,10 @@ function agentActivity(agent) {
   // Sentinels always show activity
   if(agent.role==='sentinel') { const s=sentinelActivity(name); if(s) return s; }
   const task = tasks[name];
-  if(task) return {text: task.title.slice(0,24), color:'#22c55e'};
+  if(task) {
+    const title = (task.task_title || task.title || 'task').toString();
+    return {text: title.slice(0,24), color:'#22c55e'};
+  }
   const msg = recentMsg(name);
   if(msg) return {text: msg.content.slice(0,24), color:'#a1a1aa'};
   return {text:'idle', color:'#52525b'};
@@ -494,7 +497,7 @@ canvas.addEventListener('mousemove', e=>{
   document.getElementById('ac-name').textContent = name;
   document.getElementById('ac-status').textContent = isOnline ? '● online' : '○ offline';
   document.getElementById('ac-status').style.color = isOnline ? '#22c55e' : '#52525b';
-  document.getElementById('ac-task').textContent = task ? task.task_title.slice(0,40) : (agentActivity(ag).text||'—');
+  document.getElementById('ac-task').textContent = task ? (task.task_title || task.title || 'task').toString().slice(0,40) : (agentActivity(ag).text||'—');
   document.getElementById('ac-last').textContent = lastHB ? timeSince(lastHB) : '—';
   const modelEl = document.getElementById('ac-model');
   const modelRow = document.getElementById('ac-model-row');
