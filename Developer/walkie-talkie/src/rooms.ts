@@ -587,8 +587,12 @@ export function appendMessage(
   // Track metric
   trackMetric("message_sent", code, from);
 
+  // Extract @mentions from content
+  const mentionMatches = content.match(/@([\w\s.-]+?)(?=\s|[^a-zA-Z0-9._\s-]|$)/g);
+  const mentions = mentionMatches ? [...new Set(mentionMatches.map(m => m.slice(1).trim()))] : undefined;
+
   // Emit event for real-time listeners (SSE) with decompressed content (transparent compression)
-  const messagePayload = { id, from: from, to: to || undefined, content, ts: timestamp, type: msgType, reply_to: replyTo || undefined };
+  const messagePayload = { id, from: from, to: to || undefined, content, ts: timestamp, type: msgType, reply_to: replyTo || undefined, ...(mentions?.length ? { mentions } : {}) };
   messageEvents.emit("message", { room_code: code, message: messagePayload });
 
   // Fire webhooks (async, non-blocking)
@@ -631,14 +635,12 @@ export function getMessages(
   // Filter out own messages and decompress content
   const filtered = rows
     .filter(m => m.from !== name)
-    .map(m => ({
-      id: m.id,
-      from: m.from,
-      to: m.to,
-      ts: m.ts,
-      content: m.content.startsWith("lz:") ? LZString.decompressFromEncodedURIComponent(m.content.slice(3)) || m.content : m.content,
-      type: m.type
-    }));
+    .map(m => {
+      const decompressed = m.content.startsWith("lz:") ? LZString.decompressFromEncodedURIComponent(m.content.slice(3)) || m.content : m.content;
+      const mentionMatches = decompressed.match(/@([\w\s.-]+?)(?=\s|[^a-zA-Z0-9._\s-]|$)/g);
+      const mentions = mentionMatches ? [...new Set(mentionMatches.map((m: string) => m.slice(1).trim()))] : undefined;
+      return { id: m.id, from: m.from, to: m.to, ts: m.ts, content: decompressed, type: m.type, ...(mentions?.length ? { mentions } : {}) };
+    });
 
   // Advance cursor to max rowid seen (eliminates skips)
   const maxRowid = rows.length > 0 ? rows[rows.length - 1].rowid : user.last_rowid;
@@ -685,7 +687,12 @@ export function getAllMessages(
       ...m,
       content: m.content.startsWith("lz:") ? LZString.decompressFromEncodedURIComponent(m.content.slice(3)) || m.content : m.content
     }))
-    .reverse(); // chronological order
+    .reverse() // chronological order
+    .map((m: any) => {
+      const mentionMatches = m.content.match(/@([\w\s.-]+?)(?=\s|[^a-zA-Z0-9._\s-]|$)/g);
+      const mentions = mentionMatches ? [...new Set(mentionMatches.map((t: string) => t.slice(1).trim()))] : undefined;
+      return mentions?.length ? { ...m, mentions } : m;
+    });
 
   return { ok: true, messages };
 }
