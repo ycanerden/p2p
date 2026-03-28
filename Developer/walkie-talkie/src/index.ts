@@ -806,16 +806,18 @@ app.post("/api/rooms/:code/telegram", async (c) => {
   }
 
   setTelegramConfig(code, telegram_token, telegram_chat_id);
-  
-  // Try to set webhook automatically
+
+  // Try to set webhook automatically with secret_token for security
   const baseUrl = process.env.PUBLIC_URL || c.req.url.split("/api")[0];
   const webhookUrl = `${baseUrl}/api/webhook/telegram/${code}`;
-  
+  // Use first 12 chars of admin token as webhook secret
+  const webhookSecret = (token || "mesh").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 64);
+
   try {
     const res = await fetch(`https://api.telegram.org/bot${telegram_token}/setWebhook`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url: webhookUrl }),
+      body: JSON.stringify({ url: webhookUrl, secret_token: webhookSecret }),
     });
     const d = await res.json();
     console.log(`[telegram] Webhook set to ${webhookUrl}:`, d);
@@ -824,6 +826,16 @@ app.post("/api/rooms/:code/telegram", async (c) => {
   }
 
   return c.json({ ok: true, webhook_url: webhookUrl });
+});
+
+// GET /api/rooms/:code/telegram/status — check if Telegram is configured
+app.get("/api/rooms/:code/telegram/status", async (c) => {
+  const code = c.req.param("code");
+  const token = c.req.header("x-mesh-secret") || c.req.query("token");
+  if (!verifyAdmin(code, token)) return c.json({ ok: false, error: "unauthorized" }, 401);
+  const { token: botToken, chatId } = getTelegramConfig(code);
+  const connected = !!(botToken && chatId);
+  return c.json({ ok: true, connected, has_token: !!botToken, has_chat_id: !!chatId });
 });
 
 app.post("/api/webhook/telegram/:code", async (c) => {
@@ -835,11 +847,25 @@ app.post("/api/webhook/telegram/:code", async (c) => {
     const from = msg.from?.first_name || msg.from?.username || "Unknown";
     const text = msg.text.trim();
 
+    // Chat ID verification — only accept messages from configured chat
+    const { chatId: configuredChatId } = getTelegramConfig(code);
+    if (configuredChatId && String(msg.chat?.id) !== String(configuredChatId)) {
+      console.warn(`[telegram] Rejected message from unknown chat ${msg.chat?.id} (expected ${configuredChatId})`);
+      return c.json({ ok: true }); // Silently ignore, don't reveal config
+    }
+
     // Decision commands: /approve <id>, /reject <id>, /hold <id>
     const cmdMatch = text.match(/^\/(approve|reject|hold)\s+(\S+)/i);
     if (cmdMatch) {
       const [, action, decisionId] = cmdMatch;
-      const status = action.toLowerCase() as "approved" | "rejected" | "hold";
+      // Map command verb → decision status
+      const statusMap: Record<string, "approved" | "rejected" | "hold"> = {
+        approve: "approved",
+        reject: "rejected",
+        hold: "hold",
+      };
+      const status = statusMap[action.toLowerCase()];
+      if (!status) return c.json({ ok: true });
       const decision = getDecision(decisionId);
       if (decision && decision.status === "pending") {
         resolveDecision(decisionId, status, `Via Telegram by ${from}`, from);

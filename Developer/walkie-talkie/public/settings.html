@@ -244,6 +244,20 @@ async function loadPrivacy() {
   } catch(e) {}
 }
 
+async function loadTelegramStatus() {
+  if (!adminToken) return;
+  try {
+    const d = await fetch('/api/rooms/' + ROOM + '/telegram/status?token=' + encodeURIComponent(adminToken)).then(r => r.json());
+    const dot = document.getElementById('tg-status-dot');
+    if (d.connected) {
+      dot.innerHTML = '<span class="status-dot" style="background:var(--green)"></span><span style="font-size:12px;color:var(--green);font-weight:600;">Connected</span>';
+      document.getElementById('test-ping-btn').style.display = 'inline-flex';
+    } else if (d.has_token || d.has_chat_id) {
+      dot.innerHTML = '<span class="status-dot status-warn"></span><span style="font-size:12px;color:var(--orange);">Partially configured</span>';
+    }
+  } catch(e) {}
+}
+
 function showTokenUI() {
   if (adminToken) {
     document.getElementById('token-unclaimed').style.display = 'none';
@@ -396,6 +410,7 @@ async function saveTelegram() {
 
 loadStats();
 loadPrivacy();
+loadTelegramStatus();
 showTokenUI();
 </script>
 </body>
