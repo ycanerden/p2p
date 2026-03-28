@@ -1315,6 +1315,20 @@ app.get("/changelog", async (c) => {
   }
 });
 
+app.get("/privacy", async (c) => {
+  try {
+    const html = await Bun.file("./public/privacy.html").text();
+    return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
+  } catch { return c.redirect("/"); }
+});
+
+app.get("/terms", async (c) => {
+  try {
+    const html = await Bun.file("./public/terms.html").text();
+    return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
+  } catch { return c.redirect("/"); }
+});
+
 // ── Install script (curl | bash) ─────────────────────────────────────────────
 app.get("/install", async (c) => {
   try {
