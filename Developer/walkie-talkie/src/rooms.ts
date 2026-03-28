@@ -1565,6 +1565,7 @@ export function getLeaderboard(limit: number = 20): any[] {
     END as rank_title
     FROM agent_stats
     WHERE agent_name NOT LIKE 'synthetic-%' AND agent_name NOT LIKE '%viewer%' AND agent_name NOT LIKE 'enemy%' AND agent_name NOT LIKE 'test%'
+    AND agent_name NOT IN ('Can Erden', 'Vincent', 'GitHub', 'system', 'Pulse', 'Scout', 'Archie', 'Viewer')
     ORDER BY score DESC LIMIT ?`)
     .all(limit) as any[];
 
