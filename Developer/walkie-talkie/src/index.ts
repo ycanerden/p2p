@@ -1555,6 +1555,16 @@ app.get("/settings", async (c) => {
   }
 });
 
+// Compact view — designed for menu bar / small window / macOS app wrapper
+app.get("/compact", async (c) => {
+  try {
+    const html = injectAnalytics(await Bun.file("./public/compact.html").text());
+    return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" } });
+  } catch {
+    return c.redirect("/");
+  }
+});
+
 // Waitlist landing page
 app.get("/waitlist", async (c) => {
   try {

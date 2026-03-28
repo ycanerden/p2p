@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=380, initial-scale=1.0">
+  <title>Mesh</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0a0a0b;
+      --surface: #111113;
+      --border: #1e1e21;
+      --text: #e4e4e7;
+      --text2: #a1a1aa;
+      --text3: #52525b;
+      --accent: #8b5cf6;
+      --green: #22c55e;
+      --orange: #f59e0b;
+      --red: #ef4444;
+    }
+    html, body { width: 380px; min-height: 100vh; background: var(--bg); color: var(--text); font-family: -apple-system, 'Inter', system-ui, sans-serif; font-size: 13px; }
+
+    /* Header */
+    .header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 10; }
+    .header-left { display: flex; align-items: center; gap: 8px; }
+    .logo { font-weight: 700; font-size: 14px; letter-spacing: -0.3px; }
+    .room-badge { background: var(--border); border-radius: 4px; padding: 2px 7px; font-size: 11px; color: var(--text2); font-family: 'SF Mono', monospace; }
+    .header-actions { display: flex; gap: 6px; align-items: center; }
+    .dot-online { width: 7px; height: 7px; border-radius: 50%; background: var(--green); display: inline-block; }
+    .online-count { font-size: 11px; color: var(--text3); }
+
+    /* Tabs */
+    .tabs { display: flex; border-bottom: 1px solid var(--border); background: var(--surface); }
+    .tab { flex: 1; padding: 8px 0; text-align: center; font-size: 11px; color: var(--text3); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; }
+    .tab.active { color: var(--text); border-bottom-color: var(--accent); }
+    .tab:hover:not(.active) { color: var(--text2); }
+    .tab-badge { display: inline-block; background: var(--accent); color: white; border-radius: 8px; padding: 0px 5px; font-size: 10px; margin-left: 4px; vertical-align: middle; }
+
+    /* Sections */
+    .section { display: none; }
+    .section.active { display: block; }
+
+    /* Decisions */
+    .decision-card { padding: 12px 14px; border-bottom: 1px solid var(--border); }
+    .decision-card:last-child { border-bottom: none; }
+    .decision-header { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px; }
+    .decision-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+    .decision-title { font-size: 12px; color: var(--text); line-height: 1.5; flex: 1; }
+    .decision-meta { font-size: 11px; color: var(--text3); margin-bottom: 10px; }
+    .decision-actions { display: flex; gap: 6px; }
+    .btn-sm { padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; border: none; cursor: pointer; transition: opacity 0.15s; }
+    .btn-sm:hover { opacity: 0.8; }
+    .btn-approve { background: var(--green); color: #000; }
+    .btn-reject { background: #27272a; color: var(--text2); }
+    .btn-hold { background: #27272a; color: var(--text2); }
+    .resolved-badge { font-size: 11px; color: var(--text3); background: #1c1c1f; border-radius: 4px; padding: 3px 8px; }
+
+    /* Feed */
+    .feed-item { padding: 10px 14px; border-bottom: 1px solid var(--border); display: flex; gap: 8px; }
+    .feed-avatar { width: 24px; height: 24px; border-radius: 6px; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: white; flex-shrink: 0; }
+    .feed-body { flex: 1; min-width: 0; }
+    .feed-from { font-size: 11px; font-weight: 600; color: var(--text2); }
+    .feed-content { font-size: 12px; color: var(--text); line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+    .feed-time { font-size: 10px; color: var(--text3); margin-top: 2px; }
+    .type-badge { display: inline-block; font-size: 9px; border-radius: 3px; padding: 1px 5px; margin-left: 4px; font-weight: 600; vertical-align: middle; }
+    .type-DECISION { background: #451a03; color: var(--orange); }
+    .type-RESOLUTION { background: #052e16; color: var(--green); }
+    .type-TASK { background: #1e1b4b; color: #818cf8; }
+
+    /* Online */
+    .agent-row { padding: 10px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+    .agent-avatar { width: 28px; height: 28px; border-radius: 8px; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: white; flex-shrink: 0; }
+    .agent-info { flex: 1; min-width: 0; }
+    .agent-name { font-size: 12px; font-weight: 600; }
+    .agent-status-text { font-size: 11px; color: var(--text3); }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .status-online { background: var(--green); }
+    .status-offline { background: #3f3f46; }
+
+    /* Task input */
+    .send-bar { padding: 10px 14px; border-top: 1px solid var(--border); background: var(--surface); position: sticky; bottom: 0; }
+    .send-row { display: flex; gap: 6px; }
+    .send-input { flex: 1; background: var(--border); border: 1px solid #2d2d31; border-radius: 8px; padding: 7px 10px; font-size: 12px; color: var(--text); outline: none; font-family: inherit; }
+    .send-input:focus { border-color: var(--accent); }
+    .send-input::placeholder { color: var(--text3); }
+    .send-btn { background: var(--accent); border: none; border-radius: 8px; padding: 7px 12px; color: white; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .send-btn:hover { opacity: 0.85; }
+
+    /* Empty state */
+    .empty { padding: 32px 14px; text-align: center; color: var(--text3); font-size: 12px; }
+
+    /* Room input overlay */
+    .setup-overlay { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px; z-index: 100; }
+    .setup-overlay.hidden { display: none; }
+    .setup-title { font-size: 16px; font-weight: 700; }
+    .setup-sub { font-size: 12px; color: var(--text2); text-align: center; }
+    .setup-input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 13px; color: var(--text); outline: none; font-family: monospace; }
+    .setup-input:focus { border-color: var(--accent); }
+    .setup-btn { width: 100%; background: var(--accent); border: none; border-radius: 8px; padding: 10px; color: white; font-size: 13px; font-weight: 600; cursor: pointer; }
+
+    /* Scrollable content */
+    .content { max-height: calc(100vh - 120px); overflow-y: auto; }
+    .content::-webkit-scrollbar { width: 4px; }
+    .content::-webkit-scrollbar-track { background: transparent; }
+    .content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+<!-- Setup overlay if no room configured -->
+<div class="setup-overlay" id="setup-overlay">
+  <div style="font-size:28px">🕸</div>
+  <div class="setup-title">Connect to Mesh</div>
+  <div class="setup-sub">Enter your room code to start monitoring</div>
+  <input class="setup-input" id="setup-room" placeholder="Room code (e.g. mesh01)" />
+  <input class="setup-input" id="setup-name" placeholder="Your name (e.g. Can)" />
+  <button class="setup-btn" onclick="connect()">Connect →</button>
+</div>
+
+<!-- Main UI -->
+<div id="main-ui" style="display:none">
+  <div class="header">
+    <div class="header-left">
+      <span class="logo">🕸 Mesh</span>
+      <span class="room-badge" id="room-label">mesh01</span>
+    </div>
+    <div class="header-actions">
+      <span class="dot-online"></span>
+      <span class="online-count" id="online-count">0 online</span>
+      <span style="cursor:pointer;color:var(--text3);margin-left:6px;font-size:12px;" onclick="disconnect()" title="Change room">⟳</span>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" id="tab-decisions" onclick="switchTab('decisions')">
+      Decisions <span class="tab-badge" id="decisions-badge" style="display:none">0</span>
+    </div>
+    <div class="tab" id="tab-feed" onclick="switchTab('feed')">Feed</div>
+    <div class="tab" id="tab-agents" onclick="switchTab('agents')">Agents</div>
+  </div>
+
+  <div class="content">
+    <div class="section active" id="section-decisions">
+      <div class="empty" id="decisions-empty">No pending decisions ✓</div>
+    </div>
+    <div class="section" id="section-feed">
+      <div class="empty" id="feed-empty">Loading…</div>
+    </div>
+    <div class="section" id="section-agents">
+      <div class="empty" id="agents-empty">Loading…</div>
+    </div>
+  </div>
+
+  <div class="send-bar">
+    <div class="send-row">
+      <input class="send-input" id="task-input" placeholder="Assign a task or send a message…" onkeydown="if(event.key==='Enter')sendMsg()" />
+      <button class="send-btn" onclick="sendMsg()">↑</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SERVER = 'https://trymesh.chat';
+let ROOM = localStorage.getItem('compact_room') || '';
+let NAME = localStorage.getItem('compact_name') || '';
+let adminToken = localStorage.getItem('compact_token_' + ROOM) || '';
+let pollTimer = null;
+let presenceTimer = null;
+
+function connect() {
+  ROOM = document.getElementById('setup-room').value.trim();
+  NAME = document.getElementById('setup-name').value.trim() || 'User';
+  if (!ROOM) return;
+  localStorage.setItem('compact_room', ROOM);
+  localStorage.setItem('compact_name', NAME);
+  init();
+}
+
+function disconnect() {
+  localStorage.removeItem('compact_room');
+  clearInterval(pollTimer);
+  clearInterval(presenceTimer);
+  document.getElementById('setup-overlay').classList.remove('hidden');
+  document.getElementById('main-ui').style.display = 'none';
+  document.getElementById('setup-room').value = ROOM;
+}
+
+function switchTab(tab) {
+  ['decisions','feed','agents'].forEach(t => {
+    document.getElementById('tab-' + t).classList.toggle('active', t === tab);
+    document.getElementById('section-' + t).classList.toggle('active', t === tab);
+  });
+}
+
+function timeAgo(ts) {
+  const s = Math.floor((Date.now() - ts) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return Math.floor(s/60) + 'm ago';
+  if (s < 86400) return Math.floor(s/3600) + 'h ago';
+  return Math.floor(s/86400) + 'd ago';
+}
+
+function initials(name) {
+  return (name || '?').split(/\s+/).map(w => w[0]).join('').slice(0,2).toUpperCase();
+}
+
+function avatarColor(name) {
+  const colors = ['#8b5cf6','#3b82f6','#ec4899','#f59e0b','#22c55e','#06b6d4'];
+  let h = 0; for (const c of (name||'')) h = (h * 31 + c.charCodeAt(0)) & 0xffff;
+  return colors[h % colors.length];
+}
+
+async function loadDecisions() {
+  try {
+    const d = await fetch(`${SERVER}/api/decisions?room=${ROOM}`).then(r => r.json());
+    const pending = (d.decisions || []).filter(x => x.status === 'pending');
+    const badge = document.getElementById('decisions-badge');
+    const container = document.getElementById('section-decisions');
+    const empty = document.getElementById('decisions-empty');
+
+    badge.textContent = pending.length;
+    badge.style.display = pending.length ? 'inline-block' : 'none';
+
+    // Remove old cards
+    container.querySelectorAll('.decision-card').forEach(el => el.remove());
+
+    if (!pending.length) {
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+
+    for (const dec of pending) {
+      const card = document.createElement('div');
+      card.className = 'decision-card';
+      card.innerHTML = `
+        <div class="decision-header">
+          <div class="decision-icon">🚨</div>
+          <div class="decision-title">${dec.description}</div>
+        </div>
+        <div class="decision-meta">from ${dec.created_by || 'agent'} · ${timeAgo(dec.created_at * 1000 || dec.ts)}</div>
+        <div class="decision-actions">
+          <button class="btn-sm btn-approve" onclick="resolve('${dec.id}','approved')">✅ Approve</button>
+          <button class="btn-sm btn-reject" onclick="resolve('${dec.id}','rejected')">❌ Reject</button>
+          <button class="btn-sm btn-hold" onclick="resolve('${dec.id}','hold')">⏸ Hold</button>
+        </div>`;
+      container.appendChild(card);
+    }
+  } catch(e) {}
+}
+
+async function resolve(id, status) {
+  const name = NAME || 'User';
+  try {
+    await fetch(`${SERVER}/api/decisions/${id}/resolve?room=${ROOM}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-mesh-secret': adminToken },
+      body: JSON.stringify({ status, resolved_by: name }),
+    });
+    loadDecisions();
+  } catch(e) {}
+}
+
+async function loadFeed() {
+  try {
+    const d = await fetch(`${SERVER}/api/history?room=${ROOM}`).then(r => r.json());
+    const msgs = (d.messages || []).slice(-40).reverse();
+    const container = document.getElementById('section-feed');
+    const empty = document.getElementById('feed-empty');
+    container.querySelectorAll('.feed-item').forEach(el => el.remove());
+
+    if (!msgs.length) { empty.style.display = 'block'; return; }
+    empty.style.display = 'none';
+
+    for (const m of msgs) {
+      const type = (m.type || 'BROADCAST').toUpperCase();
+      const typeBadge = (type !== 'BROADCAST') ? `<span class="type-badge type-${type}">${type}</span>` : '';
+      const item = document.createElement('div');
+      item.className = 'feed-item';
+      item.innerHTML = `
+        <div class="feed-avatar" style="background:${avatarColor(m.from || m.name)}">${initials(m.from || m.name)}</div>
+        <div class="feed-body">
+          <div class="feed-from">${m.from || m.name || '?'}${typeBadge}</div>
+          <div class="feed-content">${(m.content || m.message || '').slice(0,300)}</div>
+          <div class="feed-time">${timeAgo(m.ts)}</div>
+        </div>`;
+      container.appendChild(item);
+    }
+  } catch(e) {}
+}
+
+async function loadAgents() {
+  try {
+    const d = await fetch(`${SERVER}/api/presence?room=${ROOM}`).then(r => r.json());
+    const agents = d.agents || [];
+    const online = agents.filter(a => a.status === 'online');
+    document.getElementById('online-count').textContent = online.length + ' online';
+
+    const container = document.getElementById('section-agents');
+    const empty = document.getElementById('agents-empty');
+    container.querySelectorAll('.agent-row').forEach(el => el.remove());
+
+    const sorted = [...agents].sort((a,b) => (b.status === 'online') - (a.status === 'online'));
+    if (!sorted.length) { empty.style.display = 'block'; return; }
+    empty.style.display = 'none';
+
+    for (const a of sorted) {
+      const isOnline = a.status === 'online';
+      const row = document.createElement('div');
+      row.className = 'agent-row';
+      row.innerHTML = `
+        <div class="agent-avatar" style="background:${isOnline ? avatarColor(a.agent_name) : '#27272a'}">${initials(a.agent_name)}</div>
+        <div class="agent-info">
+          <div class="agent-name">${a.agent_name || '?'}</div>
+          <div class="agent-status-text">${a.role || 'agent'}</div>
+        </div>
+        <div class="status-dot ${isOnline ? 'status-online' : 'status-offline'}"></div>`;
+      container.appendChild(row);
+    }
+  } catch(e) {}
+}
+
+async function sendMsg() {
+  const input = document.getElementById('task-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  try {
+    await fetch(`${SERVER}/api/send?room=${encodeURIComponent(ROOM)}&name=${encodeURIComponent(NAME)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg }),
+    });
+    setTimeout(loadFeed, 300);
+  } catch(e) {}
+}
+
+function sendHeartbeat() {
+  fetch(`${SERVER}/api/heartbeat?room=${encodeURIComponent(ROOM)}&name=${encodeURIComponent(NAME)}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ role: 'user' }),
+  }).catch(() => {});
+}
+
+function init() {
+  if (!ROOM) {
+    document.getElementById('setup-overlay').classList.remove('hidden');
+    document.getElementById('main-ui').style.display = 'none';
+    return;
+  }
+  document.getElementById('setup-overlay').classList.add('hidden');
+  document.getElementById('main-ui').style.display = 'block';
+  document.getElementById('room-label').textContent = ROOM;
+
+  // Check for token in URL
+  const params = new URLSearchParams(location.search);
+  if (params.get('token')) {
+    adminToken = params.get('token');
+    localStorage.setItem('compact_token_' + ROOM, adminToken);
+  }
+  if (params.get('room')) {
+    ROOM = params.get('room');
+    localStorage.setItem('compact_room', ROOM);
+    document.getElementById('room-label').textContent = ROOM;
+  }
+  if (params.get('name')) {
+    NAME = params.get('name');
+    localStorage.setItem('compact_name', NAME);
+  }
+
+  loadDecisions();
+  loadFeed();
+  loadAgents();
+  sendHeartbeat();
+
+  clearInterval(pollTimer);
+  clearInterval(presenceTimer);
+  pollTimer = setInterval(() => { loadDecisions(); loadFeed(); }, 8000);
+  presenceTimer = setInterval(() => { loadAgents(); sendHeartbeat(); }, 20000);
+}
+
+// Init on load
+window.addEventListener('load', () => {
+  const params = new URLSearchParams(location.search);
+  if (params.get('room')) { ROOM = params.get('room'); localStorage.setItem('compact_room', ROOM); }
+  if (params.get('name')) { NAME = params.get('name'); localStorage.setItem('compact_name', NAME); }
+  if (params.get('token')) { adminToken = params.get('token'); if (ROOM) localStorage.setItem('compact_token_' + ROOM, adminToken); }
+  init();
+});
+</script>
+</body>
+</html>
