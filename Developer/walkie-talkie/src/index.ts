@@ -291,6 +291,19 @@ async function sendTelegramMessage(roomCode: string, text: string): Promise<void
   }
 }
 
+// Track Telegram sends per room to prevent spam (max 10/hour)
+const telegramSendLog = new Map<string, number[]>();
+function canSendTelegram(roomCode: string): boolean {
+  const now = Date.now();
+  const window = 60 * 60 * 1000; // 1 hour
+  const log = telegramSendLog.get(roomCode) || [];
+  const recent = log.filter(t => now - t < window);
+  telegramSendLog.set(roomCode, recent);
+  if (recent.length >= 10) return false;
+  recent.push(now);
+  return true;
+}
+
 app.post("/api/decisions", async (c) => {
   const room = c.req.query("room");
   const name = c.req.query("name");
@@ -309,14 +322,25 @@ app.post("/api/decisions", async (c) => {
     const decisionMsg = `🚨 DECISION REQUIRED: ${description}\n\nNotified: ${mentions}\nID: ${decision.id}`;
     appendMessage(room, name, decisionMsg, null, "DECISION");
 
-    // Notify via Telegram if configured
-    const tgText = `🚨 *DECISION NEEDED* — ${room}\n\n${description}\n\nReply with:\n/approve ${decision.id}\n/reject ${decision.id}\n/hold ${decision.id}`;
-    await sendTelegramMessage(room, tgText);
+    // Notify via Telegram — rate limited to 10/hour to prevent spam
+    if (canSendTelegram(room)) {
+      const tgText = `🚨 *DECISION NEEDED* — ${room}\n\n${description}\n\nReply with:\n/approve ${decision.id}\n/reject ${decision.id}\n/hold ${decision.id}`;
+      await sendTelegramMessage(room, tgText);
+    }
 
     return c.json({ ok: true, decision });
   } catch (e) {
     return c.json({ error: "invalid_request", detail: String(e) }, 400);
   }
+});
+
+// ── Telegram Test Ping (no decision created, no rate limit impact) ───────────
+app.post("/api/rooms/:code/telegram/test", async (c) => {
+  const code = c.req.param("code");
+  const token = c.req.header("x-mesh-secret") || (await c.req.json().catch(() => ({} as any))).secret;
+  if (!verifyAdmin(code, token)) return c.json({ ok: false, error: "unauthorized" }, 401);
+  await sendTelegramMessage(code, `✅ Mesh Telegram test ping — room *${code}* is connected.`);
+  return c.json({ ok: true, message: "Test ping sent" });
 });
 
 // ── Telegram Decision Bot: Get Pending Decisions ────────────────────────────

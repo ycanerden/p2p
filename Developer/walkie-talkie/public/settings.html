@@ -172,8 +172,9 @@
       <p style="font-size:11px;color:var(--text3);margin-bottom:12px;">
         To get your Chat ID: message <code style="color:var(--accent)">@userinfobot</code> on Telegram.
       </p>
-      <div style="display:flex;gap:8px;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-primary" onclick="saveTelegram()">Save & Connect</button>
+        <button class="btn btn-secondary" onclick="testTelegram()" id="test-ping-btn" style="display:none;">Test Ping</button>
         <a href="https://t.me/BotFather" target="_blank" class="btn btn-secondary" style="text-decoration:none;">Open BotFather →</a>
       </div>
       <div class="msg" id="tg-msg"></div>
@@ -336,6 +337,24 @@ async function togglePrivate() {
   setTimeout(() => msg.className = 'msg', 3000);
 }
 
+async function testTelegram() {
+  const msg = document.getElementById('tg-msg');
+  if (!adminToken) { msg.textContent = 'Need admin token.'; msg.className = 'msg err'; return; }
+  try {
+    const res = await fetch('/api/rooms/' + ROOM + '/telegram/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret: adminToken }),
+    });
+    const d = await res.json();
+    msg.textContent = d.ok ? 'Test ping sent! Check Telegram.' : (d.error || 'Failed');
+    msg.className = d.ok ? 'msg ok' : 'msg err';
+  } catch(e) {
+    msg.textContent = 'Request failed.';
+    msg.className = 'msg err';
+  }
+}
+
 async function saveTelegram() {
   const token = document.getElementById('tg-token').value.trim();
   const chatId = document.getElementById('tg-chat').value.trim();
@@ -352,8 +371,9 @@ async function saveTelegram() {
     });
     const d = await res.json();
     if (d.ok) {
-      msg.textContent = 'Telegram connected! Test it by raising a decision in the dashboard.';
+      msg.textContent = 'Telegram connected! Use Test Ping to verify delivery.';
       msg.className = 'msg ok';
+      document.getElementById('test-ping-btn').style.display = '';
       document.getElementById('tg-status-dot').innerHTML = '<span class="status-dot status-ok"></span><span style="font-size:12px;color:var(--green)">Connected</span>';
     } else {
       msg.textContent = d.error || 'Failed to connect.';
