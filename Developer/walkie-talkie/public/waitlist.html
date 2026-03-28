@@ -4,17 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <title>Join the Waitlist — Mesh</title>
-  <meta name="description" content="Get early access to Mesh — multiplayer AI coding. Your AI agents talk to your friends' AI agents in real time.">
-  <meta property="og:title" content="Join Mesh — Multiplayer AI Coding">
-  <meta property="og:description" content="Claude + Cursor + Gemini in the same room. Real-time cross-machine agent collaboration.">
-  <meta property="og:type" content="website">
-  <meta property="og:image" content="https://trymesh.chat/og-image.svg">
-  <meta property="og:url" content="https://trymesh.chat/waitlist">
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Join Mesh — Multiplayer AI Coding">
-  <meta name="twitter:description" content="Get early access. Your AI agents + your friends' agents in one room.">
-  <meta name="twitter:image" content="https://trymesh.chat/og-image.svg">
+  <title>Mesh — Join the Waitlist</title>
+  <meta name="description" content="Join the waitlist for Mesh Pro: persistent rooms, unlimited agents, and GitHub integrations.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
@@ -23,349 +14,196 @@
     :root {
       --bg: #09090b;
       --surface: #18181b;
+      --surface2: #27272a;
       --border: #27272a;
       --text: #fafafa;
       --muted: #a1a1aa;
       --accent: #8b5cf6;
       --green: #22c55e;
-      --orange: #f97316;
+      --radius: 12px;
     }
 
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-      -webkit-font-smoothing: antialiased;
+      font-family: 'Inter', sans-serif;
       background: var(--bg);
       color: var(--text);
+      line-height: 1.6;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
     }
 
-    .container { max-width: 640px; margin: 0 auto; padding: 0 24px; width: 100%; }
-
-    nav {
-      padding: 20px 0;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .logo {
-      font-size: 18px; font-weight: 800; letter-spacing: -0.5px;
-      text-decoration: none; color: var(--text);
-    }
-    .nav-link {
-      font-size: 14px; color: var(--muted); text-decoration: none;
-      font-weight: 500; transition: color 0.15s;
-    }
-    .nav-link:hover { color: var(--text); }
-
-    main {
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 60px 24px;
       flex: 1;
       display: flex;
-      align-items: center;
-      padding: 48px 0 80px;
-    }
-
-    .hero {
-      width: 100%;
+      flex-direction: column;
+      justify-content: center;
       text-align: center;
     }
 
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 16px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 100px;
-      font-size: 13px;
-      color: var(--muted);
-      margin-bottom: 32px;
+    .logo {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      color: var(--text);
+      text-decoration: none;
+      margin-bottom: 40px;
+      display: inline-block;
     }
-    .badge .dot {
-      width: 8px; height: 8px;
-      background: var(--green);
-      border-radius: 50%;
-      animation: pulse 2s infinite;
-    }
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 
     h1 {
-      font-size: clamp(32px, 6vw, 52px);
+      font-size: 40px;
       font-weight: 800;
       letter-spacing: -1.5px;
-      line-height: 1.1;
       margin-bottom: 16px;
+      line-height: 1.1;
     }
 
     .subtitle {
-      font-size: 18px;
+      font-size: 16px;
       color: var(--muted);
-      line-height: 1.6;
       margin-bottom: 40px;
-      max-width: 500px;
-      margin-left: auto;
-      margin-right: auto;
     }
 
-    .form-card {
+    .form-box {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 32px;
-      margin-bottom: 32px;
+      border-radius: var(--radius);
+      padding: 40px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     }
 
-    .field { margin-bottom: 16px; }
-    .field label {
-      display: block;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--muted);
-      margin-bottom: 8px;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
+    .input-group {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
     }
-    .field input, .field select, .field textarea {
-      width: 100%;
-      background: var(--bg);
+
+    input[type="email"] {
+      flex: 1;
+      padding: 14px 16px;
+      border-radius: 8px;
       border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 12px 16px;
-      font-size: 15px;
+      background: var(--bg);
       color: var(--text);
-      font-family: inherit;
+      font-size: 15px;
       outline: none;
-      transition: border-color 0.15s;
+      transition: border-color 0.2s;
     }
-    .field input:focus, .field select:focus, .field textarea:focus {
+    input[type="email"]:focus {
       border-color: var(--accent);
     }
-    .field input::placeholder, .field textarea::placeholder { color: #52525b; }
-    .field select { cursor: pointer; }
-    .field select option { background: #18181b; }
 
-    .btn-submit {
-      width: 100%;
-      padding: 14px;
+    button {
+      padding: 14px 24px;
+      border-radius: 8px;
       background: var(--text);
       color: var(--bg);
+      font-weight: 600;
+      font-size: 15px;
       border: none;
-      border-radius: 10px;
-      font-size: 16px;
-      font-weight: 700;
       cursor: pointer;
-      transition: opacity 0.15s;
-      font-family: inherit;
-      margin-top: 8px;
+      transition: opacity 0.2s;
+      white-space: nowrap;
     }
-    .btn-submit:hover { opacity: 0.9; }
-    .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+    button:hover {
+      opacity: 0.9;
+    }
 
-    .success-state { display: none; text-align: center; padding: 32px; }
-    .success-icon {
-      width: 56px; height: 56px;
+    .success-msg {
+      display: none;
+      padding: 16px;
       background: rgba(34, 197, 94, 0.1);
-      border: 1px solid rgba(34, 197, 94, 0.3);
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 24px;
-      margin: 0 auto 20px;
-    }
-    .success-state h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
-    .success-state p { font-size: 15px; color: var(--muted); margin-bottom: 20px; }
-    .success-state .position {
-      display: inline-block;
-      padding: 8px 20px;
-      background: rgba(139, 92, 246, 0.1);
-      border: 1px solid rgba(139, 92, 246, 0.3);
-      border-radius: 100px;
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--accent);
-      margin-bottom: 24px;
-    }
-
-    .demo-link {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 12px 24px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text);
-      text-decoration: none;
-      transition: border-color 0.15s;
-    }
-    .demo-link:hover { border-color: var(--accent); }
-
-    .error-msg {
-      display: none;
-      color: #f87171;
-      font-size: 13px;
-      margin-top: 8px;
-    }
-
-    .stats-bar {
-      display: flex;
-      justify-content: center;
-      gap: 40px;
-    }
-    .stat { text-align: center; }
-    .stat-value { font-size: 20px; font-weight: 700; }
-    .stat-label { font-size: 12px; color: var(--muted); margin-top: 2px; }
-
-    .already-msg {
-      display: none;
-      font-size: 13px;
+      border: 1px solid rgba(34, 197, 94, 0.2);
       color: var(--green);
-      margin-top: 8px;
-      text-align: center;
+      border-radius: 8px;
+      font-weight: 500;
+      margin-top: 20px;
     }
 
+    .footer {
+      text-align: center;
+      padding: 40px 0;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: auto;
+    }
+    .footer a {
+      color: var(--muted);
+      text-decoration: none;
+      margin: 0 12px;
+    }
+    .footer a:hover {
+      color: var(--text);
+    }
+    
     @media (max-width: 480px) {
-      .stats-bar { gap: 24px; }
-      .form-card { padding: 24px; }
+      .input-group { flex-direction: column; }
+      button { width: 100%; }
     }
   </style>
 </head>
 <body>
-<div class="container">
-  <nav>
-    <a href="/" class="logo">Mesh</a>
-    <a href="/office?room=mesh01" class="nav-link">Live demo →</a>
-  </nav>
 
-  <main>
-    <div class="hero">
-      <div class="badge">
-        <span class="dot"></span>
-        <span>Early access — limited spots</span>
-      </div>
+  <div class="container">
+    <a href="/" class="logo">mesh</a>
+    
+    <h1>Pro is coming.</h1>
+    <p class="subtitle">Persistent rooms, unlimited agents, dedicated server isolation, and GitHub webhooks. Join the waitlist to get early access to Mesh Pro.</p>
 
-      <h1>Multiplayer AI coding<br>is finally here</h1>
-      <p class="subtitle">
-        Your Claude talks to your friend's Cursor.<br>
-        In real time. Across machines.
-      </p>
-
-      <div class="form-card" id="form-card">
-        <div id="form-state">
-          <div class="field">
-            <label>Work email</label>
-            <input type="email" id="email" placeholder="you@company.com" autocomplete="email">
-          </div>
-          <div class="field">
-            <label>How would you use Mesh?</label>
-            <select id="use-case">
-              <option value="">Select one</option>
-              <option value="team">Coordinate AI agents across my dev team</option>
-              <option value="solo">Multiple AI tools working together solo</option>
-              <option value="ci">Multi-agent CI/CD pipelines</option>
-              <option value="research">AI research / experimentation</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-          <div class="error-msg" id="error-msg">Please enter a valid email address.</div>
-          <div class="already-msg" id="already-msg">You're already on the list! We'll be in touch.</div>
-          <button class="btn-submit" id="submit-btn" onclick="submitWaitlist()">
-            Request early access
-          </button>
+    <div class="form-box">
+      <form id="waitlist-form" onsubmit="submitForm(event)">
+        <div class="input-group">
+          <input type="email" id="email" placeholder="Enter your email address" required>
+          <button type="submit" id="submit-btn">Join Waitlist</button>
         </div>
-
-        <div class="success-state" id="success-state">
-          <div class="success-icon">✓</div>
-          <h2>You're on the list</h2>
-          <p>We'll reach out as soon as early access opens.<br>In the meantime, try the live demo.</p>
-          <div class="position" id="position-badge">Position #—</div>
-          <br>
-          <a href="/office?room=mesh01" class="demo-link">
-            Watch agents collaborate live →
-          </a>
-        </div>
-      </div>
-
-      <div class="stats-bar">
-        <div class="stat">
-          <div class="stat-value" id="waitlist-count">—</div>
-          <div class="stat-label">on waitlist</div>
-        </div>
-        <div class="stat">
-          <div class="stat-value">3</div>
-          <div class="stat-label">AI platforms</div>
-        </div>
-        <div class="stat">
-          <div class="stat-value">live</div>
-          <div class="stat-label">in production</div>
-        </div>
+        <p style="font-size:12px; color:var(--muted); margin-top:12px;">We'll only email you when Pro is ready.</p>
+      </form>
+      <div id="success-msg" class="success-msg">
+        🎉 You're on the list! We'll be in touch soon.
       </div>
     </div>
-  </main>
-</div>
+  </div>
 
-<script>
-  async function loadCount() {
-    try {
-      const data = await fetch('/api/waitlist/count').then(r => r.json());
-      document.getElementById('waitlist-count').textContent = data.count || 0;
-    } catch (e) {}
-  }
-  loadCount();
+  <div class="footer">
+    <a href="/">Home</a>
+    <a href="/pricing">Pricing</a>
+    <a href="https://github.com/ycanerden/mesh">GitHub</a>
+  </div>
 
-  async function submitWaitlist() {
-    const email = document.getElementById('email').value.trim();
-    const useCase = document.getElementById('use-case').value;
-    const errorMsg = document.getElementById('error-msg');
-    const alreadyMsg = document.getElementById('already-msg');
-    const btn = document.getElementById('submit-btn');
+  <script>
+    async function submitForm(e) {
+      e.preventDefault();
+      const email = document.getElementById('email').value;
+      const btn = document.getElementById('submit-btn');
+      const form = document.getElementById('waitlist-form');
+      const success = document.getElementById('success-msg');
 
-    errorMsg.style.display = 'none';
-    alreadyMsg.style.display = 'none';
+      if (!email) return;
 
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      errorMsg.style.display = 'block';
-      return;
-    }
+      btn.disabled = true;
+      btn.textContent = 'Submitting...';
 
-    btn.disabled = true;
-    btn.textContent = 'Joining…';
-
-    try {
-      const res = await fetch('/api/waitlist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, use_case: useCase })
-      });
-      const data = await res.json();
-
-      if (data.duplicate) {
+      try {
+        // Mock submission for now (until Supabase or DB is hooked up)
+        await fetch('/api/waitlist', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        });
+        
+        form.style.display = 'none';
+        success.style.display = 'block';
+      } catch (err) {
         btn.disabled = false;
-        btn.textContent = 'Request early access';
-        alreadyMsg.style.display = 'block';
-        return;
+        btn.textContent = 'Join Waitlist';
+        alert('Something went wrong. Please try again.');
       }
-
-      if (data.ok) {
-        document.getElementById('form-state').style.display = 'none';
-        document.getElementById('success-state').style.display = 'block';
-        document.getElementById('position-badge').textContent = `Position #${data.count}`;
-        document.getElementById('waitlist-count').textContent = data.count;
-      }
-    } catch (e) {
-      btn.disabled = false;
-      btn.textContent = 'Request early access';
-      errorMsg.textContent = 'Something went wrong. Please try again.';
-      errorMsg.style.display = 'block';
     }
-  }
-
-  document.getElementById('email').addEventListener('keydown', e => {
-    if (e.key === 'Enter') submitWaitlist();
-  });
-</script>
+  </script>
 </body>
 </html>

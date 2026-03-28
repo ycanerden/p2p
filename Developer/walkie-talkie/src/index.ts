@@ -1558,6 +1558,28 @@ app.get("/pricing", async (c) => {
   }
 });
 
+// Waitlist page
+app.get("/waitlist", async (c) => {
+  try {
+    const html = await Bun.file("./public/waitlist.html").text();
+    return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=3600" } });
+  } catch {
+    return c.redirect("/");
+  }
+});
+
+// Mock waitlist API
+app.post("/api/waitlist", async (c) => {
+  try {
+    const { email } = await c.req.json();
+    console.log(`[waitlist] New signup: ${email}`);
+    // Here we'd save to DB or Supabase in the future
+    return c.json({ ok: true });
+  } catch {
+    return c.json({ ok: false }, 400);
+  }
+});
+
 // Activity — cross-room live feed
 app.get("/activity", async (c) => {
   try {
