@@ -287,6 +287,21 @@ export function claimRoomAdmin(roomCode: string): string | null {
   return token;
 }
 
+export function rotateAdminToken(roomCode: string): string {
+  const token = crypto.randomUUID();
+  db.prepare("UPDATE rooms SET admin_token = ? WHERE code = ?").run(token, roomCode);
+  return token;
+}
+
+// Force-reset admin token (for creators who lost it or need to reclaim)
+export function resetAdminToken(roomCode: string): string | null {
+  const row = db.prepare("SELECT 1 FROM rooms WHERE code = ?").get(roomCode);
+  if (!row) return null;
+  const token = crypto.randomUUID();
+  db.prepare("UPDATE rooms SET admin_token = ? WHERE code = ?").run(token, roomCode);
+  return token;
+}
+
 export function addToWhitelist(roomCode: string, agentName: string): void {
   db.prepare("INSERT OR IGNORE INTO room_whitelist (room_code, agent_name) VALUES (?, ?)").run(roomCode, agentName);
 }
@@ -562,9 +577,10 @@ export function getAllMessages(
   const room = db.prepare("SELECT 1 FROM rooms WHERE code = ?").get(code);
   if (!room) return { ok: false, error: "room_expired_or_not_found" };
 
+  // Exclude private DMs (messages with a recipient) from public history
   const query = since
-    ? db.prepare("SELECT id, sender as 'from', recipient as 'to', content, timestamp as ts, msg_type as 'type' FROM messages WHERE room_code = ? AND timestamp > ? ORDER BY timestamp DESC LIMIT ?")
-    : db.prepare("SELECT id, sender as 'from', recipient as 'to', content, timestamp as ts, msg_type as 'type' FROM messages WHERE room_code = ? ORDER BY timestamp DESC LIMIT ?");
+    ? db.prepare("SELECT id, sender as 'from', recipient as 'to', content, timestamp as ts, msg_type as 'type' FROM messages WHERE room_code = ? AND timestamp > ? AND recipient IS NULL ORDER BY timestamp DESC LIMIT ?")
+    : db.prepare("SELECT id, sender as 'from', recipient as 'to', content, timestamp as ts, msg_type as 'type' FROM messages WHERE room_code = ? AND recipient IS NULL ORDER BY timestamp DESC LIMIT ?");
 
   const rows = since
     ? query.all(code, since, limit) as Message[]

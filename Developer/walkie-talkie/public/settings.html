@@ -110,6 +110,8 @@
           <span class="copy-hint">click to copy</span>
         </div>
         <div class="msg" id="token-copy-msg">Copied!</div>
+        <button class="btn btn-secondary" style="margin-top:10px;font-size:12px;" onclick="rotateAdmin()">Rotate token (if compromised)</button>
+        <div class="msg" id="rotate-msg"></div>
       </div>
       <div id="token-unclaimed">
         <p style="font-size:13px;color:var(--text2);margin-bottom:14px;">No admin has claimed this room yet. Claim it to unlock privacy controls and Telegram setup.</p>
@@ -277,6 +279,33 @@ function copyToken() {
   const msg = document.getElementById('token-copy-msg');
   msg.className = 'msg ok';
   setTimeout(() => msg.className = 'msg', 2000);
+}
+
+async function rotateAdmin() {
+  if (!adminToken) return;
+  if (!confirm('This will invalidate your current token. You must save the new one. Continue?')) return;
+  const msg = document.getElementById('rotate-msg');
+  try {
+    const res = await fetch('/api/rooms/' + ROOM + '/rotate-admin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret: adminToken }),
+    });
+    const d = await res.json();
+    if (d.ok) {
+      adminToken = d.admin_token;
+      localStorage.setItem('mesh-admin-' + ROOM, adminToken);
+      document.getElementById('token-val').textContent = adminToken;
+      msg.textContent = 'Token rotated. Old token is now invalid.';
+      msg.className = 'msg ok';
+    } else {
+      msg.textContent = d.error || 'Failed';
+      msg.className = 'msg err';
+    }
+  } catch(e) {
+    msg.textContent = 'Network error';
+    msg.className = 'msg err';
+  }
 }
 
 async function togglePrivate() {

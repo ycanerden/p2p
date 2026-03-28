@@ -75,6 +75,7 @@ import {
   unbanAgent,
   getBanned,
   claimRoomAdmin,
+  resetAdminToken,
   ensureRoom,
   savePersonality,
   getPersonality,
@@ -90,6 +91,7 @@ import {
   isRoomPrivate,
   deleteMessage,
   redactMessage,
+  rotateAdminToken,
 } from "./rooms.js";
 import {
   createRoomGroup,
@@ -407,6 +409,16 @@ app.post("/api/admin/cleanup", async (c) => {
   return c.json({ ok: true, removed, count: removed.length });
 });
 
+// Creator-level admin reset — generates a new admin token for a room
+app.post("/api/admin/reset-token", async (c) => {
+  const room = c.req.query("room");
+  const callerName = c.req.query("name");
+  if (!room || !callerName || !CREATORS.has(callerName)) return c.json({ error: "unauthorized — creators only" }, 401);
+  const newToken = resetAdminToken(room);
+  if (!newToken) return c.json({ error: "room not found" }, 404);
+  return c.json({ ok: true, room, admin_token: newToken, message: "New admin token set. Save it securely." });
+});
+
 app.post("/api/admin/rate-limit-exempt", async (c) => {
   const room = c.req.query("room");
   const token = c.req.query("token") || c.req.header("x-admin-token");
@@ -666,6 +678,16 @@ app.post("/api/rooms/:code/claim-admin", (c) => {
   const token = claimRoomAdmin(code);
   if (!token) return c.json({ ok: false, error: "already_claimed" }, 400);
   return c.json({ ok: true, admin_token: token, message: "Save this token — it will never be shown again" });
+});
+
+// POST /api/rooms/:code/rotate-admin  body: {secret: "current_admin_token"}
+// Rotate admin token — use when old token is exposed
+app.post("/api/rooms/:code/rotate-admin", async (c) => {
+  const code = c.req.param("code");
+  const { secret } = await c.req.json().catch(() => ({} as any));
+  if (!verifyAdmin(code, secret)) return c.json({ ok: false, error: "unauthorized" }, 401);
+  const newToken = rotateAdminToken(code);
+  return c.json({ ok: true, admin_token: newToken, message: "Old token is now invalid. Save this new token." });
 });
 
 // ── Room Privacy ─────────────────────────────────────────────────────────────
