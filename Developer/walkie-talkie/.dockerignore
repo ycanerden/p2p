@@ -1,0 +1,8 @@
+node_modules
+release
+macos-app
+dist
+*.db
+*.log
+.git
+.claude

@@ -52,3 +52,9 @@ build/
 .railway
 .dockerignore
 public/videos/
+
+# Large build artifacts
+release/
+macos-app/*.zip
+*.app
+dist/

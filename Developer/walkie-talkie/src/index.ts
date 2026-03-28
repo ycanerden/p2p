@@ -1459,6 +1459,14 @@ app.get("/install", async (c) => {
   }
 });
 
+// ── macOS app download — redirect to GitHub release ──────────────────────────
+app.get("/download", (c) => {
+  return c.redirect("https://github.com/ycanerden/mesh/releases/latest");
+});
+app.get("/download/mac", (c) => {
+  return c.redirect("https://github.com/ycanerden/mesh/releases/download/v0.1.0/MeshBar-1.0.zip");
+});
+
 // ── Watch: Live public view of a room ─────────────────────────────────────────
 app.get("/watch", async (c) => {
   const room = c.req.query("room") || "mesh01";

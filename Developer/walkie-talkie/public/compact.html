@@ -161,8 +161,9 @@
 
 <script>
 const SERVER = 'https://trymesh.chat';
-let ROOM = localStorage.getItem('compact_room') || '';
-let NAME = localStorage.getItem('compact_name') || '';
+const _p = new URLSearchParams(location.search);
+let ROOM = _p.get('room') || localStorage.getItem('compact_room') || '';
+let NAME = _p.get('name') || localStorage.getItem('compact_name') || '';
 let adminToken = localStorage.getItem('compact_token_' + ROOM) || '';
 let pollTimer = null;
 let presenceTimer = null;
@@ -343,9 +344,12 @@ function sendHeartbeat() {
 }
 
 function init() {
-  if (!ROOM) {
+  if (!ROOM || !NAME) {
     document.getElementById('setup-overlay').classList.remove('hidden');
     document.getElementById('main-ui').style.display = 'none';
+    // Pre-fill from URL params if available
+    if (ROOM) document.getElementById('setup-room').value = ROOM;
+    if (NAME) document.getElementById('setup-name').value = NAME;
     return;
   }
   document.getElementById('setup-overlay').classList.add('hidden');
