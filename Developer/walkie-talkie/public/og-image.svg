@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#09090b"/>
+      <stop offset="100%" stop-color="#0f0f14"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#8b5cf6"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Subtle grid -->
+  <g stroke="#1a1a2e" stroke-width="1" opacity="0.6">
+    <line x1="0" y1="210" x2="1200" y2="210"/>
+    <line x1="0" y1="420" x2="1200" y2="420"/>
+    <line x1="300" y1="0" x2="300" y2="630"/>
+    <line x1="600" y1="0" x2="600" y2="630"/>
+    <line x1="900" y1="0" x2="900" y2="630"/>
+  </g>
+
+  <!-- Logo mark -->
+  <rect x="80" y="80" width="60" height="60" rx="14" fill="url(#accent)"/>
+  <text x="110" y="122" font-family="system-ui,-apple-system,sans-serif" font-size="32" font-weight="800" fill="white" text-anchor="middle">M</text>
+
+  <!-- Live badge -->
+  <rect x="80" y="175" width="90" height="28" rx="14" fill="#18181b" stroke="#27272a" stroke-width="1"/>
+  <circle cx="102" cy="189" r="5" fill="#22c55e">
+    <animate attributeName="opacity" values="1;0.4;1" dur="2s" repeatCount="indefinite"/>
+  </circle>
+  <text x="115" y="194" font-family="system-ui,-apple-system,sans-serif" font-size="12" font-weight="600" fill="#a1a1aa">LIVE</text>
+
+  <!-- Main headline -->
+  <text x="80" y="310" font-family="system-ui,-apple-system,sans-serif" font-size="72" font-weight="800" fill="#fafafa" letter-spacing="-2">Multiplayer</text>
+  <text x="80" y="395" font-family="system-ui,-apple-system,sans-serif" font-size="72" font-weight="800" fill="#fafafa" letter-spacing="-2">AI Coding</text>
+
+  <!-- Subtitle -->
+  <text x="80" y="450" font-family="system-ui,-apple-system,sans-serif" font-size="26" fill="#a1a1aa">Your agents + your friends' agents. One room, real time.</text>
+
+  <!-- Agent bubbles on the right -->
+  <g transform="translate(820, 160)">
+    <!-- Claude bubble -->
+    <rect x="0" y="0" width="300" height="72" rx="12" fill="#18181b" stroke="#27272a" stroke-width="1"/>
+    <circle cx="36" cy="36" r="20" fill="#8b5cf6"/>
+    <text x="36" y="42" font-family="system-ui,sans-serif" font-size="14" font-weight="700" fill="white" text-anchor="middle">C</text>
+    <text x="68" y="28" font-family="system-ui,sans-serif" font-size="13" font-weight="600" fill="#fafafa">Claude</text>
+    <text x="68" y="48" font-family="system-ui,sans-serif" font-size="12" fill="#71717a">Reviewing auth module...</text>
+    <circle cx="280" cy="16" r="5" fill="#22c55e"/>
+
+    <!-- Cursor bubble -->
+    <rect x="0" y="88" width="300" height="72" rx="12" fill="#18181b" stroke="#27272a" stroke-width="1"/>
+    <circle cx="36" cy="124" r="20" fill="#6366f1"/>
+    <text x="36" y="130" font-family="system-ui,sans-serif" font-size="14" font-weight="700" fill="white" text-anchor="middle">Cu</text>
+    <text x="68" y="116" font-family="system-ui,sans-serif" font-size="13" font-weight="600" fill="#fafafa">Cursor</text>
+    <text x="68" y="136" font-family="system-ui,sans-serif" font-size="12" fill="#71717a">Picked up task from Claude ✓</text>
+    <circle cx="280" cy="104" r="5" fill="#22c55e"/>
+
+    <!-- Gemini bubble -->
+    <rect x="0" y="176" width="300" height="72" rx="12" fill="#18181b" stroke="#27272a" stroke-width="1"/>
+    <circle cx="36" cy="212" r="20" fill="#f59e0b"/>
+    <text x="36" y="218" font-family="system-ui,sans-serif" font-size="14" font-weight="700" fill="white" text-anchor="middle">G</text>
+    <text x="68" y="204" font-family="system-ui,sans-serif" font-size="13" font-weight="600" fill="#fafafa">Gemini</text>
+    <text x="68" y="224" font-family="system-ui,sans-serif" font-size="12" fill="#71717a">Running tests in parallel...</text>
+    <circle cx="280" cy="192" r="5" fill="#22c55e"/>
+
+    <!-- Connection lines between bubbles -->
+    <line x1="150" y1="72" x2="150" y2="88" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="3,3" opacity="0.6"/>
+    <line x1="150" y1="160" x2="150" y2="176" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="3,3" opacity="0.6"/>
+  </g>
+
+  <!-- Bottom bar -->
+  <rect x="0" y="570" width="1200" height="60" fill="#111113"/>
+  <text x="80" y="603" font-family="system-ui,sans-serif" font-size="16" font-weight="600" fill="#52525b">p2p-production-983f.up.railway.app</text>
+  <text x="1120" y="603" font-family="system-ui,sans-serif" font-size="16" font-weight="700" fill="#8b5cf6" text-anchor="end">mesh →</text>
+</svg>

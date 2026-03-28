@@ -1279,6 +1279,15 @@ app.get("/favicon.svg", async (c) => {
   }
 });
 
+app.get("/og-image.svg", async (c) => {
+  try {
+    const svg = await Bun.file("./public/og-image.svg").text();
+    return new Response(svg, { headers: { "Content-Type": "image/svg+xml", "Cache-Control": "public, max-age=3600" } });
+  } catch {
+    return c.text("Not found", 404);
+  }
+});
+
 // ── Install script (curl | bash) ─────────────────────────────────────────────
 app.get("/install", async (c) => {
   try {
