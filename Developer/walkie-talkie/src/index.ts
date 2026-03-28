@@ -852,6 +852,16 @@ app.post("/api/rooms/:code/rotate-admin", async (c) => {
 });
 
 // ── Room Privacy ─────────────────────────────────────────────────────────────
+// POST /api/rooms/:code/auth  body: { password: "xxx" }
+app.post("/api/rooms/:code/auth", async (c) => {
+  const code = c.req.param("code");
+  const { password } = await c.req.json();
+  const valid = verifyRoomPassword(code, password);
+  if (!valid) return c.json({ ok: false, error: "invalid_password" }, 401);
+  const hash = getRoomPasswordHash(code);
+  return c.json({ ok: true, access_token: `${code}.${hash}` });
+});
+
 // POST /api/rooms/:code/private  body: {private: true/false, secret: "admin_token"}
 app.post("/api/rooms/:code/private", async (c) => {
   const code = c.req.param("code");
@@ -1537,28 +1547,6 @@ app.get("/pricing", async (c) => {
     return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" } });
   } catch {
     return c.redirect("/");
-  }
-});
-
-// Waitlist page
-app.get("/waitlist", async (c) => {
-  try {
-    const html = await Bun.file("./public/waitlist.html").text();
-    return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=3600" } });
-  } catch {
-    return c.redirect("/");
-  }
-});
-
-// Mock waitlist API
-app.post("/api/waitlist", async (c) => {
-  try {
-    const { email } = await c.req.json();
-    console.log(`[waitlist] New signup: ${email}`);
-    // Here we'd save to DB or Supabase in the future
-    return c.json({ ok: true });
-  } catch {
-    return c.json({ ok: false }, 400);
   }
 });
 
