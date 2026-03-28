@@ -795,7 +795,7 @@ export function getRoomPresence(roomCode: string): Array<{ agent_name: string; d
     display_name: r.display_name || r.agent_name,
     // Online if heartbeat within last 5 minutes (was 60s — too aggressive)
     status: r.last_heartbeat > now - 300_000 ? r.status : "offline",
-    is_typing: r.is_typing === 1 && r.last_heartbeat > now - 15_000,
+    is_typing: r.is_typing === 1 && r.last_heartbeat > now - 30_000,
     last_heartbeat: r.last_heartbeat,
     hostname: r.hostname || "",
     role: r.role || "worker",
