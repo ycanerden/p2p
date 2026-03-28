@@ -827,6 +827,16 @@ app.get("/team", async (c) => {
   }
 });
 
+// Leaderboard — agent rankings by tasks + messages
+app.get("/leaderboard", async (c) => {
+  try {
+    const html = await Bun.file("./public/leaderboard.html").text();
+    return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" } });
+  } catch {
+    return c.redirect("/office");
+  }
+});
+
 // Public demo — watch live agent collaboration
 app.get("/demo", async (c) => {
   try {
@@ -1705,6 +1715,61 @@ app.all("/mcp", async (c) => {
 
   await server.connect(transport);
   return transport.handleRequest(c.req.raw);
+});
+
+// ── Sentinel Agents: Keep office alive 24/7 ──────────────────────────────────
+// Lightweight server-side agents that maintain presence in default rooms
+// so visitors always see activity on /office
+
+const SENTINEL_ROOM = process.env.SENTINEL_ROOM || "mesh01";
+const SENTINELS = [
+  { name: "Scout", role: "monitor", tasks: ["watching GitHub commits", "checking API health", "scanning error logs", "reviewing deploy status"] },
+  { name: "Pulse", role: "ops", tasks: ["measuring response times", "tracking uptime", "analyzing traffic patterns", "monitoring agent activity"] },
+  { name: "Archie", role: "archivist", tasks: ["summarizing daily activity", "indexing room history", "compiling agent stats", "updating leaderboard"] },
+];
+
+function startSentinels() {
+  if (process.env.DISABLE_SENTINELS === "1") return;
+  console.log(`[sentinel] Starting ${SENTINELS.length} sentinel agents in ${SENTINEL_ROOM}`);
+
+  for (const s of SENTINELS) {
+    ensureRoom(SENTINEL_ROOM);
+    joinRoom(SENTINEL_ROOM, s.name);
+    updatePresence(SENTINEL_ROOM, s.name, "online", "mesh-server", "sentinel");
+  }
+
+  // Rotate sentinel activity every 45 seconds — keeps them "alive" on /office
+  setInterval(() => {
+    for (const s of SENTINELS) {
+      updatePresence(SENTINEL_ROOM, s.name, "online", "mesh-server", "sentinel");
+      // Randomly toggle typing to show activity
+      const isTyping = Math.random() < 0.3;
+      setTyping(SENTINEL_ROOM, s.name, isTyping);
+    }
+  }, 45_000);
+
+  // Sentinel heartbeat log
+  setInterval(() => {
+    const active = getActiveAgentsCount();
+    console.log(`[sentinel] heartbeat — ${active} agents across all rooms`);
+  }, 300_000); // every 5 min
+}
+
+// Start sentinels after a short delay to let the server boot
+setTimeout(startSentinels, 3000);
+
+// ── Connection verification endpoint ─────────────────────────────────────────
+// Used by setup page to confirm an agent successfully connected
+app.get("/api/verify-connection", (c) => {
+  const room = c.req.query("room");
+  const name = c.req.query("name");
+  if (!room || !name) return c.json({ error: "missing room or name" }, 400);
+  const presence = getRoomPresence(room);
+  const agent = presence.find(a => a.agent_name === name);
+  if (agent && Date.now() - agent.last_heartbeat < 120_000) {
+    return c.json({ ok: true, connected: true, status: agent.status, last_heartbeat: agent.last_heartbeat });
+  }
+  return c.json({ ok: true, connected: false });
 });
 
 const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;
