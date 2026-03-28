@@ -1246,6 +1246,16 @@ app.get("/invite", (c) => {
   return c.redirect(`/setup?room=${encodeURIComponent(safe)}`);
 });
 
+// ── Favicon ───────────────────────────────────────────────────────────────────
+app.get("/favicon.svg", async (c) => {
+  try {
+    const svg = await Bun.file("./public/favicon.svg").text();
+    return new Response(svg, { headers: { "Content-Type": "image/svg+xml", "Cache-Control": "public, max-age=86400" } });
+  } catch {
+    return c.text("Not found", 404);
+  }
+});
+
 // ── Install script (curl | bash) ─────────────────────────────────────────────
 app.get("/install", async (c) => {
   try {
