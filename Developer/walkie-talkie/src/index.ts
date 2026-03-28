@@ -975,37 +975,39 @@ app.get("/api/leaderboard", (c) => {
   return c.json({ ok: true, leaderboard: getLeaderboard(limit) });
 });
 
-// Agent activity timeline for a room
+// Agent activity timeline — single room or cross-room (no room = all public rooms)
 app.get("/api/activity", (c) => {
   const room = c.req.query("room");
-  if (!room) return c.json({ error: "missing room" }, 400);
+  const limit = Math.min(parseInt(c.req.query("limit") || "50"), 200);
 
-  const limit = parseInt(c.req.query("limit") || "50");
-  const status = getRoomStatus(room);
-  const messagesResult = getAllMessages(room, limit);
-  const presence = getRoomPresence(room);
-
-  if (!messagesResult.ok) {
-    return c.json({ error: messagesResult.error }, 404);
+  if (room) {
+    const messagesResult = getAllMessages(room, limit);
+    const presence = getRoomPresence(room);
+    if (!messagesResult.ok) return c.json({ error: messagesResult.error }, 404);
+    const events = (messagesResult.messages || []).map((msg) => ({
+      id: msg.id,
+      from: msg.from,
+      room_code: room,
+      type: msg.type || "BROADCAST",
+      content: msg.content.slice(0, 200),
+      ts: msg.ts,
+    }));
+    return c.json({ ok: true, room, events, agents_online: presence.filter((a) => a.status === "online").length });
   }
 
-  // Build activity timeline
-  const activity = (messagesResult.messages || []).map((msg) => ({
-    id: msg.id,
-    agent: msg.from,
-    type: msg.type || "MESSAGE",
-    content: msg.content.slice(0, 100),
-    timestamp: msg.ts,
-    mentions: (msg.content.match(/@\w+/g) || []).length,
-  }));
-
-  return c.json({
-    ok: true,
-    room,
-    activity,
-    agents_online: presence.filter((a) => a.status === "online").length,
-    total_messages: status?.message_count || 0,
-  });
+  // Cross-room: aggregate recent events from all public rooms
+  const rooms = getActiveRooms();
+  const allEvents: any[] = [];
+  for (const r of rooms.slice(0, 10)) {
+    const result = getAllMessages(r.code, Math.ceil(limit / Math.max(rooms.length, 1)));
+    if (result.ok) {
+      for (const msg of result.messages || []) {
+        allEvents.push({ id: msg.id, from: msg.from, room_code: r.code, type: msg.type || "BROADCAST", content: msg.content.slice(0, 200), ts: msg.ts });
+      }
+    }
+  }
+  allEvents.sort((a, b) => b.ts - a.ts);
+  return c.json({ ok: true, events: allEvents.slice(0, limit) });
 });
 
 // Agent profile cards for a room

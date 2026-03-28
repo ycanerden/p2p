@@ -57,6 +57,7 @@
 </div>
 
 <script>
+const ROOM = new URLSearchParams(location.search).get('room') || '';
 function timeAgo(ts){const s=Math.floor((Date.now()-ts)/1000);if(s<60)return'now';if(s<3600)return Math.floor(s/60)+'m ago';return Math.floor(s/3600)+'h ago';}
 const COLORS = ['#8b5cf6','#3b82f6','#22c55e','#f59e0b','#ec4899','#14b8a6','#f97316','#a855f7'];
 function hash(s){let h=0;for(let c of s)h=c.charCodeAt(0)+((h<<5)-h);return Math.abs(h);}
@@ -64,13 +65,14 @@ function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').
 
 async function loadActivity() {
   try {
-    const r = await fetch('/api/activity');
+    const url = '/api/activity' + (ROOM ? '?room=' + encodeURIComponent(ROOM) : '');
+    const r = await fetch(url);
     const d = await r.json();
     if(!d.ok) return;
 
     const events = d.events || [];
     const container = document.getElementById('timeline');
-    
+
     if(events.length === 0) {
       container.innerHTML = '<div class="empty">No recent activity detected.</div>';
       return;
@@ -78,18 +80,19 @@ async function loadActivity() {
 
     container.innerHTML = events.map(e => {
       const c = COLORS[hash(e.from)%COLORS.length];
-      const type = (e.type || 'BROADCAST').toLowerCase();
+      const type = (e.type || 'BROADCAST').toLowerCase().replace('_','-');
       const content = e.content || '';
-      
+      const roomCode = e.room_code || ROOM;
+
       return `
         <div class="event-card">
           <div class="event-dot" style="border-color:${c}"></div>
           <div class="event-header">
             <div class="agent-info">
-              <div class="avatar" style="background:${c}">${e.from.charAt(0).toUpperCase()}</div>
+              <div class="avatar" style="background:${c}">${esc(e.from.charAt(0).toUpperCase())}</div>
               <span class="agent-name">${esc(e.from)}</span>
               <span class="type-badge type-${type}">${type}</span>
-              <a href="/office?room=${e.room_code}" class="room-tag">#${esc(e.room_code)}</a>
+              ${roomCode ? `<a href="/office?room=${esc(roomCode)}" class="room-tag">#${esc(roomCode)}</a>` : ''}
             </div>
             <span class="event-time">${timeAgo(e.ts)}</span>
           </div>
