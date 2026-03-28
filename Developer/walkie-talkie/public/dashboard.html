@@ -763,6 +763,7 @@
       <a href="/team" title="Team roster — agent cards with model badges" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 8px;cursor:pointer;color:var(--text2);font-size:12px;line-height:1;font-family:inherit;text-decoration:none;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text2)'">Team</a>
       <a href="/office" title="Pixel Office" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 8px;cursor:pointer;color:var(--text2);font-size:12px;line-height:1;font-family:inherit;text-decoration:none;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text2)'">Office</a>
       <a href="/analytics" title="Platform analytics — rooms, agents, latency, uptime" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 8px;cursor:pointer;color:var(--text2);font-size:12px;line-height:1;font-family:inherit;text-decoration:none;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text2)'">Analytics</a>
+      <button id="summary-btn" onclick="toggleSummary()" title="Executive summary" style="background:var(--accent);border:none;border-radius:var(--radius-sm);padding:4px 10px;cursor:pointer;color:#fff;font-size:12px;font-weight:600;line-height:1;font-family:inherit;">Summary</button>
       <button id="notif-btn" onclick="requestNotifPerm()" title="Enable mention notifications" style="display:none;background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 8px;cursor:pointer;color:var(--text2);font-size:12px;line-height:1;font-family:inherit;">🔔</button>
       <button id="invite-btn" onclick="copyInviteLink()" title="Copy invite link for this room" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 8px;cursor:pointer;color:var(--text2);font-size:12px;line-height:1;font-family:inherit;">Invite</button>
       <button onclick="goToSettings()" title="Room settings — privacy, Telegram, admin" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 8px;cursor:pointer;color:var(--text2);font-size:12px;line-height:1;font-family:inherit;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text2)'">Settings</button>
@@ -857,8 +858,6 @@
           <span class="tab-badge" id="chat-badge" style="display:none;">0</span>
         </div>
         <div class="main-tab" data-tab="tasks"><span>Tasks</span></div>
-        <div class="main-tab" data-tab="directory"><span>Directory</span></div>
-        <div class="main-tab" data-tab="search"><span>Search</span></div>
       </div>
 
       <!-- Chat panel -->
@@ -919,25 +918,9 @@
         <div class="handoffs-list" id="handoffs-container" style="overflow-y:auto;"></div>
       </div>
 
-      <!-- Directory panel -->
-      <div class="tab-panel" id="panel-directory">
-        <div class="directory-grid" id="directory-container" style="overflow-y:auto;"></div>
-      </div>
-
       <!-- Pins panel -->
       <div class="tab-panel" id="panel-pins">
         <div class="pins-list" id="pins-container" style="overflow-y:auto;"></div>
-      </div>
-
-      <!-- Search panel -->
-      <div class="tab-panel" id="panel-search">
-        <div style="padding:20px 24px;">
-          <div style="display:flex;gap:10px;margin-bottom:16px;">
-            <input type="text" id="search-input" placeholder="Search messages..." style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-size:14px;font-family:inherit;outline:none;" />
-            <button onclick="doSearch()" style="background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px 20px;cursor:pointer;font-weight:600;font-size:13px;">Search</button>
-          </div>
-          <div id="search-results" style="overflow-y:auto;max-height:calc(100vh - 200px);"></div>
-        </div>
       </div>
     </div>
   </div>
@@ -2229,6 +2212,79 @@ function showConnectModal() {
       '<button onclick="this.closest(\'#connect-modal\').remove()" style="margin-top:20px;width:100%;padding:10px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:10px;font-size:14px;cursor:pointer;">Close</button>' +
     '</div>';
   document.body.appendChild(modal);
+}
+
+// ── Executive Summary ─────────────────────────────────────────────────────
+var summaryOpen = false;
+function toggleSummary() {
+  var existing = document.getElementById('summary-panel');
+  if (existing) { existing.remove(); summaryOpen = false; return; }
+  summaryOpen = true;
+  var panel = document.createElement('div');
+  panel.id = 'summary-panel';
+  panel.style.cssText = 'position:fixed;top:var(--topbar-h);right:0;width:380px;max-width:90vw;height:calc(100vh - var(--topbar-h));background:var(--surface);border-left:1px solid var(--border);z-index:200;display:flex;flex-direction:column;overflow:hidden;';
+  panel.innerHTML =
+    '<div style="padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">' +
+      '<div style="font-size:13px;font-weight:700;color:var(--text);">Executive Summary</div>' +
+      '<div style="display:flex;gap:6px;align-items:center;">' +
+        '<select id="summary-hours" onchange="loadSummary()" style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;padding:2px 6px;">' +
+          '<option value="1">1h</option><option value="3">3h</option><option value="6" selected>6h</option><option value="24">24h</option>' +
+        '</select>' +
+        '<button onclick="toggleSummary()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:2px 4px;">&times;</button>' +
+      '</div>' +
+    '</div>' +
+    '<div id="summary-content" style="flex:1;overflow-y:auto;padding:14px 18px;font-size:12px;color:var(--text2);line-height:1.6;">' +
+      '<div style="color:var(--text3);">Loading...</div>' +
+    '</div>';
+  document.body.appendChild(panel);
+  loadSummary();
+}
+
+function loadSummary() {
+  var hours = document.getElementById('summary-hours')?.value || '6';
+  var el = document.getElementById('summary-content');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--text3);">Loading...</div>';
+  fetch('/api/summary?room=' + encodeURIComponent(ROOM) + '&hours=' + hours)
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (!d.ok) { el.innerHTML = '<div style="color:var(--red);">Error: ' + (d.error || 'unknown') + '</div>'; return; }
+      var html = '';
+      // Stats
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;">';
+      html += '<div style="background:var(--surface2);border-radius:6px;padding:10px;text-align:center;"><div style="font-size:18px;font-weight:800;color:var(--text);">' + d.stats.agent_messages + '</div><div style="font-size:10px;color:var(--text3);margin-top:2px;">messages</div></div>';
+      html += '<div style="background:var(--surface2);border-radius:6px;padding:10px;text-align:center;"><div style="font-size:18px;font-weight:800;color:var(--text);">' + d.stats.deploy_count + '</div><div style="font-size:10px;color:var(--text3);margin-top:2px;">deploys</div></div>';
+      html += '<div style="background:var(--surface2);border-radius:6px;padding:10px;text-align:center;"><div style="font-size:18px;font-weight:800;color:var(--text);">' + d.stats.active_agents + '</div><div style="font-size:10px;color:var(--text3);margin-top:2px;">agents</div></div>';
+      html += '</div>';
+      // Needs decision
+      if (d.needs_decision && d.needs_decision.length > 0) {
+        html += '<div style="font-size:11px;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Needs your decision</div>';
+        d.needs_decision.forEach(function(m) {
+          html += '<div style="background:var(--orange-dim);border:1px solid rgba(251,146,60,.15);border-radius:6px;padding:8px 10px;margin-bottom:6px;"><span style="font-weight:600;color:var(--text);">' + esc(m.from) + ':</span> ' + esc(m.content) + '</div>';
+        });
+        html += '<div style="height:12px;"></div>';
+      }
+      // Shipped
+      if (d.shipped && d.shipped.length > 0) {
+        html += '<div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Shipped</div>';
+        d.shipped.forEach(function(m) {
+          html += '<div style="border-left:2px solid var(--green);padding:4px 10px;margin-bottom:6px;"><span style="font-weight:600;color:var(--text);">' + esc(m.from) + '</span><div style="margin-top:2px;color:var(--text2);">' + esc(m.content) + '</div></div>';
+        });
+        html += '<div style="height:12px;"></div>';
+      }
+      // In progress
+      if (d.in_progress && d.in_progress.length > 0) {
+        html += '<div style="font-size:11px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">In progress</div>';
+        d.in_progress.forEach(function(m) {
+          html += '<div style="border-left:2px solid var(--blue);padding:4px 10px;margin-bottom:6px;"><span style="font-weight:600;color:var(--text);">' + esc(m.from) + '</span><div style="margin-top:2px;color:var(--text2);">' + esc(m.content) + '</div></div>';
+        });
+      }
+      if (!d.shipped.length && !d.in_progress.length && !d.needs_decision.length) {
+        html += '<div style="color:var(--text3);text-align:center;padding:20px 0;">No significant activity in the last ' + hours + 'h</div>';
+      }
+      el.innerHTML = html;
+    })
+    .catch(function(e) { el.innerHTML = '<div style="color:var(--red);">Failed to load summary</div>'; });
 }
 </script>
 </body>

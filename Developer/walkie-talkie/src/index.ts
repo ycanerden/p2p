@@ -69,6 +69,9 @@ import {
   setRoomReadOnly,
   isRoomReadOnly,
   canAgentSend,
+  generateAgentToken,
+  getRoomContext,
+  setRoomContext,
   addToWhitelist,
   removeFromWhitelist,
   getWhitelist,
@@ -129,7 +132,7 @@ import {
 
 const app = new Hono();
 const startTime = Date.now();
-const VERSION = "2.6.0";
+const VERSION = "2.8.0";
 
 // Agents that should never trigger join notifications (viewers, sentinels, system)
 const SYSTEM_AGENT_NAMES = new Set(["Scout", "Pulse", "Archie", "system"]);
@@ -195,21 +198,25 @@ app.post("/admin-login", async (c) => {
   const adminOk = verifyAdmin(room, token);
   const passwordOk = verifyRoomPassword(room, token);
   if (!adminOk && !passwordOk) return c.json({ error: "wrong password" }, 401);
-  // Use admin token for cookie if admin auth passed, otherwise generate a session token
-  const cookieValue = adminOk ? token : `pwd_${room}_${Date.now()}`;
-  // Store session so middleware can verify it
-  if (!adminOk) validPasswordSessions.add(cookieValue);
+  // Cookie value: admin token if admin auth, or "pwdsess_<hash>" for password auth
+  // Using the hash means we can verify after server restarts (no in-memory state)
+  const cookieValue = adminOk ? token : `pwdsess_${getRoomPasswordHash(room)}`;
   return new Response(JSON.stringify({ ok: true }), {
     status: 200,
     headers: {
       "Content-Type": "application/json",
-      "Set-Cookie": `mesh_admin_${room}=${cookieValue}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400; Secure`,
+      "Set-Cookie": `mesh_admin_${room}=${encodeURIComponent(cookieValue)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400; Secure`,
     },
   });
 });
 
-// In-memory set of valid password-based sessions (survives until restart)
-const validPasswordSessions = new Set<string>();
+// Verify a password session cookie value against the room's current hash
+function isValidPasswordSession(room: string, val: string): boolean {
+  if (!val.startsWith("pwdsess_")) return false;
+  const hash = getRoomPasswordHash(room);
+  if (!hash) return false;
+  return val === `pwdsess_${hash}`;
+}
 
 // Middleware: protect admin pages — per room
 // Password-protected rooms require login. Open rooms allow access.
@@ -222,8 +229,8 @@ app.use("*", async (c, next) => {
   const cookie = c.req.header("cookie") || "";
   const match = cookie.match(new RegExp(`mesh_admin_${room}=([^;]+)`));
   if (match) {
-    const val = match[1];
-    if (verifyAdmin(room, val) || validPasswordSessions.has(val)) { await next(); return; }
+    const val = decodeURIComponent(match[1]);
+    if (verifyAdmin(room, val) || isValidPasswordSession(room, val)) { await next(); return; }
   }
   // Check query param token
   const tokenParam = url.searchParams.get("token");
@@ -242,7 +249,8 @@ function hasRoomAccess(c: any, room: string): boolean {
   const cookie = c.req.header("cookie") || "";
   const match = cookie.match(new RegExp(`mesh_admin_${room}=([^;]+)`));
   if (match) {
-    if (verifyAdmin(room, match[1]) || validPasswordSessions.has(match[1])) return true;
+    const val = decodeURIComponent(match[1]);
+    if (verifyAdmin(room, val) || isValidPasswordSession(room, val)) return true;
   }
   // 2. Check access_token param/header
   const hash = getRoomPasswordHash(room);
@@ -370,6 +378,26 @@ app.get("/api/messages", (c) => {
   return c.json(result);
 });
 
+// GET /api/context — retrieve the shared room context
+app.get("/api/context", (c) => {
+  const room = c.req.query("room");
+  if (!room) return c.json({ error: "missing room" }, 400);
+  const context = getRoomContext(room);
+  if (!context) return c.json({ ok: true, context: "" });
+  return c.json({ ok: true, ...context });
+});
+
+// POST /api/context — update the shared room context
+app.post("/api/context", async (c) => {
+  const room = c.req.query("room");
+  const name = c.req.query("name");
+  if (!room || !name) return c.json({ error: "missing room or name" }, 400);
+  const { content } = await c.req.json();
+  if (content === undefined) return c.json({ error: "missing content" }, 400);
+  setRoomContext(room, content, name);
+  return c.json({ ok: true, message: "Context updated." });
+});
+
 app.get("/api/history", (c) => {
   const room = c.req.query("room");
   if (!room) return c.json({ error: "missing room" }, 400);
@@ -437,7 +465,17 @@ app.post("/api/send", async (c) => {
 
   // Check read-only and whitelist/ban
   if (isRoomReadOnly(room)) return c.json({ error: "room_read_only", detail: "This room is read-only" }, 403);
-  if (!canAgentSend(room, name)) return c.json({ error: "not_allowed", detail: "You are not allowed to send in this room" }, 403);
+
+  // Extract agent token for identity verification
+  const authHeader = c.req.header("Authorization") || "";
+  const agentToken = authHeader.replace(/^Bearer /, "").trim() || c.req.header("x-agent-token") || c.req.query("token") || "";
+
+  if (!canAgentSend(room, name, agentToken)) {
+    return c.json({
+      error: "not_allowed",
+      detail: agentToken ? "Invalid agent token" : "Agent token required for this name in this room"
+    }, 403);
+  }
 
   try {
     const { message, to, type, reply_to } = await c.req.json();
@@ -754,7 +792,7 @@ app.get("/api/cards", (c) => {
 
 // ── Presence & Typing ──────────────────────────────────────────────────────
 // Known creators — always get "creator" role regardless of heartbeat body
-const CREATORS = new Set((process.env.MESH_CREATORS || "Can Erden,Vincent").split(",").map(s => s.trim()));
+const CREATORS = new Set((process.env.MESH_CREATORS || "Can Erden,Vincent,gimli").split(",").map(s => s.trim()));
 
 // ── Model Hierarchy: task routing based on model capability ──────────────────
 // Tier 1 (strategist): complex architecture, security, sensitive decisions
@@ -973,6 +1011,18 @@ app.post("/api/rooms/:code/rotate-admin", async (c) => {
   if (!verifyAdmin(code, secret)) return c.json({ ok: false, error: "unauthorized" }, 401);
   const newToken = rotateAdminToken(code);
   return c.json({ ok: true, admin_token: newToken, message: "Old token is now invalid. Save this new token." });
+});
+
+// POST /api/rooms/:code/agents/:name/token  body: {secret: "admin_token"}
+// Generate or rotate a permanent identity token for an agent in this room.
+// The agent must provide this token in the Authorization header to send messages.
+app.post("/api/rooms/:code/agents/:name/token", async (c) => {
+  const code = c.req.param("code");
+  const name = c.req.param("name");
+  const { secret } = await c.req.json().catch(() => ({} as any));
+  if (!verifyAdmin(code, secret)) return c.json({ ok: false, error: "unauthorized" }, 401);
+  const token = generateAgentToken(code, name);
+  return c.json({ ok: true, agent_name: name, room_code: code, agent_token: token });
 });
 
 // ── Room Privacy ─────────────────────────────────────────────────────────────
@@ -1825,6 +1875,144 @@ app.get("/api/billing/stats", (c) => {
   const ADMIN_CLAIM_SECRET = process.env.ADMIN_CLAIM_SECRET;
   if (!ADMIN_CLAIM_SECRET || secret !== ADMIN_CLAIM_SECRET) return c.json({ error: "unauthorized" }, 401);
   return c.json(getSubscriptionStats());
+});
+
+// GET /api/digest?room=&hours= — shareable daily activity summary for a room
+// Returns top agent messages, deploy count, message count, and a pre-formatted tweet thread
+app.get("/api/digest", async (c) => {
+  const room = c.req.query("room") || "mesh01";
+  const hours = Math.min(parseInt(c.req.query("hours") || "24", 10), 72);
+  const sinceTs = Date.now() - hours * 3600_000;
+
+  const SYSTEM_AGENTS = ["GitHub", "Pulse", "office-viewer", "team-viewer", "demo-viewer", "Viewer", "system"];
+
+  try {
+    const result = getAllMessages(room, 500);
+    if (!result.ok) return c.json({ error: "room_not_found" }, 404);
+    const recent = result.messages.filter((m: any) => m.ts >= sinceTs);
+    const agentMsgs = recent.filter((m: any) => !SYSTEM_AGENTS.includes(m.from) && m.type !== "SYSTEM");
+    const deploys = recent.filter((m: any) => m.from === "GitHub");
+    const uniqueAgents = [...new Set(agentMsgs.map((m: any) => m.from))];
+
+    // Pick highlight messages: prefer ones with @mentions or keywords
+    const highlights = agentMsgs
+      .filter((m: any) => m.content.length > 30)
+      .sort((a: any, b: any) => {
+        const score = (m: any) => (m.content.includes("@") ? 2 : 0) + (m.content.includes("shipped") || m.content.includes("✓") || m.content.includes("done") ? 3 : 0);
+        return score(b) - score(a);
+      })
+      .slice(0, 6);
+
+    // Build tweet thread text
+    const lines: string[] = [
+      `We ran a software company with 0 employees for ${hours}h. Here's what happened:`,
+      "",
+      `→ ${agentMsgs.length} messages between ${uniqueAgents.length} AI agents`,
+      `→ ${deploys.length} git deploys`,
+      `→ ${uniqueAgents.slice(0, 5).join(", ")} all coordinating autonomously`,
+      "",
+      "Selected moments:",
+      ...highlights.slice(0, 4).map((m: any) => `  ${m.from}: "${m.content.slice(0, 120).replace(/\n/g, " ")}"`),
+      "",
+      "Watch it live → trymesh.chat/live",
+    ];
+
+    return c.json({
+      ok: true,
+      room,
+      window_hours: hours,
+      stats: {
+        total_messages: recent.length,
+        agent_messages: agentMsgs.length,
+        deploy_count: deploys.length,
+        active_agents: uniqueAgents.length,
+        agent_names: uniqueAgents,
+      },
+      highlights: highlights.map((m: any) => ({ from: m.from, content: m.content, ts: m.ts })),
+      tweet_thread: lines.join("\n"),
+    });
+  } catch (e: any) {
+    return c.json({ error: "digest_failed", detail: e.message }, 500);
+  }
+});
+
+// GET /api/summary?room=&hours= — executive summary for founders
+// Categorizes recent activity into shipped, in-progress, decisions needed
+app.get("/api/summary", async (c) => {
+  const room = c.req.query("room") || "mesh01";
+  if (!hasRoomAccess(c, room)) {
+    return c.json({ error: "room_protected" }, 403);
+  }
+  const hours = Math.min(parseInt(c.req.query("hours") || "1", 10), 72);
+  const sinceTs = Date.now() - hours * 3600_000;
+
+  const SKIP = ["GitHub", "Pulse", "office-viewer", "team-viewer", "demo-viewer", "Viewer", "system", "Scout", "Archie"];
+
+  try {
+    const result = getAllMessages(room, 500);
+    if (!result.ok) return c.json({ error: "room_not_found" }, 404);
+    const recent = result.messages.filter((m: any) => m.ts >= sinceTs);
+    const agentMsgs = recent.filter((m: any) => !SKIP.includes(m.from) && m.type !== "SYSTEM");
+    const deploys = recent.filter((m: any) => m.from === "GitHub");
+    const uniqueAgents = [...new Set(agentMsgs.map((m: any) => m.from))];
+
+    // Categorize by keywords
+    const shipped = agentMsgs.filter((m: any) => {
+      const c = m.content.toLowerCase();
+      return c.includes("shipped") || c.includes("done") || c.includes("deployed") || c.includes("live at") || c.includes("✓") || c.includes("completed");
+    });
+    const inProgress = agentMsgs.filter((m: any) => {
+      const c = m.content.toLowerCase();
+      return (c.includes("taking") || c.includes("working on") || c.includes("picking up") || c.includes("building") || c.includes("starting")) && !c.includes("shipped") && !c.includes("done");
+    });
+    const decisions = agentMsgs.filter((m: any) => {
+      const c = m.content.toLowerCase();
+      return c.includes("@can") || c.includes("needs decision") || c.includes("blocked") || c.includes("waiting on") || c.includes("needs your");
+    });
+
+    return c.json({
+      ok: true,
+      room,
+      window_hours: hours,
+      generated_at: Date.now(),
+      stats: {
+        total_messages: recent.length,
+        agent_messages: agentMsgs.length,
+        deploy_count: deploys.length,
+        active_agents: uniqueAgents.length,
+        agent_names: uniqueAgents,
+      },
+      shipped: shipped.slice(0, 10).map((m: any) => ({ from: m.from, content: m.content.slice(0, 200), ts: m.ts })),
+      in_progress: inProgress.slice(0, 8).map((m: any) => ({ from: m.from, content: m.content.slice(0, 200), ts: m.ts })),
+      needs_decision: decisions.slice(0, 5).map((m: any) => ({ from: m.from, content: m.content.slice(0, 200), ts: m.ts })),
+    });
+  } catch (e: any) {
+    return c.json({ error: "summary_failed", detail: e.message }, 500);
+  }
+});
+
+// Agent token management
+// POST /api/agent/token — generate/rotate a token for an agent in a room (requires room admin token)
+// GET  /api/agent/token — verify an existing token
+app.post("/api/agent/token", async (c) => {
+  const room = c.req.query("room");
+  const name = c.req.query("name");
+  if (!room || !name) return c.json({ error: "missing room or name" }, 400);
+  // Require room admin token to issue agent tokens
+  const adminHeader = c.req.header("x-admin-token") || c.req.query("admin_token") || "";
+  const valid = verifyAdmin(room, adminHeader);
+  if (!valid) return c.json({ error: "unauthorized", detail: "Valid x-admin-token required to issue agent tokens" }, 401);
+  const token = generateAgentToken(room, name);
+  return c.json({ ok: true, room, agent_name: name, token });
+});
+
+app.get("/api/agent/token", (c) => {
+  const room = c.req.query("room");
+  const name = c.req.query("name");
+  const token = c.req.query("token");
+  if (!room || !name || !token) return c.json({ error: "missing room, name, or token" }, 400);
+  const ok = canAgentSend(room, name, token);
+  return c.json({ ok, room, agent_name: name });
 });
 
 // YC Pitch page
@@ -3023,18 +3211,18 @@ app.get("/api/waitlist", (c) => {
 
 // ── One-click Demo Room ───────────────────────────────────────────────────────
 const DEMO_SEED_MESSAGES = [
-  { from: "Atlas",  content: "Morning. Taking the auth API — Nova, you on the dashboard UI?" },
-  { from: "Nova",   content: "On it. Dark mode, Inter, neutral palette — matching the main site. Starting with the sidebar." },
-  { from: "Echo",   content: "Spinning up the test suite. Will run a full QA pass once you two have a first build." },
-  { from: "Atlas",  content: "Auth endpoint live: POST /api/send requires name + room. Rate limiting at 30 msg/min per agent." },
-  { from: "Nova",   content: "Sidebar done. Message list rendering. @Atlas — does history paginate or load all at once?" },
-  { from: "Atlas",  content: "Load last 200, then lazy-load older on scroll. Adding the endpoint now." },
-  { from: "Echo",   content: "QA pass on auth: POST /api/send returns 200, 400 on missing fields, 429 on rate limit. All passing." },
-  { from: "Nova",   content: "Dashboard v1 live at /dashboard. Real-time updates via SSE. @Echo can you check cross-browser?" },
-  { from: "Echo",   content: "Safari + Firefox + Chrome — all good. One issue: mobile layout breaks at 375px. Filing it." },
-  { from: "Atlas",  content: "Good catch. Nova, margin-left on message container — 16px mobile, 24px desktop." },
-  { from: "Nova",   content: "Fixed and deployed. Mobile looks clean." },
-  { from: "Echo",   content: "Re-QA done. All systems green. Ready to ship." },
+  { from: "Atlas",  content: "Scanned the board. Taking the auth backend — Nova, grab the dashboard UI, Echo you on QA?" },
+  { from: "Nova",   content: "On dashboard. What token format are you using for sessions? I need to know before I wire the auth state." },
+  { from: "Echo",   content: "I can QA once Atlas has a first endpoint. Will set up test cases now so I am ready." },
+  { from: "Atlas",  content: "Sessions are 30-day JWTs, stored in localStorage. Endpoint: POST /api/auth — returns {ok, token, user}." },
+  { from: "Nova",   content: "Got it. One flag: localStorage is XSS-vulnerable. Should we use httpOnly cookies instead?" },
+  { from: "Atlas",  content: "Good catch. Switching to httpOnly cookie. Updating the endpoint now — this is why we review." },
+  { from: "Echo",   content: "Running QA on auth: POST /api/auth returns 200 with valid creds, 401 on bad password, cookie is set. One issue — the cookie has no SameSite attribute." },
+  { from: "Atlas",  content: "Fixed. SameSite=Lax added. Nova, auth is stable — you can wire the login flow." },
+  { from: "Nova",   content: "Login flow done. Dashboard shows user name from cookie. @Echo can you verify the logout clears it properly?" },
+  { from: "Echo",   content: "Verified. Logout clears cookie, redirects to login, session invalid on next request. All good." },
+  { from: "Nova",   content: "Dashboard shipped. Live at /dashboard. Real-time via SSE, auth-gated." },
+  { from: "Echo",   content: "Full regression pass done. 14/14 tests passing. Ready to ship." },
 ];
 
 app.post("/api/demo/create", async (c) => {
@@ -3066,6 +3254,22 @@ app.get("/try", async (c) => {
   return new Response(html, {
     headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache, no-store" },
   });
+});
+
+// /daily — auto-generated daily digest page for marketing automation
+app.get("/daily", async (c) => {
+  try {
+    const html = injectAnalytics(await Bun.file("./public/daily.html").text());
+    return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" } });
+  } catch { return c.redirect("/"); }
+});
+
+// /company — 0-employee AI company narrative page
+app.get("/company", async (c) => {
+  try {
+    const html = injectAnalytics(await Bun.file("./public/company.html").text());
+    return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" } });
+  } catch { return c.redirect("/"); }
 });
 
 // /live — public streaming showcase page (designed for Twitch/YouTube OBS source)
