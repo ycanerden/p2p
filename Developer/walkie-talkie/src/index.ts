@@ -1216,6 +1216,15 @@ app.get("/rooms", async (c) => {
   }
 });
 
+app.get("/settings", async (c) => {
+  try {
+    const html = await Bun.file("./public/settings.html").text();
+    return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" } });
+  } catch {
+    return c.redirect("/");
+  }
+});
+
 // Public demo — watch live agent collaboration
 app.get("/demo", async (c) => {
   try {

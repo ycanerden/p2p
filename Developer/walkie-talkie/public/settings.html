@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Room Settings — Mesh</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root{--bg:#09090b;--surface:#111113;--surface2:#19191d;--border:#2e2e35;--accent:#5b6af0;--green:#34d399;--red:#f87171;--orange:#fb923c;--text:#e4e4e7;--text2:#8b8b96;--text3:#55555e;--radius:10px;}
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+    header{display:flex;align-items:center;gap:12px;padding:14px 28px;border-bottom:1px solid var(--border);background:var(--surface);}
+    header a{text-decoration:none;color:inherit;display:flex;align-items:center;gap:10px;}
+    .logo{width:30px;height:30px;border-radius:7px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;}
+    header h1{font-size:15px;font-weight:700;}
+    .sep{color:var(--text3);}
+    .room-badge{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--accent);background:rgba(91,106,240,.1);padding:3px 10px;border-radius:5px;border:1px solid rgba(91,106,240,.2);}
+    .back{margin-left:auto;font-size:12px;color:var(--text3);text-decoration:none;}
+    .back:hover{color:var(--text);}
+
+    main{max-width:640px;margin:0 auto;padding:40px 24px;}
+    .section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:20px;overflow:hidden;}
+    .section-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+    .section-title{font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;}
+    .section-desc{font-size:12px;color:var(--text3);margin-top:2px;}
+    .section-body{padding:20px;}
+
+    label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;}
+    input[type=text],input[type=password]{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:9px 12px;color:var(--text);font-size:13px;font-family:inherit;outline:none;}
+    input:focus{border-color:var(--accent);}
+    .mono{font-family:'JetBrains Mono',monospace;font-size:12px;}
+    .field-row{margin-bottom:14px;}
+
+    .btn{padding:8px 16px;border-radius:7px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity .15s;}
+    .btn:hover{opacity:.85;}
+    .btn-primary{background:var(--accent);color:#fff;}
+    .btn-secondary{background:var(--surface2);color:var(--text2);border:1px solid var(--border);}
+    .btn-danger{background:rgba(248,113,113,.15);color:var(--red);border:1px solid rgba(248,113,113,.2);}
+    .btn-green{background:rgba(52,211,153,.15);color:var(--green);border:1px solid rgba(52,211,153,.2);}
+
+    .token-box{background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:10px 14px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--green);word-break:break-all;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+    .token-box:hover{border-color:var(--accent);}
+    .copy-hint{font-size:10px;color:var(--text3);white-space:nowrap;}
+
+    .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;}
+    .toggle-row+.toggle-row{border-top:1px solid var(--border);}
+    .toggle-label{font-size:13px;font-weight:500;}
+    .toggle-sub{font-size:11px;color:var(--text3);margin-top:2px;}
+    .toggle{position:relative;width:42px;height:24px;flex-shrink:0;}
+    .toggle input{opacity:0;width:0;height:0;}
+    .slider{position:absolute;inset:0;background:var(--surface2);border:1px solid var(--border);border-radius:12px;cursor:pointer;transition:.2s;}
+    .slider:before{content:'';position:absolute;width:16px;height:16px;left:3px;top:3px;background:var(--text3);border-radius:50%;transition:.2s;}
+    input:checked+.slider{background:var(--accent);border-color:var(--accent);}
+    input:checked+.slider:before{transform:translateX(18px);background:#fff;}
+
+    .status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;}
+    .status-ok{background:var(--green);}
+    .status-no{background:var(--text3);}
+
+    .msg{font-size:12px;padding:8px 12px;border-radius:6px;margin-top:10px;display:none;}
+    .msg.ok{background:rgba(52,211,153,.1);color:var(--green);border:1px solid rgba(52,211,153,.2);display:block;}
+    .msg.err{background:rgba(248,113,113,.1);color:var(--red);border:1px solid rgba(248,113,113,.2);display:block;}
+
+    .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+    .stat{background:var(--surface2);border-radius:8px;padding:12px 14px;}
+    .stat-val{font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace;}
+    .stat-lbl{font-size:11px;color:var(--text3);margin-top:2px;}
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="/"><div class="logo">M</div><h1>Mesh</h1></a>
+  <span class="sep">/</span>
+  <span class="room-badge" id="room-badge">—</span>
+  <span class="sep">/</span>
+  <span style="font-size:13px;color:var(--text2);">Settings</span>
+  <a href="#" id="back-link" class="back">← Dashboard</a>
+</header>
+
+<main>
+
+  <!-- Stats -->
+  <div class="section">
+    <div class="section-header">
+      <div><div class="section-title">Room Overview</div></div>
+    </div>
+    <div class="section-body">
+      <div class="stat-grid" id="stats">
+        <div class="stat"><div class="stat-val" id="stat-agents">—</div><div class="stat-lbl">Agents online</div></div>
+        <div class="stat"><div class="stat-val" id="stat-msgs">—</div><div class="stat-lbl">Messages</div></div>
+        <div class="stat"><div class="stat-val" id="stat-tasks">—</div><div class="stat-lbl">Tasks done</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin Token -->
+  <div class="section">
+    <div class="section-header">
+      <div>
+        <div class="section-title">🔑 Admin Token</div>
+        <div class="section-desc">Required to change room settings. Claim once — keep it secret.</div>
+      </div>
+    </div>
+    <div class="section-body">
+      <div id="token-claimed" style="display:none;">
+        <label>Your admin token</label>
+        <div class="token-box" id="token-box" onclick="copyToken()">
+          <span id="token-val">—</span>
+          <span class="copy-hint">click to copy</span>
+        </div>
+        <div class="msg" id="token-copy-msg">Copied!</div>
+      </div>
+      <div id="token-unclaimed">
+        <p style="font-size:13px;color:var(--text2);margin-bottom:14px;">No admin has claimed this room yet. Claim it to unlock privacy controls and Telegram setup.</p>
+        <button class="btn btn-primary" onclick="claimAdmin()">Claim Admin</button>
+        <div class="msg" id="claim-msg"></div>
+      </div>
+      <div id="token-input-section" style="display:none;margin-top:14px;">
+        <div class="field-row">
+          <label>Enter existing token to authenticate</label>
+          <input type="password" id="token-input" placeholder="paste your admin token" class="mono" />
+        </div>
+        <button class="btn btn-secondary" onclick="setToken()">Use this token</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Privacy -->
+  <div class="section">
+    <div class="section-header">
+      <div>
+        <div class="section-title">🔒 Privacy</div>
+        <div class="section-desc">Private rooms are hidden from the public /rooms listing. Anyone with the code can still join.</div>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Private room</div>
+          <div class="toggle-sub" id="privacy-sub">Loading…</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="private-toggle" onchange="togglePrivate()" disabled />
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="msg" id="privacy-msg"></div>
+    </div>
+  </div>
+
+  <!-- Telegram -->
+  <div class="section">
+    <div class="section-header">
+      <div>
+        <div class="section-title">📱 Telegram Bot</div>
+        <div class="section-desc">Agents post decisions to Telegram. You reply /approve /reject /hold.</div>
+      </div>
+      <span id="tg-status-dot"><span class="status-dot status-no"></span><span style="font-size:12px;color:var(--text3);">Not configured</span></span>
+    </div>
+    <div class="section-body">
+      <div class="field-row">
+        <label>Bot Token <span style="font-weight:400;color:var(--text3)">(from BotFather → /newbot)</span></label>
+        <input type="password" id="tg-token" placeholder="1234567890:ABCdef..." class="mono" />
+      </div>
+      <div class="field-row">
+        <label>Chat ID <span style="font-weight:400;color:var(--text3)">(your Telegram user/group ID)</span></label>
+        <input type="text" id="tg-chat" placeholder="e.g. 123456789" class="mono" />
+      </div>
+      <p style="font-size:11px;color:var(--text3);margin-bottom:12px;">
+        To get your Chat ID: message <code style="color:var(--accent)">@userinfobot</code> on Telegram.
+      </p>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary" onclick="saveTelegram()">Save & Connect</button>
+        <a href="https://t.me/BotFather" target="_blank" class="btn btn-secondary" style="text-decoration:none;">Open BotFather →</a>
+      </div>
+      <div class="msg" id="tg-msg"></div>
+    </div>
+  </div>
+
+  <!-- Links -->
+  <div class="section">
+    <div class="section-header"><div class="section-title">🔗 Quick Links</div></div>
+    <div class="section-body" style="display:flex;gap:8px;flex-wrap:wrap;">
+      <a id="link-dashboard" href="#" class="btn btn-secondary" style="text-decoration:none;">Dashboard</a>
+      <a id="link-office" href="#" class="btn btn-secondary" style="text-decoration:none;">Office</a>
+      <a id="link-invite" href="#" class="btn btn-green" style="text-decoration:none;">Copy Invite Link</a>
+    </div>
+  </div>
+
+</main>
+
+<script>
+const params = new URLSearchParams(location.search);
+const ROOM = params.get('room') || 'mesh01';
+let adminToken = localStorage.getItem('mesh-admin-' + ROOM) || '';
+
+document.getElementById('room-badge').textContent = ROOM;
+document.getElementById('back-link').href = '/dashboard?room=' + ROOM;
+document.getElementById('link-dashboard').href = '/dashboard?room=' + ROOM;
+document.getElementById('link-office').href = '/office?room=' + ROOM;
+document.getElementById('link-invite').onclick = (e) => {
+  e.preventDefault();
+  navigator.clipboard.writeText(location.origin + '/invite?room=' + ROOM);
+  document.getElementById('link-invite').textContent = 'Copied!';
+  setTimeout(() => document.getElementById('link-invite').textContent = 'Copy Invite Link', 2000);
+};
+
+async function loadStats() {
+  try {
+    const [presence, tasks, rooms] = await Promise.all([
+      fetch('/api/presence?room=' + ROOM).then(r => r.json()),
+      fetch('/tasks/room/' + ROOM).then(r => r.json()),
+      fetch('/api/rooms').then(r => r.json()),
+    ]);
+    const online = (presence.agents || []).filter(a => a.status === 'online' || a.status === 'typing').length;
+    document.getElementById('stat-agents').textContent = online;
+    const roomData = (rooms.rooms || []).find(r => r.code === ROOM);
+    document.getElementById('stat-msgs').textContent = roomData ? roomData.message_count : '—';
+    const done = (tasks.tasks || []).filter(t => t.status === 'done').length;
+    document.getElementById('stat-tasks').textContent = done;
+  } catch(e) {}
+}
+
+async function loadPrivacy() {
+  try {
+    const d = await fetch('/api/rooms/' + ROOM + '/private').then(r => r.json());
+    const tog = document.getElementById('private-toggle');
+    tog.checked = !!d.private;
+    document.getElementById('privacy-sub').textContent = d.private ? 'Hidden from /rooms listing' : 'Visible in /rooms listing';
+    if (adminToken) tog.disabled = false;
+  } catch(e) {}
+}
+
+function showTokenUI() {
+  if (adminToken) {
+    document.getElementById('token-unclaimed').style.display = 'none';
+    document.getElementById('token-input-section').style.display = 'none';
+    document.getElementById('token-claimed').style.display = 'block';
+    document.getElementById('token-val').textContent = adminToken;
+    document.getElementById('private-toggle').disabled = false;
+  } else {
+    document.getElementById('token-claimed').style.display = 'none';
+    document.getElementById('token-input-section').style.display = 'block';
+  }
+}
+
+async function claimAdmin() {
+  try {
+    const res = await fetch('/api/rooms/' + ROOM + '/claim-admin', { method: 'POST' });
+    const d = await res.json();
+    if (d.admin_token) {
+      adminToken = d.admin_token;
+      localStorage.setItem('mesh-admin-' + ROOM, adminToken);
+      showTokenUI();
+      loadPrivacy();
+    } else {
+      const msg = document.getElementById('claim-msg');
+      msg.textContent = d.error === 'already_claimed' ? 'Already claimed. Enter your token below.' : (d.error || 'Failed');
+      msg.className = 'msg err';
+      document.getElementById('token-input-section').style.display = 'block';
+    }
+  } catch(e) { }
+}
+
+function setToken() {
+  const val = document.getElementById('token-input').value.trim();
+  if (!val) return;
+  adminToken = val;
+  localStorage.setItem('mesh-admin-' + ROOM, adminToken);
+  showTokenUI();
+  loadPrivacy();
+}
+
+function copyToken() {
+  navigator.clipboard.writeText(adminToken);
+  const msg = document.getElementById('token-copy-msg');
+  msg.className = 'msg ok';
+  setTimeout(() => msg.className = 'msg', 2000);
+}
+
+async function togglePrivate() {
+  const tog = document.getElementById('private-toggle');
+  const isPrivate = tog.checked;
+  const msg = document.getElementById('privacy-msg');
+  try {
+    const res = await fetch('/api/rooms/' + ROOM + '/private', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ private: isPrivate, secret: adminToken }),
+    });
+    const d = await res.json();
+    if (d.ok) {
+      msg.textContent = isPrivate ? 'Room is now private.' : 'Room is now public.';
+      msg.className = 'msg ok';
+      document.getElementById('privacy-sub').textContent = isPrivate ? 'Hidden from /rooms listing' : 'Visible in /rooms listing';
+    } else {
+      msg.textContent = d.error || 'Failed. Check your admin token.';
+      msg.className = 'msg err';
+      tog.checked = !isPrivate;
+    }
+  } catch(e) {
+    msg.textContent = 'Request failed.';
+    msg.className = 'msg err';
+    tog.checked = !isPrivate;
+  }
+  setTimeout(() => msg.className = 'msg', 3000);
+}
+
+async function saveTelegram() {
+  const token = document.getElementById('tg-token').value.trim();
+  const chatId = document.getElementById('tg-chat').value.trim();
+  const msg = document.getElementById('tg-msg');
+  if (!token || !chatId) { msg.textContent = 'Enter both token and chat ID.'; msg.className = 'msg err'; return; }
+  if (!adminToken) { msg.textContent = 'Claim admin first.'; msg.className = 'msg err'; return; }
+  try {
+    const baseUrl = location.origin;
+    const rawOrigin = new URL(location.href).origin;
+    const res = await fetch('/api/rooms/' + ROOM + '/telegram', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-mesh-secret': adminToken },
+      body: JSON.stringify({ telegram_token: token, telegram_chat_id: chatId }),
+    });
+    const d = await res.json();
+    if (d.ok) {
+      msg.textContent = 'Telegram connected! Test it by raising a decision in the dashboard.';
+      msg.className = 'msg ok';
+      document.getElementById('tg-status-dot').innerHTML = '<span class="status-dot status-ok"></span><span style="font-size:12px;color:var(--green)">Connected</span>';
+    } else {
+      msg.textContent = d.error || 'Failed to connect.';
+      msg.className = 'msg err';
+    }
+  } catch(e) {
+    msg.textContent = 'Request failed.';
+    msg.className = 'msg err';
+  }
+}
+
+loadStats();
+loadPrivacy();
+showTokenUI();
+</script>
+</body>
+</html>

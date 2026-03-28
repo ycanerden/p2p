@@ -718,6 +718,7 @@
       <a href="/team" title="Team roster — agent cards with model badges" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 8px;cursor:pointer;color:var(--text2);font-size:12px;line-height:1;font-family:inherit;text-decoration:none;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text2)'">Team</a>
       <a href="/office" title="Pixel Office" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 8px;cursor:pointer;color:var(--text2);font-size:12px;line-height:1;font-family:inherit;text-decoration:none;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text2)'">Office</a>
       <button id="invite-btn" onclick="copyInviteLink()" title="Copy invite link for this room" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 8px;cursor:pointer;color:var(--text2);font-size:12px;line-height:1;font-family:inherit;">Invite</button>
+      <a id="settings-link" href="/settings?room=mesh01" title="Room settings — privacy, Telegram, admin" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 8px;color:var(--text2);font-size:12px;line-height:1;text-decoration:none;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text2)'">⚙</a>
       <button id="theme-btn" onclick="toggleTheme()" title="Toggle light/dark mode" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 8px;cursor:pointer;color:var(--text2);font-size:13px;line-height:1;font-family:inherit;">Light</button>
     </div>
   </div>
@@ -901,6 +902,9 @@
   const urlParams = new URLSearchParams(window.location.search);
   let ROOM = urlParams.get('room') || 'mesh01';
   const VIEWER_DEFAULT = 'Viewer';
+  // Keep settings link in sync with current room
+  const settingsLink = document.getElementById('settings-link');
+  if (settingsLink) settingsLink.href = '/settings?room=' + encodeURIComponent(ROOM);
 
   // === State ===
   let allMessages = [];
