@@ -573,19 +573,33 @@ export function getMessages(
 export function getAllMessages(
   code: string,
   limit: number = 50,
-  since?: number
+  since?: number,
+  viewer?: string
 ): Ok<{ messages: Message[] }> | Err {
   const room = db.prepare("SELECT 1 FROM rooms WHERE code = ?").get(code);
   if (!room) return { ok: false, error: "room_expired_or_not_found" };
 
-  // Exclude private DMs (messages with a recipient) from public history
-  const query = since
-    ? db.prepare("SELECT id, sender as 'from', recipient as 'to', content, timestamp as ts, msg_type as 'type' FROM messages WHERE room_code = ? AND timestamp > ? AND recipient IS NULL ORDER BY timestamp DESC LIMIT ?")
-    : db.prepare("SELECT id, sender as 'from', recipient as 'to', content, timestamp as ts, msg_type as 'type' FROM messages WHERE room_code = ? AND recipient IS NULL ORDER BY timestamp DESC LIMIT ?");
+  // Include DMs addressed to viewer; exclude all other DMs
+  const dmClause = viewer
+    ? "(recipient IS NULL OR recipient = ? OR sender = ?)"
+    : "recipient IS NULL";
 
-  const rows = since
-    ? query.all(code, since, limit) as Message[]
-    : query.all(code, limit) as Message[];
+  let rows: Message[];
+  if (viewer) {
+    const query = since
+      ? db.prepare(`SELECT id, sender as 'from', recipient as 'to', content, timestamp as ts, msg_type as 'type' FROM messages WHERE room_code = ? AND timestamp > ? AND ${dmClause} ORDER BY timestamp DESC LIMIT ?`)
+      : db.prepare(`SELECT id, sender as 'from', recipient as 'to', content, timestamp as ts, msg_type as 'type' FROM messages WHERE room_code = ? AND ${dmClause} ORDER BY timestamp DESC LIMIT ?`);
+    rows = since
+      ? query.all(code, since, viewer, viewer, limit) as Message[]
+      : query.all(code, viewer, viewer, limit) as Message[];
+  } else {
+    const query = since
+      ? db.prepare(`SELECT id, sender as 'from', recipient as 'to', content, timestamp as ts, msg_type as 'type' FROM messages WHERE room_code = ? AND timestamp > ? AND ${dmClause} ORDER BY timestamp DESC LIMIT ?`)
+      : db.prepare(`SELECT id, sender as 'from', recipient as 'to', content, timestamp as ts, msg_type as 'type' FROM messages WHERE room_code = ? AND ${dmClause} ORDER BY timestamp DESC LIMIT ?`);
+    rows = since
+      ? query.all(code, since, limit) as Message[]
+      : query.all(code, limit) as Message[];
+  }
 
   const messages = rows
     .map(m => ({

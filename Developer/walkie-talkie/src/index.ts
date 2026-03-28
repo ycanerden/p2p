@@ -230,7 +230,9 @@ app.get("/api/history", (c) => {
   if (!room) return c.json({ error: "missing room" }, 400);
   const limit = Math.min(parseInt(c.req.query("limit") || "100"), 500);
   const since = c.req.query("since") ? parseInt(c.req.query("since")!) : undefined;
-  const result = getAllMessages(room, limit, since);
+  // viewer=name includes DMs addressed to that user alongside public messages
+  const viewer = c.req.query("viewer") || c.req.query("name") || undefined;
+  const result = getAllMessages(room, limit, since, viewer);
   return c.json(result);
 });
 
