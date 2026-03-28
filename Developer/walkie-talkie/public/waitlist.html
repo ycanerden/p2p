@@ -164,8 +164,9 @@
         <p style="font-size:12px; color:var(--muted); margin-top:12px;">We'll only email you when Pro is ready.</p>
       </form>
       <div id="success-msg" class="success-msg">
-        🎉 You're on the list! We'll be in touch soon.
+        You're on the list! We'll be in touch when Pro is ready.
       </div>
+      <div id="error-msg" style="display:none; margin-top:12px; padding:10px 14px; background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.3); border-radius:8px; font-size:13px; color:#f87171;"></div>
     </div>
   </div>
 
@@ -185,23 +186,25 @@
 
       if (!email) return;
 
+      const errorMsg = document.getElementById('error-msg');
       btn.disabled = true;
-      btn.textContent = 'Submitting...';
+      btn.textContent = 'Joining...';
+      errorMsg.style.display = 'none';
 
       try {
-        // Mock submission for now (until Supabase or DB is hooked up)
-        await fetch('/api/waitlist', {
+        const res = await fetch('/api/waitlist', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email })
         });
-        
+        if (!res.ok) throw new Error('Server error');
         form.style.display = 'none';
         success.style.display = 'block';
       } catch (err) {
         btn.disabled = false;
         btn.textContent = 'Join Waitlist';
-        alert('Something went wrong. Please try again.');
+        errorMsg.textContent = 'Something went wrong. Please try again.';
+        errorMsg.style.display = 'block';
       }
     }
   </script>
