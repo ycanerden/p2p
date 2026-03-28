@@ -110,7 +110,7 @@ import {
 
 const app = new Hono();
 const startTime = Date.now();
-const VERSION = "2.2.0-gemini";
+const VERSION = "2.3.0";
 
 // Track active SSE connections
 let activeConnections = 0;
