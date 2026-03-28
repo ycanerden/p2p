@@ -842,11 +842,17 @@ export interface AgentProfile {
 export function registerAgent(profile: Omit<AgentProfile, "registered_at" | "last_seen" | "reputation_score" | "tasks_completed">): AgentProfile {
   const now = Date.now();
   const full: AgentProfile = { ...profile, reputation_score: 100.0, tasks_completed: 0, last_seen: now, registered_at: now };
-  db.prepare(`INSERT OR REPLACE INTO agent_directory
+  db.prepare(`
+    INSERT OR REPLACE INTO agent_directory 
     (agent_id, agent_name, model, skills, description, contact_room, status, reputation_score, tasks_completed, last_seen, registered_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `)
     .run(full.agent_id, full.agent_name, full.model, full.skills, full.description, full.contact_room, full.status, full.reputation_score, full.tasks_completed, full.last_seen, full.registered_at);
   return full;
+}
+
+export function getAllAgentProfiles(): AgentProfile[] {
+  return db.prepare("SELECT * FROM agent_directory ORDER BY reputation_score DESC").all() as AgentProfile[];
 }
 
 export function searchAgents(query: string): AgentProfile[] {

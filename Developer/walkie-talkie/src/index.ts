@@ -1062,6 +1062,16 @@ app.get("/leaderboard", async (c) => {
   }
 });
 
+// Analytics — team-wide performance trends
+app.get("/analytics", async (c) => {
+  try {
+    const html = await Bun.file("./public/analytics.html").text();
+    return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" } });
+  } catch {
+    return c.redirect("/team");
+  }
+});
+
 // Active rooms list
 app.get("/api/rooms", (c) => {
   const rooms = getActiveRooms();
@@ -1164,6 +1174,27 @@ app.get("/api/personality/identity-block", (c) => {
   if (!name) return c.json({ error: "missing name" }, 400);
   const block = generateIdentityBlock(name);
   return new Response(block, { headers: { "Content-Type": "text/plain" } });
+});
+
+// ── Analytics API ──────────────────────────────────────────────────────────
+
+app.get("/api/analytics", (c) => {
+  const agents = getAllAgentProfiles();
+  const summary = agents.map(a => ({
+    name: a.agent_name,
+    model: a.model,
+    tasks_done: a.tasks_completed,
+    reputation: a.reputation_score,
+    last_seen: a.last_seen,
+  }));
+  return c.json({ ok: true, agents: summary });
+});
+
+app.get("/api/analytics/:name", (c) => {
+  const name = c.req.param("name");
+  const stats = getProductivityReport(name);
+  const tasks = getAllAgentTasks(name);
+  return c.json({ ok: true, stats, tasks });
 });
 
 // Morning briefing — summary of activity since you were last here

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mesh — Agent Analytics</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root{--bg:#09090b;--surface:#111113;--surface2:#18181b;--border:#27272a;--accent:#8b5cf6;--green:#22c55e;--text:#fafafa;--text2:#a1a1aa;--text3:#52525b;--radius:12px;}
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:40px 20px;}
+
+    .container{max-width:1000px;margin:0 auto;}
+    header{display:flex;justify-content:space-between;align-items:center;margin-bottom:40px;}
+    h1{font-size:24px;font-weight:800;letter-spacing:-0.5px;}
+    .back-link{color:var(--text3);text-decoration:none;font-size:13px;}
+
+    .stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:20px;margin-bottom:40px;}
+    .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;}
+    .stat-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;}
+    .stat-value{font-size:32px;font-weight:700;font-family:'JetBrains Mono',monospace;}
+
+    .table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+    table{width:100%;border-collapse:collapse;text-align:left;}
+    th{background:var(--surface2);padding:14px 20px;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid var(--border);}
+    td{padding:16px 20px;font-size:13px;border-bottom:1px solid var(--border);color:var(--text2);}
+    tr:last-child td{border-bottom:none;}
+    tr:hover td{background:rgba(255,255,255,0.01);color:var(--text);}
+
+    .agent-name{font-weight:600;color:var(--text);display:flex;align-items:center;gap:10px;}
+    .avatar{width:24px;height:24px;border-radius:6px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;}
+    .reputation{font-family:'JetBrains Mono',monospace;color:var(--accent);font-weight:600;}
+    .status-dot{width:6px;height:6px;border-radius:50%;}
+    .status-online{background:var(--green);box-shadow:0 0 8px var(--green);}
+    .status-offline{background:var(--text3);}
+
+    .empty{padding:60px;text-align:center;color:var(--text3);font-size:14px;}
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>Agent Analytics</h1>
+    <a href="/team" class="back-link">← Back to team</a>
+  </header>
+
+  <div class="stats-grid" id="global-stats">
+    <div class="stat-card"><div class="stat-label">Total Agents</div><div class="stat-value" id="count-agents">—</div></div>
+    <div class="stat-card"><div class="stat-label">Tasks Completed</div><div class="stat-value" id="count-tasks">—</div></div>
+    <div class="stat-card"><div class="stat-label">Avg Reputation</div><div class="stat-value" id="avg-reputation">—</div></div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Agent</th>
+          <th>Model</th>
+          <th>Tasks Done</th>
+          <th>Reputation</th>
+          <th>Last Seen</th>
+        </tr>
+      </thead>
+      <tbody id="agent-table">
+        <!-- Rows will be injected here -->
+      </tbody>
+    </table>
+    <div id="loading" class="empty">Loading analytics data...</div>
+  </div>
+</div>
+
+<script>
+function timeAgo(ts){if(!ts)return 'never';const s=Math.floor((Date.now()-ts)/1000);if(s<60)return'now';if(s<3600)return Math.floor(s/60)+'m';if(s<86400)return Math.floor(s/3600)+'h';return Math.floor(s/86400)+'d';}
+const COLORS = ['#8b5cf6','#3b82f6','#22c55e','#f59e0b','#ec4899','#14b8a6','#f97316','#a855f7'];
+function hash(s){let h=0;for(let c of s)h=c.charCodeAt(0)+((h<<5)-h);return Math.abs(h);}
+
+async function loadAnalytics() {
+  try {
+    const r = await fetch('/api/analytics');
+    const d = await r.json();
+    if(!d.ok) return;
+
+    const agents = d.agents || [];
+    document.getElementById('loading').style.display = 'none';
+    
+    if(agents.length === 0) {
+      document.getElementById('loading').innerHTML = 'No agent data found.';
+      document.getElementById('loading').style.display = 'block';
+      return;
+    }
+
+    // Update summary
+    document.getElementById('count-agents').textContent = agents.length;
+    const totalTasks = agents.reduce((sum, a) => sum + (a.tasks_done || 0), 0);
+    const avgRep = agents.reduce((sum, a) => sum + (a.reputation || 0), 0) / agents.length;
+    document.getElementById('count-tasks').textContent = totalTasks;
+    document.getElementById('avg-reputation').textContent = Math.floor(avgRep);
+
+    const table = document.getElementById('agent-table');
+    table.innerHTML = agents.map(a => {
+      const c = COLORS[hash(a.name)%COLORS.length];
+      const isOnline = (Date.now() - a.last_seen) < 300000; // 5 mins
+      return `
+        <tr>
+          <td>
+            <div class="agent-name">
+              <div class="avatar" style="background:${c}">${a.name.charAt(0).toUpperCase()}</div>
+              <span>${a.name}</span>
+              <div class="status-dot ${isOnline ? 'status-online' : 'status-offline'}"></div>
+            </div>
+          </td>
+          <td style="font-size:11px;">${a.model || '—'}</td>
+          <td style="font-weight:600;">${a.tasks_done || 0}</td>
+          <td class="reputation">${Math.floor(a.reputation || 0)}</td>
+          <td style="font-family:monospace;font-size:11px;">${timeAgo(a.last_seen)}</td>
+        </tr>
+      `;
+    }).join('');
+
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+loadAnalytics();
+setInterval(loadAnalytics, 15000);
+</script>
+</body>
+</html>
