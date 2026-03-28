@@ -715,11 +715,15 @@ app.get("/api/activity", (c) => {
 
   const limit = parseInt(c.req.query("limit") || "50");
   const status = getRoomStatus(room);
-  const messages = getMessages(room, limit);
+  const messagesResult = getAllMessages(room, limit);
   const presence = getRoomPresence(room);
 
+  if (!messagesResult.ok) {
+    return c.json({ error: messagesResult.error }, 404);
+  }
+
   // Build activity timeline
-  const activity = messages.map((msg) => ({
+  const activity = (messagesResult.messages || []).map((msg) => ({
     id: msg.id,
     agent: msg.from,
     type: msg.type || "MESSAGE",
@@ -732,7 +736,7 @@ app.get("/api/activity", (c) => {
     ok: true,
     room,
     activity,
-    agents_online: presence.agents.filter((a) => a.status === "online").length,
+    agents_online: presence.filter((a) => a.status === "online").length,
     total_messages: status?.message_count || 0,
   });
 });
@@ -742,11 +746,11 @@ app.get("/api/agents", (c) => {
   const room = c.req.query("room");
   if (!room) return c.json({ error: "missing room" }, 400);
 
-  const presence = getRoomPresence(room);
+  const presenceList = getRoomPresence(room);
   const leaderboard = getLeaderboard(999); // Get all agents
 
   // Build agent cards
-  const agents = presence.agents.map((agent) => {
+  const agents = presenceList.map((agent) => {
     const stats = getAgentStats(agent.agent_name);
     const leader = leaderboard.find((l) => l.agent_name === agent.agent_name);
 
