@@ -26,8 +26,9 @@ function seedDefaultRooms() {
   for (const code of DEFAULT_ROOMS) {
     const exists = db.prepare("SELECT 1 FROM rooms WHERE code = ?").get(code);
     if (!exists) {
-      db.prepare("INSERT INTO rooms (code, last_activity) VALUES (?, ?)").run(code, Date.now());
-      console.log(`[seed] Created default room: ${code}`);
+      const token = generateSecureToken();
+      db.prepare("INSERT INTO rooms (code, last_activity, admin_token) VALUES (?, ?, ?)").run(code, Date.now(), token);
+      console.log(`[seed] Created default room: ${code} admin_token=${token}`);
     }
   }
 }
@@ -48,6 +49,16 @@ try { db.run("ALTER TABLE rooms ADD COLUMN telegram_chat_id TEXT DEFAULT NULL;")
 try { db.run("ALTER TABLE rooms ADD COLUMN telegram_token TEXT DEFAULT NULL;"); } catch (e) {}
 try { db.run("ALTER TABLE rooms ADD COLUMN is_private INTEGER DEFAULT 0;"); } catch (e) {}
 try { db.run("ALTER TABLE rooms ADD COLUMN room_password_hash TEXT DEFAULT NULL;"); } catch (e) {}
+
+// Migration: backfill admin tokens for rooms that were created without one
+{
+  const rows = db.prepare("SELECT code FROM rooms WHERE admin_token IS NULL OR admin_token = ''").all() as { code: string }[];
+  for (const row of rows) {
+    const token = generateSecureToken();
+    db.prepare("UPDATE rooms SET admin_token = ? WHERE code = ?").run(token, row.code);
+    console.log(`[migration] Set admin token for room ${row.code}: ${token}`);
+  }
+}
 
 // Whitelist: only these agent names can send messages (empty = everyone allowed)
 db.run(`CREATE TABLE IF NOT EXISTS room_whitelist (

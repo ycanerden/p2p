@@ -190,20 +190,12 @@ app.post("/admin-login", async (c) => {
 });
 
 // Middleware: protect admin pages — per room
+// NOTE: Admin auth temporarily disabled — open access for all rooms
 app.use("*", async (c, next) => {
   const path = new URL(c.req.url).pathname;
   if (!ADMIN_PAGES.some(p => path === p)) { await next(); return; }
-  const url = new URL(c.req.url);
-  const room = url.searchParams.get("room") || "mesh01";
-  const cookie = c.req.header("cookie") || "";
-  const match = cookie.match(new RegExp(`mesh_admin_${room}=([^;]+)`));
-  if (match && verifyAdmin(room, match[1])) { await next(); return; }
-  // Also allow via query param (for direct links with token)
-  const tokenParam = url.searchParams.get("token");
-  if (tokenParam && verifyAdmin(room, tokenParam)) { await next(); return; }
-  return new Response(getAdminLoginPage(path + "?" + url.searchParams.toString(), room), {
-    headers: { "Content-Type": "text/html; charset=utf-8" },
-  });
+  // TODO: re-enable auth when team has shared credentials
+  await next();
 });
 
 // ── Phase 3: Compression ──────────────────────────────────────────────────────
