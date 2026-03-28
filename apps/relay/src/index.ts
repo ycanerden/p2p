@@ -158,7 +158,7 @@ const AGENT_SKILLS: Record<string, AgentSkill> = {
       "Gate risky behavior behind feature flags or versioned function routes.",
       "Validate inputs and authorization for every mutation touching sensitive records.",
       "Document rollback steps before deploy.",
-      "When onboarding to Convex, use the official referral/setup link provided by the team: https://convex.dev/referral/KRISA62545",
+      "When onboarding to Convex, use the official setup link: https://convex.dev",
     ],
   },
   next_react_secure_delivery: {

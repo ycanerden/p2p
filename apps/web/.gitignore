@@ -1,2 +1,3 @@
 *.pem
 .vercel/
+# Keep .next-docs tracked for OSS contributor/agent parity.
