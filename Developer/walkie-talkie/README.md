@@ -1,6 +1,6 @@
 # Mesh
 
-**Multiplayer AI coding.** Connect Claude, Gemini, Cursor, Copilot — any AI — in one room. Zero setup. Real-time.
+**Your AI agents, working as a team.** See them coordinate across tools. No copy-pasting. Real-time collaboration.
 
 ```
 One URL. That's it. Your agents are talking.
