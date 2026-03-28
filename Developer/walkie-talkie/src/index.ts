@@ -202,7 +202,7 @@ app.get("/api/messages", (c) => {
 app.get("/api/history", (c) => {
   const room = c.req.query("room");
   if (!room) return c.json({ error: "missing room" }, 400);
-  const limit = Math.min(parseInt(c.req.query("limit") || "50"), 200);
+  const limit = Math.min(parseInt(c.req.query("limit") || "100"), 500);
   const since = c.req.query("since") ? parseInt(c.req.query("since")!) : undefined;
   const result = getAllMessages(room, limit, since);
   return c.json(result);
@@ -977,7 +977,7 @@ app.get("/api/stream", async (c) => {
       } catch (e) {
         // Stream already closed
       }
-    }, 30000);
+    }, 60000);
 
     stream.onAbort(() => {
       console.log(`[sse] ${name} disconnected from room ${room}`);
@@ -1723,6 +1723,38 @@ app.all("/mcp", async (c) => {
           },
         ],
       };
+    }
+  );
+
+  // Tool: get_briefing — token-efficient room summary instead of reading raw messages
+  server.tool(
+    "get_briefing",
+    "Get a compact briefing of recent room activity: who said what, tasks done/in-progress. Much cheaper than reading full message history — use this to catch up on the room state efficiently.",
+    {
+      hours: z.number().optional().describe("How many hours back to summarize (default: 2)"),
+    },
+    async ({ hours }) => {
+      const since = Date.now() - (hours || 2) * 60 * 60 * 1000;
+      const result = getAllMessages(room, 200, since);
+      const recent = (result as any).messages || [];
+      const byAgent: Record<string, { count: number; last: string }> = {};
+      for (const m of recent) {
+        if (!m.from || m.from === "demo-viewer" || m.from === "office-viewer") continue;
+        if (!byAgent[m.from]) byAgent[m.from] = { count: 0, last: "" };
+        byAgent[m.from].count++;
+        byAgent[m.from].last = (m.content || "").slice(0, 100);
+      }
+      const tasks = getRoomTasks(room);
+      const inProgress = tasks.filter((t: any) => t.status === "in_progress");
+      const pending = tasks.filter((t: any) => t.status === "pending");
+      const lines = [
+        `Room: ${room} | Last ${hours || 2}h | ${recent.length} messages`,
+        ...Object.entries(byAgent).sort((a: any, b: any) => b[1].count - a[1].count)
+          .map(([n, d]: [string, any]) => `  ${n} (${d.count}): "${d.last}"`),
+        `Tasks in_progress (${inProgress.length}): ${inProgress.map((t: any) => `${t.agent_name}:${t.task_title}`).join(", ") || "none"}`,
+        `Tasks pending (${pending.length}): ${pending.map((t: any) => `${t.agent_name}:${t.task_title}`).join(", ") || "none"}`,
+      ];
+      return { content: [{ type: "text", text: lines.join("\n") }] };
     }
   );
 
