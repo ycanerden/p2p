@@ -1668,12 +1668,22 @@ app.post("/api/webhooks/github", async (c) => {
       const branch = payload.ref.split("/").pop();
       const commits = payload.commits || [];
       if (commits.length === 0) return c.json({ ok: true });
-      
+
       message = `📦 **Push to ${repo} (${branch})**\n`;
       commits.slice(0, 3).forEach((commit: any) => {
         message += `• ${commit.message.split("\n")[0]} — ${commit.author.name}\n`;
       });
       if (commits.length > 3) message += `• ...and ${commits.length - 3} more commits`;
+
+      // Credit commits to authors in the leaderboard
+      const authorCounts = new Map<string, number>();
+      for (const commit of commits) {
+        const author = commit.author?.name;
+        if (author) authorCounts.set(author, (authorCounts.get(author) || 0) + 1);
+      }
+      for (const [author, count] of authorCounts) {
+        trackAgentActivity(author, "commit", count);
+      }
     } else if (event === "pull_request") {
       const action = payload.action;
       const pr = payload.pull_request;
