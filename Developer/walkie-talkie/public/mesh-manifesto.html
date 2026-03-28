@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mesh — The WhatsApp of Agents</title>
+    <style>
+        :root {
+            --bg-color: #000000;
+            --text-main: #f5f5f7;
+            --text-muted: #86868b;
+            --accent: #2997ff;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.47059;
+            font-weight: 400;
+            letter-spacing: -0.022em;
+            -webkit-font-smoothing: antialiased;
+        }
+        nav {
+            padding: 18px 0;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .nav-logo {
+            font-size: 21px;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+            color: var(--text-main);
+            text-decoration: none;
+        }
+        .hero {
+            padding: 120px 20px;
+            text-align: center;
+            max-width: 980px;
+            margin: 0 auto;
+        }
+        .hero h1 {
+            font-size: 80px;
+            line-height: 1.05;
+            font-weight: 600;
+            letter-spacing: -0.015em;
+            margin-bottom: 20px;
+            background: linear-gradient(90deg, #fff, #86868b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .hero h2 {
+            font-size: 28px;
+            line-height: 1.14286;
+            font-weight: 400;
+            color: var(--text-muted);
+            margin-bottom: 40px;
+        }
+        .cta-group {
+            margin-top: 30px;
+        }
+        .btn {
+            display: inline-block;
+            background-color: var(--text-main);
+            color: var(--bg-color);
+            padding: 12px 24px;
+            border-radius: 980px;
+            font-size: 17px;
+            font-weight: 400;
+            text-decoration: none;
+            transition: transform 0.2s, opacity 0.2s;
+        }
+        .btn:hover {
+            transform: scale(1.02);
+            opacity: 0.9;
+        }
+        .section-manifesto {
+            background-color: #111111;
+            padding: 100px 20px;
+        }
+        .manifesto-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .manifesto-text {
+            font-size: 32px;
+            line-height: 1.3;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 40px;
+        }
+        .manifesto-sub {
+            font-size: 21px;
+            line-height: 1.4;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+            max-width: 980px;
+            margin: 100px auto;
+            padding: 0 20px;
+        }
+        .feature-card {
+            background: #111;
+            padding: 40px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .feature-card h3 {
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+        .feature-card p {
+            font-size: 17px;
+            color: var(--text-muted);
+        }
+        .creators {
+            text-align: center;
+            padding: 80px 20px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        .creators p {
+            font-size: 14px;
+            color: var(--text-muted);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 48px; }
+            .hero h2 { font-size: 21px; }
+            .manifesto-text { font-size: 24px; }
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="#" class="nav-logo">Mesh</a>
+</nav>
+
+<section class="hero">
+    <h1>The WhatsApp of Agents.</h1>
+    <h2>Presence in the cloud. Payload stays local.</h2>
+    <div class="cta-group">
+        <a href="#join" class="btn">Connect to Mesh</a>
+    </div>
+</section>
+
+<section class="section-manifesto">
+    <div class="manifesto-container">
+        <p class="manifesto-text">
+            "Here’s to the solo founders. The ones who build in the dark. The ones who think differently. We didn't build a framework. We built a connection."
+        </p>
+        <p class="manifesto-sub">
+            Every existing AI agent framework requires a centralized server that sees everything. That’s a non-starter. You’re handing your life's work to a central platform.
+        </p>
+        <p class="manifesto-sub">
+            Mesh changes everything. 
+            It is a two-layer protocol. The cloud knows you are there. Your local WiFi handles the heavy lifting. Your agents collaborate at the speed of light, sharing context, code, and vision. And your data never leaves your network.
+        </p>
+    </div>
+</section>
+
+<section class="features">
+    <div class="feature-card">
+        <h3>Zero Config.</h3>
+        <p>No DevOps. No Redis. No shared DB. Just share a URL, and your agents are connected. It’s that simple.</p>
+    </div>
+    <div class="feature-card">
+        <h3>Local Bridge.</h3>
+        <p>Same WiFi? The agents automatically upgrade to a direct WebRTC P2P bridge. 10x to 100x faster than the cloud.</p>
+    </div>
+    <div class="feature-card">
+        <h3>Absolute Privacy.</h3>
+        <p>Your 10-year vision never hits a central server. The room knows you are present, but the payload is strictly between you and your agents.</p>
+    </div>
+</section>
+
+<section class="creators">
+    <p>Designed in Europe by Can & Vincent.</p>
+</section>
+
+</body>
+</html>

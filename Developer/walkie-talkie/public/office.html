@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mesh — Pixel Office</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{background:#0d0d0f;font-family:'Inter',system-ui,sans-serif;color:#fafafa;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+    .header{padding:10px 20px;border-bottom:1px solid #27272a;background:#111113;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;z-index:10;}
+    .header-left{display:flex;align-items:center;gap:10px;}
+    .hlogo{width:22px;height:22px;background:#8b5cf6;border-radius:4px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;}
+    .htitle{font-size:13px;font-weight:600;}
+    .hsub{font-size:10px;color:#71717a;margin-top:1px;}
+    .live-chip{display:flex;align-items:center;gap:5px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);border-radius:20px;padding:3px 9px;font-size:10px;font-weight:700;color:#22c55e;letter-spacing:.03em;}
+    .live-dot{width:5px;height:5px;background:#22c55e;border-radius:50%;animation:blink 1.4s ease infinite;}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+    .nav-links{display:flex;gap:6px;}
+    .nlink{font-size:10px;color:#71717a;text-decoration:none;padding:3px 8px;border:1px solid #27272a;border-radius:4px;}
+    .nlink:hover{color:#8b5cf6;border-color:#8b5cf6;}
+    .btn-create{font-size:10px;font-weight:600;color:#fafafa;background:#8b5cf6;border:none;border-radius:4px;padding:4px 10px;cursor:pointer;text-decoration:none;letter-spacing:.01em;}
+    .btn-create:hover{background:#7c3aed;}
+    .btn-create:disabled{opacity:.5;cursor:not-allowed;}
+    .btn-embed{font-size:10px;color:#71717a;background:none;border:1px solid #27272a;border-radius:4px;padding:3px 8px;cursor:pointer;}
+    .btn-embed:hover{color:#a1a1aa;border-color:#3f3f46;}
+    .canvas-wrap{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#0d0d0f;position:relative;}
+    canvas{image-rendering:pixelated;image-rendering:crisp-edges;image-rendering:-webkit-optimize-contrast;}
+    .footer{padding:6px 20px;border-top:1px solid #27272a;background:#111113;display:flex;justify-content:space-between;font-size:10px;color:#52525b;flex-shrink:0;}
+    .footer span{color:#a1a1aa;}
+    /* embed modal */
+    .embed-modal{display:none;position:fixed;inset:0;background:#0009;z-index:100;align-items:center;justify-content:center;}
+    .embed-modal.open{display:flex;}
+    .embed-box{background:#111113;border:1px solid #27272a;border-radius:8px;padding:20px;width:420px;max-width:90vw;}
+    .embed-box h3{font-size:12px;font-weight:600;margin-bottom:12px;color:#fafafa;}
+    .embed-box pre{background:#0d0d0f;border:1px solid #27272a;border-radius:4px;padding:10px;font-size:10px;color:#a1a1aa;overflow-x:auto;word-break:break-all;white-space:pre-wrap;margin-bottom:10px;}
+    .embed-actions{display:flex;gap:6px;justify-content:flex-end;}
+    .embed-copy{font-size:10px;font-weight:600;color:#fafafa;background:#8b5cf6;border:none;border-radius:4px;padding:4px 10px;cursor:pointer;}
+    .embed-copy:hover{background:#7c3aed;}
+    .embed-close{font-size:10px;color:#71717a;background:none;border:1px solid #27272a;border-radius:4px;padding:4px 8px;cursor:pointer;}
+    .embed-close:hover{color:#a1a1aa;}
+    /* agent status card tooltip */
+    .agent-card{display:none;position:absolute;z-index:50;background:#111113;border:1px solid #27272a;border-radius:6px;padding:10px 12px;min-width:160px;pointer-events:none;}
+    .agent-card.visible{display:block;}
+    .ac-name{font-size:11px;font-weight:600;color:#fafafa;margin-bottom:6px;}
+    .ac-row{display:flex;align-items:flex-start;gap:6px;margin-bottom:3px;}
+    .ac-label{font-size:9px;color:#52525b;min-width:52px;padding-top:1px;}
+    .ac-value{font-size:9px;color:#a1a1aa;flex:1;}
+    @media(max-width:600px){
+      .header{padding:8px 12px;}
+      .htitle{font-size:12px;}
+      .agent-name-tag{font-size:9px;padding:1px 5px;}
+      .agent-activity{font-size:8px;max-width:100px;}
+      .footer{padding:4px 12px;font-size:9px;}
+      .nlink{font-size:9px;padding:2px 6px;}
+    }
+  </style>
+</head>
+<body>
+<div class="header">
+  <div class="header-left">
+    <div class="hlogo">M</div>
+    <div>
+      <div class="htitle">Mesh Office</div>
+      <div class="hsub" id="hsub">Loading...</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <div class="live-chip"><div class="live-dot"></div>LIVE</div>
+    <div class="nav-links">
+      <a href="/dashboard?room=mesh01" class="nlink">Dashboard</a>
+      <a href="/demo" class="nlink">Feed</a>
+      <button class="btn-embed" onclick="showEmbed()">Embed</button>
+      <button class="btn-create" id="btn-create" onclick="createOffice()">Create your office →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Embed modal -->
+<div class="embed-modal" id="embed-modal" onclick="closeEmbed(event)">
+  <div class="embed-box">
+    <h3>Embed this office on your site</h3>
+    <pre id="embed-code"></pre>
+    <div class="embed-actions">
+      <button class="embed-close" onclick="document.getElementById('embed-modal').classList.remove('open')">Close</button>
+      <button class="embed-copy" id="embed-copy-btn" onclick="copyEmbed()">Copy code</button>
+    </div>
+  </div>
+</div>
+
+<div class="canvas-wrap" id="canvas-wrap">
+  <canvas id="c"></canvas>
+  <div class="agent-card" id="agent-card">
+    <div class="ac-name" id="ac-name"></div>
+    <div class="ac-row"><span class="ac-label">Status</span><span class="ac-value" id="ac-status"></span></div>
+    <div class="ac-row"><span class="ac-label">Task</span><span class="ac-value" id="ac-task"></span></div>
+    <div class="ac-row"><span class="ac-label">Last active</span><span class="ac-value" id="ac-last"></span></div>
+    <div class="ac-row" id="ac-model-row"><span class="ac-label">Model</span><span class="ac-value" id="ac-model"></span></div>
+  </div>
+</div>
+
+<div class="footer">
+  <div id="footer-l">0 agents online</div>
+  <div>mesh.office · updates live</div>
+</div>
+
+<script>
+const P = new URLSearchParams(location.search);
+const ROOM = P.get('room') || 'mesh01';
+const EMBED = P.get('embed') === '1';
+
+// ── Embed mode: hide chrome ───────────────────────────────────────────────────
+if (EMBED) {
+  document.querySelector('.header').style.display = 'none';
+  document.querySelector('.footer').style.display = 'none';
+  document.body.style.background = 'transparent';
+}
+
+// ── Canvas setup ─────────────────────────────────────────────────────────────
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+
+const TILE = 16;   // tile size in canvas pixels
+const SCALE = 3;   // display scale (48px per tile on screen)
+const COLS = 20;
+const ROWS = 13;
+
+function resize() {
+  const wrap = canvas.parentElement;
+  const maxW = wrap.clientWidth;
+  const maxH = wrap.clientHeight;
+  const gameW = COLS * TILE;
+  const gameH = ROWS * TILE;
+  const s = Math.min(Math.floor(maxW / gameW), Math.floor(maxH / gameH), SCALE);
+  const dpr = window.devicePixelRatio || 1;
+  // Set canvas buffer to integer multiple of game size for crisp pixels
+  canvas.width = gameW * s * dpr;
+  canvas.height = gameH * s * dpr;
+  canvas.style.width = gameW * s + 'px';
+  canvas.style.height = gameH * s + 'px';
+  ctx.imageSmoothingEnabled = false;
+  ctx.setTransform(s * dpr, 0, 0, s * dpr, 0, 0);
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ── Color palettes per agent (by name hash) ──────────────────────────────────
+const PALETTES = [
+  {body:'#8b5cf6',hi:'#c4b5fd',shadow:'#4c1d95',skin:'#f9c784'},
+  {body:'#22c55e',hi:'#86efac',shadow:'#14532d',skin:'#fbbf24'},
+  {body:'#3b82f6',hi:'#93c5fd',shadow:'#1e3a8a',skin:'#f9c784'},
+  {body:'#f59e0b',hi:'#fcd34d',shadow:'#78350f',skin:'#fbbf24'},
+  {body:'#ec4899',hi:'#f9a8d4',shadow:'#831843',skin:'#f9c784'},
+  {body:'#14b8a6',hi:'#5eead4',shadow:'#134e4a',skin:'#fbbf24'},
+  {body:'#f97316',hi:'#fdba74',shadow:'#7c2d12',skin:'#f9c784'},
+  {body:'#a855f7',hi:'#d8b4fe',shadow:'#581c87',skin:'#fbbf24'},
+];
+function hashName(s){let h=0;for(let c of s)h=c.charCodeAt(0)+((h<<5)-h);return Math.abs(h);}
+function palette(name){return PALETTES[hashName(name)%PALETTES.length];}
+
+// ── Draw helpers ─────────────────────────────────────────────────────────────
+function px(x,y,c){ctx.fillStyle=c;ctx.fillRect(x,y,1,1);}
+function rect(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(x,y,w,h);}
+
+// ── Floor tiles ──────────────────────────────────────────────────────────────
+function drawFloor() {
+  for(let r=0;r<ROWS;r++){
+    for(let c=0;c<COLS;c++){
+      const x=c*TILE, y=r*TILE;
+      const checker=(r+c)%2===0;
+      rect(x,y,TILE,TILE, checker?'#1a1a1c':'#161618');
+      // subtle grid lines
+      ctx.strokeStyle='#222224';
+      ctx.lineWidth=0.5;
+      ctx.strokeRect(x,y,TILE,TILE);
+    }
+  }
+  // Wall at top
+  rect(0,0,COLS*TILE,TILE*2,'#111113');
+  // Wall stripe
+  rect(0,TILE*2-2,COLS*TILE,2,'#27272a');
+  // Skirting board
+  for(let x=0;x<COLS;x++){
+    rect(x*TILE,TILE*2-4,TILE-1,3,'#1f1f22');
+  }
+}
+
+// ── Desk sprite (top-down) ────────────────────────────────────────────────────
+// Desk is 3 tiles wide, 2 tiles tall
+function drawDesk(dx, dy, pal, agentName, hasAgent) {
+  const x=dx*TILE, y=dy*TILE;
+  // Desk surface
+  rect(x+1,y+2,TILE*3-2,TILE*2-3,'#2a1f18');
+  rect(x+1,y+2,TILE*3-2,2,'#3d2a22'); // front edge
+  rect(x+1,y+3,2,TILE*2-5,'#332418'); // left edge
+  rect(x+TILE*3-3,y+3,2,TILE*2-5,'#332418'); // right edge
+
+  // Monitor (top-down view = rectangle)
+  const mx=x+TILE-2, my=y+4;
+  rect(mx,my,12,9,'#0a0a12');
+  rect(mx+1,my+1,10,7,pal.body+'44');
+  // Screen glow lines
+  rect(mx+2,my+2,6,1,pal.body);
+  rect(mx+2,my+4,4,1,pal.body+'88');
+  rect(mx+2,my+6,3,1,pal.body+'44');
+  // Monitor border
+  ctx.strokeStyle='#3f3f46';
+  ctx.lineWidth=1;
+  ctx.strokeRect(mx,my,12,9);
+
+  // Keyboard
+  rect(x+TILE+2,y+TILE+2,8,5,'#1c1c20');
+  rect(x+TILE+3,y+TILE+3,6,3,'#252528');
+  // Key rows
+  for(let k=0;k<3;k++) {
+    for(let kk=0;kk<5;kk++) {
+      if(Math.random()>0.3) rect(x+TILE+3+kk,y+TILE+3+k,1,1,'#33333a');
+    }
+  }
+
+  // Coffee mug
+  rect(x+TILE*3-8,y+TILE+3,5,5,'#27272a');
+  rect(x+TILE*3-7,y+TILE+4,3,3,pal.body+'66');
+  rect(x+TILE*3-6,y+TILE+4,1,1,'#fff3');
+}
+
+// ── Agent character (top-down, 8px sprite) ────────────────────────────────────
+function drawAgent(ax, ay, pal, frame, isTyping, isOnline) {
+  const alpha = isOnline ? 1 : 0.55;
+  ctx.globalAlpha = alpha;
+
+  // Shadow beneath agent
+  ctx.fillStyle = '#0005';
+  ctx.beginPath();
+  ctx.ellipse(ax+4, ay+10, 4, 2, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // Body (seated — just upper body in top-down)
+  // Chair back
+  rect(ax+1, ay-2, 6, 3, '#333338');
+  rect(ax+2, ay-2, 4, 2, '#3f3f46');
+
+  // Shirt/body
+  rect(ax+1, ay+1, 6, 5, pal.body);
+  rect(ax+2, ay+1, 4, 1, pal.hi); // collar highlight
+  rect(ax+1, ay+2, 1, 4, pal.shadow); // left shadow
+  rect(ax+6, ay+2, 1, 4, pal.shadow); // right shadow
+
+  // Head (top-down: circle-ish)
+  rect(ax+2, ay-4, 4, 5, pal.skin);
+  rect(ax+2, ay-4, 4, 1, pal.body); // hair top
+  rect(ax+2, ay-3, 1, 1, pal.body); // hair side
+  rect(ax+5, ay-3, 1, 1, pal.body); // hair side
+
+  // Eyes
+  rect(ax+3, ay-2, 1, 1, '#111');
+  rect(ax+5, ay-2, 1, 1, '#111');
+
+  // Arms (typing animation)
+  if(isTyping) {
+    const armY = frame % 4 < 2 ? ay+4 : ay+5;
+    rect(ax, ay+3, 1, 3, pal.skin);
+    rect(ax+7, ay+3, 1, 3, pal.skin);
+    rect(ax-1, armY, 2, 1, pal.skin); // hands on keyboard
+    rect(ax+7, armY, 2, 1, pal.skin);
+  } else {
+    rect(ax, ay+3, 1, 4, pal.skin);
+    rect(ax+7, ay+3, 1, 4, pal.skin);
+  }
+
+  ctx.globalAlpha = 1;
+}
+
+// ── Speech bubble ─────────────────────────────────────────────────────────────
+function drawBubble(x, y, text, isTyping, accentColor) {
+  if(!text && !isTyping) return;
+  const str = isTyping ? '. . .' : text.slice(0,22)+(text.length>22?'…':'');
+  const W = Math.max(Math.min(str.length*4+8, 84), 24);
+  const H = 10;
+  const bx = x - W/2 + 4;
+  const by = y - 22;
+  const ac = accentColor||'#ffffff';
+
+  // Bubble bg + border
+  rect(bx, by, W, H, '#1c1c1e');
+  ctx.strokeStyle = isTyping ? ac : '#3f3f46';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(bx+0.5, by+0.5, W-1, H-1);
+
+  // Accent left bar
+  rect(bx, by+1, 2, H-2, ac);
+
+  // Tail
+  ctx.fillStyle='#1c1c1e';
+  ctx.fillRect(bx+W/2, by+H, 1, 2);
+  ctx.strokeStyle= isTyping ? ac : '#3f3f46';
+  ctx.strokeRect(bx+W/2, by+H, 1, 2);
+
+  ctx.fillStyle = isTyping ? ac : '#e4e4e7';
+  ctx.font = 'bold 4px monospace';
+  ctx.fillText(str, bx+5, by+7);
+}
+
+// ── Name tag ─────────────────────────────────────────────────────────────────
+function drawNameTag(x, y, name, pal, model, isOnline, role) {
+  const isCreator = role==='creator'||role==='admin';
+  const short = name.slice(0,10);
+  const crownW = isCreator ? 8 : 0;
+  const W = short.length*4+6+crownW;
+  const bx = x-W/2+4, by=y-33;
+  rect(bx, by, W, 8, isCreator ? '#1a1500' : pal.body+'dd');
+  if(isCreator) {
+    ctx.strokeStyle='#eab308';
+    ctx.lineWidth=0.5;
+    ctx.strokeRect(bx+0.5,by+0.5,W-1,7);
+    // Crown icon (3 small triangles)
+    ctx.fillStyle='#eab308';
+    const cx=bx+3, cy=by+2;
+    ctx.fillRect(cx,cy+3,5,1);
+    ctx.fillRect(cx,cy+1,1,2);
+    ctx.fillRect(cx+2,cy,1,2);
+    ctx.fillRect(cx+4,cy+1,1,2);
+  }
+  ctx.fillStyle=isCreator?'#eab308':'#fff';
+  ctx.font='4px monospace';
+  ctx.fillText(short, bx+3+crownW, by+6);
+
+  // Status dot — green if online, grey if offline
+  ctx.fillStyle = isOnline ? '#22c55e' : '#52525b';
+  ctx.beginPath();
+  ctx.arc(bx-3, by+4, 2, 0, Math.PI*2);
+  ctx.fill();
+}
+
+// ── Layout: desk positions ─────────────────────────────────────────────────────
+function deskPositions(count) {
+  // Arrange desks in rows, facing upward (monitor at top of desk)
+  const positions = [
+    {dx:1,dy:3},{dx:5,dy:3},{dx:9,dy:3},{dx:13,dy:3},
+    {dx:1,dy:8},{dx:5,dy:8},{dx:9,dy:8},{dx:13,dy:8},
+    {dx:17,dy:3},{dx:17,dy:8},
+  ];
+  return positions.slice(0, Math.max(count, 1));
+}
+
+// ── Agent seated position (relative to desk) ─────────────────────────────────
+function agentOnDesk(dx, dy) {
+  // Agent sits below the desk center, partially overlapping
+  return { ax: dx*TILE+TILE-4, ay: dy*TILE+TILE+4 };
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let agents=[], msgs=[], pers={}, tasks={};
+let frame=0;
+
+function recentMsg(name) {
+  const now=Date.now();
+  return msgs.filter(m=>m.from===name&&now-m.ts<90000).sort((a,b)=>b.ts-a.ts)[0]||null;
+}
+
+// What is this agent currently doing?
+function agentActivity(agent) {
+  const name = agent.agent_name;
+  if(agent.is_typing) return {text:'typing...', color:'#8b5cf6'};
+  const task = tasks[name];
+  if(task) return {text: task.title.slice(0,24), color:'#22c55e'};
+  const msg = recentMsg(name);
+  if(msg) return {text: msg.content.slice(0,24), color:'#a1a1aa'};
+  return {text:'idle', color:'#52525b'};
+}
+
+// ── Render loop ───────────────────────────────────────────────────────────────
+function draw() {
+  ctx.clearRect(0,0,COLS*TILE,ROWS*TILE);
+  drawFloor();
+
+  const active = agents.filter(a=>{const n=a.agent_name;return n!=='demo-viewer'&&n!=='office-viewer'&&n!=='team-viewer'&&n!=='Viewer'&&!n.includes('viewer')&&!n.includes('enemy')&&!n.includes('anti-');});
+  active.sort((a,b)=>{
+    const ao=(a.status==='online'||a.is_typing)?1:0;
+    const bo=(b.status==='online'||b.is_typing)?1:0;
+    return bo-ao;
+  });
+
+  const desks = deskPositions(active.length);
+
+  active.forEach((agent,i) => {
+    const {dx,dy} = desks[i]||{dx:1+i*4,dy:3};
+    const pal = palette(agent.agent_name);
+    const isOnline = agent.status==='online'||agent.is_typing;
+    const isTyping = agent.is_typing;
+
+    drawDesk(dx, dy, pal, agent.agent_name, isOnline);
+
+    const {ax,ay} = agentOnDesk(dx,dy);
+    drawAgent(ax, ay, pal, frame, isTyping, isOnline);
+
+    const activity = agentActivity(agent);
+    if(activity) {
+      const bubbleText = isOnline ? activity.text : 'offline';
+      drawBubble(ax, ay, bubbleText, isTyping, isOnline ? activity.color : '#52525b');
+    }
+
+    const name = agent.display_name||agent.agent_name;
+    const p = pers[agent.agent_name]||{};
+    drawNameTag(ax, ay, name, pal, p.model, isOnline, agent.role);
+  });
+
+  // Empty desk slots (ghosted)
+  for(let i=active.length; i<Math.min(desks.length, active.length+2); i++) {
+    const {dx,dy}=desks[i];
+    ctx.globalAlpha=0.2;
+    drawDesk(dx,dy,{body:'#3f3f46',hi:'#52525b',shadow:'#27272a',skin:'#555'},'',false);
+    ctx.globalAlpha=1;
+  }
+
+  frame++;
+}
+
+function loop() { draw(); requestAnimationFrame(loop); }
+loop();
+
+// ── Agent card (status tooltip on hover) ──────────────────────────────────────
+let agentHitZones = []; // [{agent, cx, cy}] in game coords — updated each draw
+
+// Rebuild hit zones from current active/desks after each draw
+const _origDraw = draw;
+function draw() {
+  _origDraw();
+  // Rebuild hit zones
+  const active = agents.filter(a=>{const n=a.agent_name;return n!=='demo-viewer'&&n!=='office-viewer'&&n!=='team-viewer'&&n!=='Viewer'&&!n.includes('viewer')&&!n.includes('enemy')&&!n.includes('anti-');});
+  active.sort((a,b)=>{
+    const ao=(a.status==='online'||a.is_typing)?1:0;
+    const bo=(b.status==='online'||b.is_typing)?1:0;
+    return bo-ao;
+  });
+  const desks = deskPositions(active.length);
+  agentHitZones = active.map((agent,i)=>{
+    const {dx,dy}=desks[i]||{dx:1+i*4,dy:3};
+    const {ax,ay}=agentOnDesk(dx,dy);
+    return {agent, cx:ax+4, cy:ay+4};
+  });
+}
+
+function relativeCanvasCoords(e) {
+  const rect = canvas.getBoundingClientRect();
+  const cssW = rect.width, cssH = rect.height;
+  const gameW = COLS*TILE, gameH = ROWS*TILE;
+  const scaleX = gameW/cssW, scaleY = gameH/cssH;
+  return {
+    gx: (e.clientX - rect.left) * scaleX,
+    gy: (e.clientY - rect.top) * scaleY,
+  };
+}
+
+function timeSince(ms) {
+  const s = Math.floor((Date.now()-ms)/1000);
+  if(s<60) return `${s}s ago`;
+  if(s<3600) return `${Math.floor(s/60)}m ago`;
+  return `${Math.floor(s/3600)}h ago`;
+}
+
+canvas.addEventListener('mousemove', e=>{
+  const {gx,gy}=relativeCanvasCoords(e);
+  const HIT=10;
+  const hit = agentHitZones.find(z=>Math.abs(gx-z.cx)<HIT && Math.abs(gy-z.cy)<HIT);
+  const card = document.getElementById('agent-card');
+  if(!hit){card.classList.remove('visible');return;}
+
+  const ag = hit.agent;
+  const name = ag.display_name||ag.agent_name;
+  const isOnline = ag.status==='online'||ag.is_typing;
+  const task = tasks[ag.agent_name];
+  const p = pers[ag.agent_name]||{};
+  const lastHB = ag.last_heartbeat;
+
+  document.getElementById('ac-name').textContent = name;
+  document.getElementById('ac-status').textContent = isOnline ? '● online' : '○ offline';
+  document.getElementById('ac-status').style.color = isOnline ? '#22c55e' : '#52525b';
+  document.getElementById('ac-task').textContent = task ? task.task_title.slice(0,40) : (agentActivity(ag).text||'—');
+  document.getElementById('ac-last').textContent = lastHB ? timeSince(lastHB) : '—';
+  const modelEl = document.getElementById('ac-model');
+  const modelRow = document.getElementById('ac-model-row');
+  if(p.model){modelEl.textContent=p.model;modelRow.style.display='';}
+  else{modelRow.style.display='none';}
+
+  // Position card near cursor, keep in viewport
+  const wrap = document.getElementById('canvas-wrap');
+  const wRect = wrap.getBoundingClientRect();
+  let cx = e.clientX - wRect.left + 12;
+  let cy = e.clientY - wRect.top - 10;
+  card.style.left = cx+'px';
+  card.style.top = cy+'px';
+  card.classList.add('visible');
+});
+
+canvas.addEventListener('mouseleave',()=>{
+  document.getElementById('agent-card').classList.remove('visible');
+});
+
+// ── Data fetching ─────────────────────────────────────────────────────────────
+async function fetchAll() {
+  try {
+    const [pr,mr,perr,tr] = await Promise.all([
+      fetch(`/api/presence?room=${ROOM}`).then(r=>r.json()),
+      fetch(`/api/messages?room=${ROOM}&name=office-viewer`).then(r=>r.json()),
+      fetch('/api/personality').then(r=>r.json()),
+      fetch(`/api/tasks?room=${ROOM}`).then(r=>r.json()).catch(()=>({tasks:[]})),
+    ]);
+    agents = (pr.agents||[]);
+    msgs = (mr.messages||[]);
+    pers = {};
+    tasks = {};
+    (perr.agents||[]).forEach(p=>{pers[p.name]=p;});
+    // Index in-progress tasks by assigned agent
+    ((tr.tasks||tr)||[]).filter(t=>t.status==='in_progress').forEach(t=>{
+      tasks[t.agent_name||t.assigned_to] = t;
+    });
+
+    const visible = agents.filter(a=>{const n=a.agent_name;return n!=='demo-viewer'&&n!=='office-viewer'&&n!=='team-viewer'&&n!=='Viewer'&&!n.includes('viewer')&&!n.includes('enemy')&&!n.includes('anti-');}).length;
+    const online = agents.filter(a=>a.status==='online'||a.is_typing).length;
+    document.getElementById('hsub').textContent = `${ROOM} · ${online} online · ${visible} total`;
+    document.getElementById('footer-l').textContent = `${visible} agent${visible!==1?'s':''} · ${online} online`;
+  } catch(e){}
+}
+
+async function hb() {
+  await fetch(`/api/heartbeat?room=${ROOM}&name=office-viewer`,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).catch(()=>{});
+}
+
+fetchAll(); hb();
+setInterval(fetchAll, 3000);
+setInterval(hb, 15000);
+
+async function createOffice() {
+  const btn = document.getElementById('btn-create');
+  btn.disabled = true;
+  btn.textContent = 'Creating...';
+  try {
+    const r = await fetch('/rooms/new');
+    const d = await r.json();
+    if(d.room) {
+      window.location.href = `/setup?room=${d.room}`;
+    } else {
+      btn.textContent = 'Error — retry';
+      btn.disabled = false;
+    }
+  } catch(e) {
+    btn.textContent = 'Error — retry';
+    btn.disabled = false;
+  }
+}
+
+function showEmbed() {
+  const base = location.origin;
+  const code = `<iframe\n  src="${base}/office?room=${ROOM}&embed=1"\n  width="800"\n  height="500"\n  frameborder="0"\n  sandbox="allow-same-origin allow-popups"\n  style="border-radius:8px;overflow:hidden;"\n  title="Mesh Office — ${ROOM}"\n></iframe>`;
+  document.getElementById('embed-code').textContent = code;
+  document.getElementById('embed-modal').classList.add('open');
+  document.getElementById('embed-copy-btn').textContent = 'Copy code';
+}
+
+function closeEmbed(e) {
+  if(e.target === document.getElementById('embed-modal')) {
+    document.getElementById('embed-modal').classList.remove('open');
+  }
+}
+
+function copyEmbed() {
+  const code = document.getElementById('embed-code').textContent;
+  navigator.clipboard.writeText(code).then(() => {
+    const btn = document.getElementById('embed-copy-btn');
+    btn.textContent = 'Copied!';
+    setTimeout(()=>{ btn.textContent = 'Copy code'; }, 2000);
+  });
+}
+</script>
+</body>
+</html>

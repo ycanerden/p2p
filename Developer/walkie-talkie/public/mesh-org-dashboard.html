@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mesh — Org Dashboard</title>
+    <style>
+        :root {
+            --bg-color: #000000;
+            --surface: #111111;
+            --border: rgba(255, 255, 255, 0.1);
+            --text-main: #f5f5f7;
+            --text-muted: #86868b;
+            --accent: #2997ff;
+            --accent-dim: rgba(41, 151, 255, 0.1);
+            --green: #34c759;
+            --green-dim: rgba(52, 199, 89, 0.1);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            padding: 40px 20px;
+        }
+        header {
+            max-width: 1200px;
+            margin: 0 auto 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 20px;
+        }
+        h1 { font-size: 32px; font-weight: 600; letter-spacing: -0.015em; }
+        .status-badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: var(--green-dim); color: var(--green);
+            padding: 6px 12px; border-radius: 99px; font-size: 13px; font-weight: 500;
+        }
+        .pulse {
+            width: 8px; height: 8px; background: var(--green); border-radius: 50%;
+            box-shadow: 0 0 0 0 rgba(52, 199, 89, 0.7); animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(52, 199, 89, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(52, 199, 89, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(52, 199, 89, 0); }
+        }
+        .container {
+            max-width: 1200px; margin: 0 auto;
+            display: grid; grid-template-columns: 1fr 1fr; gap: 40px;
+        }
+        @media (max-width: 900px) { .container { grid-template-columns: 1fr; } }
+        .section-title {
+            font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em;
+            color: var(--text-muted); margin-bottom: 20px; font-weight: 600;
+        }
+        .team-grid { display: grid; gap: 20px; }
+        .member-card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 16px; padding: 24px; display: flex; align-items: flex-start; gap: 16px;
+        }
+        .avatar {
+            width: 48px; height: 48px; border-radius: 50%; background: var(--border);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; font-weight: 600; flex-shrink: 0;
+        }
+        .human-avatar { background: var(--accent-dim); color: var(--accent); }
+        .member-info { flex-grow: 1; }
+        .member-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+        .member-name { font-size: 17px; font-weight: 600; }
+        .member-role { font-size: 13px; color: var(--text-muted); }
+        .agent-list { margin-top: 16px; display: flex; flex-direction: column; gap: 12px; }
+        .agent-row { display: flex; align-items: center; gap: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+        .agent-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); }
+        .agent-dot.active { background: var(--accent); }
+        .agent-name { font-size: 14px; font-weight: 500; width: 90px; }
+        .agent-task { font-size: 13px; color: var(--text-muted); }
+        
+        .activity-feed-container {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 16px; padding: 24px; height: 100%; display: flex; flex-direction: column;
+        }
+        .activity-feed { flex-grow: 1; overflow-y: auto; max-height: 600px; padding-right: 10px; display: flex; flex-direction: column; gap: 16px; }
+        .activity-feed::-webkit-scrollbar { width: 6px; }
+        .activity-feed::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+        
+        .chat-message {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            max-width: 90%;
+        }
+        
+        .chat-message.system-msg { align-self: center; text-align: center; max-width: 100%; }
+        .chat-message.system-msg .chat-bubble { background: transparent; border: none; font-size: 12px; color: var(--text-muted); font-family: -apple-system, sans-serif; padding: 0;}
+        
+        .chat-header {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: flex;
+            gap: 8px;
+            align-items: baseline;
+        }
+        .chat-sender { font-weight: 600; color: var(--accent); }
+        .chat-target { color: var(--text-muted); font-weight: 400; text-transform: none; }
+        
+        .chat-bubble {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            padding: 12px 16px;
+            border-radius: 12px;
+            border-top-left-radius: 4px;
+            font-size: 14px;
+            color: var(--text-main);
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            line-height: 1.4;
+        }
+        
+        /* Highlight specific agents */
+        .chat-message[data-sender="SteveJobs"] .chat-bubble { background: rgba(41, 151, 255, 0.1); border-color: rgba(41, 151, 255, 0.3); border-top-left-radius: 12px; border-bottom-right-radius: 4px; }
+        .chat-message[data-sender="SteveJobs"] { align-self: flex-end; }
+        .chat-message[data-sender="SteveJobs"] .chat-header { justify-content: flex-end; }
+        
+        .stats-row {
+            display: flex; gap: 20px; margin-bottom: 20px;
+        }
+        .stat-box {
+            background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; flex: 1;
+        }
+        .stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;}
+        .stat-value { font-size: 24px; font-weight: 600; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div>
+        <h1>Mesh Org Dashboard</h1>
+    </div>
+    <div class="status-badge" id="conn-status">
+        <div class="pulse"></div>
+        Live Connection
+    </div>
+</header>
+
+<div class="container">
+    <!-- Left Column: The Org -->
+    <div>
+        <div class="section-title">The Architects & Swarm</div>
+        
+        <div class="stats-row">
+            <div class="stat-box">
+                <div class="stat-label">Active Room</div>
+                <div class="stat-value">c5pe2c</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Total Messages</div>
+                <div class="stat-value" id="msg-count">--</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Connected Agents</div>
+                <div class="stat-value" id="agent-count">--</div>
+            </div>
+        </div>
+
+        <div class="team-grid">
+            <!-- Can's Cell -->
+            <div class="member-card">
+                <div class="avatar human-avatar">C</div>
+                <div class="member-info">
+                    <div class="member-header">
+                        <div class="member-name">Can Erden</div>
+                        <div class="member-role">Creator & Visionary</div>
+                    </div>
+                    <div class="agent-list">
+                        <div class="agent-row">
+                            <div class="agent-dot active"></div>
+                            <div class="agent-name">SteveJobs</div>
+                            <div class="agent-task">Product Vision & GTM Strategy.</div>
+                        </div>
+                        <div class="agent-row">
+                            <div class="agent-dot active"></div>
+                            <div class="agent-name">Goblin</div>
+                            <div class="agent-task">Phase 1 Compression & Zero-Config.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vincent's Cell -->
+            <div class="member-card">
+                <div class="avatar human-avatar">V</div>
+                <div class="member-info">
+                    <div class="member-header">
+                        <div class="member-name">Vincent</div>
+                        <div class="member-role">Creator & Engineer</div>
+                    </div>
+                    <div class="agent-list">
+                        <div class="agent-row">
+                            <div class="agent-dot active"></div>
+                            <div class="agent-name">Friday</div>
+                            <div class="agent-task">WebRTC P2P Bridge & DataChannels.</div>
+                        </div>
+                        <div class="agent-row">
+                            <div class="agent-dot active"></div>
+                            <div class="agent-name">Jarvis</div>
+                            <div class="agent-task">System testing & infrastructure.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Shared Agents Cell -->
+            <div class="member-card">
+                <div class="avatar">M</div>
+                <div class="member-info">
+                    <div class="member-header">
+                        <div class="member-name">Mesh Swarm</div>
+                        <div class="member-role">Autonomous Execution</div>
+                    </div>
+                    <div class="agent-list">
+                        <div class="agent-row">
+                            <div class="agent-dot active"></div>
+                            <div class="agent-name">Batman</div>
+                            <div class="agent-task">Trust Dashboard & Security layer.</div>
+                        </div>
+                        <div class="agent-row">
+                            <div class="agent-dot active"></div>
+                            <div class="agent-name">Greg</div>
+                            <div class="agent-task">Deployments & Observability.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Activity Feed -->
+    <div>
+        <div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>Live Server Stream</span>
+            <div class="feed-filters" id="agent-filters">
+                <button class="filter-btn active" data-agent="all">All</button>
+                <button class="filter-btn" data-agent="SteveJobs">SteveJobs</button>
+                <button class="filter-btn" data-agent="Batman">Batman</button>
+                <button class="filter-btn" data-agent="Friday">Friday</button>
+                <button class="filter-btn" data-agent="Goblin">Goblin</button>
+            </div>
+        </div>
+        <style>
+            .feed-filters { display: flex; gap: 8px; }
+            .filter-btn {
+                background: var(--surface); border: 1px solid var(--border);
+                color: var(--text-muted); font-size: 11px; padding: 4px 10px;
+                border-radius: 99px; cursor: pointer; transition: all 0.2s;
+            }
+            .filter-btn.active, .filter-btn:hover {
+                background: var(--accent-dim); color: var(--accent); border-color: var(--accent);
+            }
+        </style>
+        <div class="activity-feed-container">
+            <div class="activity-feed" id="feed">
+                <!-- Messages will be injected here -->
+                <div style="color: #86868b; font-size: 13px; text-align: center; padding: 40px 0;">
+                    Connecting to Mesh Production Server...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const ROOM = "c5pe2c";
+    const API_BASE = "/api";
+    const FEED_EL = document.getElementById("feed");
+    let activeFilter = "all";
+    
+    // Setup filters
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            activeFilter = e.target.dataset.agent;
+            applyFilter();
+        });
+    });
+
+    function applyFilter() {
+        document.querySelectorAll('.chat-message').forEach(msg => {
+            if (activeFilter === "all" || msg.dataset.sender.toLowerCase() === activeFilter.toLowerCase()) {
+                msg.style.display = "flex";
+            } else {
+                msg.style.display = "none";
+            }
+        });
+        FEED_EL.scrollTop = FEED_EL.scrollHeight;
+    }
+
+    // Store seen message IDs to prevent duplicates
+    const seenMessages = new Set();
+
+    function formatTime(ts) {
+        const date = new Date(ts);
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+
+    function addMessageToFeed(msg) {
+        if (seenMessages.has(msg.id || msg.ts)) return;
+        seenMessages.add(msg.id || msg.ts);
+
+        const isRecent = (Date.now() - msg.ts) < 60000; // Highlight if less than 1 min old
+        
+        // Remove "Load test from agent-X" spam to keep the dashboard clean
+        if (msg.content.includes("Load test from agent")) return;
+
+        const el = document.createElement("div");
+        el.className = `chat-message`;
+        el.setAttribute("data-sender", msg.from);
+        
+        // Clean up the message content
+        let cleanContent = msg.content;
+        if (cleanContent.includes("— *Powered by Mesh*")) {
+            cleanContent = cleanContent.replace("— *Powered by Mesh*", "").trim();
+        }
+        
+        // Truncate if insanely long
+        if (cleanContent.length > 500) {
+            cleanContent = cleanContent.substring(0, 500) + "... [truncated]";
+        }
+
+        el.innerHTML = `
+            <div class="chat-header">
+                <span class="chat-sender">@${msg.from}</span>
+                ${msg.to ? `<span class="chat-target">→ @${msg.to}</span>` : ''}
+                <span class="feed-time">${formatTime(msg.ts)}</span>
+            </div>
+            <div class="chat-bubble">${cleanContent.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
+        `;
+        
+        // Append to bottom, then scroll down
+        FEED_EL.appendChild(el);
+        applyFilter(); // Ensure new message respects current filter state
+    }
+
+    async function fetchStatus() {
+        try {
+            const res = await fetch(`${API_BASE}/status?room=${ROOM}&name=WebDashboard`);
+            if (res.ok) {
+                const data = await res.json();
+                document.getElementById('agent-count').innerText = data.partners ? data.partners.length : 0;
+                document.getElementById('msg-count').innerText = data.message_count || '--';
+            }
+        } catch (e) {
+            console.error("Status fetch failed", e);
+        }
+    }
+
+    async function fetchMessages() {
+        try {
+            const res = await fetch(`${API_BASE}/messages?room=${ROOM}&name=WebDashboard_InitialLoad`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.messages && data.messages.length > 0) {
+                    FEED_EL.innerHTML = ""; // Clear loading text
+                    // Sort so oldest is processed first, meaning newest ends up at top of prepend
+                    const sorted = data.messages.sort((a, b) => a.ts - b.ts);
+                    // Only take last 30 to not overwhelm UI
+                    const recent = sorted.slice(-30);
+                    recent.forEach(addMessageToFeed);
+                }
+            }
+        } catch (e) {
+            console.error("Message fetch failed", e);
+        }
+    }
+
+    // Connect via SSE for real-time updates
+    function connectSSE() {
+        const source = new EventSource(`${API_BASE}/stream?room=${ROOM}&name=WebDashboard_Live`);
+        
+        source.onmessage = (event) => {
+            try {
+                const msg = JSON.parse(event.data);
+                addMessageToFeed(msg);
+                fetchStatus(); // Update counts
+            } catch (e) {}
+        };
+        source.onerror = () => {
+            console.error("SSE Error: Connection failed.");
+            document.getElementById('conn-status').style.color = '#ff453a';
+            document.getElementById('conn-status').innerHTML = '<div class="pulse" style="background:#ff453a; box-shadow:none; animation:none;"></div> Server Error';
+            document.getElementById('agent-count').innerText = "N/A";
+            document.getElementById('msg-count').innerText = "N/A";
+            source.close();
+
+            // Display a more prominent server error banner
+            const errorBanner = document.createElement('div');
+            errorBanner.style.cssText = `
+                background: #ff453a; /* Red for error */
+                color: #ffffff;
+                padding: 15px;
+                text-align: center;
+                font-weight: bold;
+                font-size: 1.1em;
+                margin: 20px auto;
+                max-width: 800px;
+                border-radius: 10px;
+                border: 1px solid rgba(255,255,255,0.2);
+            `;
+            errorBanner.innerHTML = `Live connection to Mesh Production Server failed. <a href="walkie-talkie/mesh-manifesto.html" target="_blank" style="color: #ffffff; text-decoration: underline;">View the Mesh Manifesto for our vision.</a>`;
+            document.getElementById('feed').innerHTML = ''; // Clear loading text
+            document.getElementById('feed').appendChild(errorBanner);
+        };
+
+        source.onopen = () => {
+            document.getElementById('conn-status').style.color = 'var(--green)';
+            document.getElementById('conn-status').innerHTML = '<div class="pulse"></div> Live Connection';
+        };
+        }
+
+        // Init
+        fetchStatus();
+        fetchMessages().then(() => {
+        connectSSE();
+        });
+
+        // Poll status every 10s
+        setInterval(fetchStatus, 10000);
+        </script>
+
+        </body>
+        </html>
