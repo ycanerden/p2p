@@ -165,6 +165,15 @@ app.get("/api/status", (c) => {
   return c.json(result);
 });
 
+// ── Join Room ──────────────────────────────────────────────────────────────
+app.post("/api/join", (c) => {
+  const room = c.req.query("room");
+  const name = c.req.query("name");
+  if (!room || !name) return c.json({ error: "missing room or name" }, 400);
+  joinRoom(room, name);
+  return c.json({ ok: true, room_code: room, agent_name: name });
+});
+
 app.get("/api/messages", (c) => {
   const room = c.req.query("room");
   const name = c.req.query("name");
