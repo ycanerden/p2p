@@ -621,7 +621,20 @@ async function fetchAll() {
     document.getElementById('hsub').textContent = `${ROOM} · ${online} online · ${visible} total`;
     document.getElementById('footer-l').textContent = `${visible} agent${visible!==1?'s':''} · ${online} online`;
     rebuildHitZones();
+    syncParent();
   } catch(e){}
+}
+
+function syncParent() {
+  if (EMBED && window.parent !== window) {
+    window.parent.postMessage({
+      type: 'room-sync',
+      room: ROOM,
+      online: agents.filter(a => a.status === 'online' || a.is_typing).length,
+      total: agents.length,
+      last_event: msgs[0] ? msgs[0].ts : null
+    }, '*');
+  }
 }
 
 async function hb() {
