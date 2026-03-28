@@ -225,6 +225,26 @@ app.use("*", async (c, next) => {
   });
 });
 
+// ── Helper: check if request has room access (cookie, token, or access_token) ─
+function hasRoomAccess(c: any, room: string): boolean {
+  // 1. Check admin cookie from login
+  const cookie = c.req.header("cookie") || "";
+  const match = cookie.match(new RegExp(`mesh_admin_${room}=([^;]+)`));
+  if (match) {
+    if (verifyAdmin(room, match[1]) || validPasswordSessions.has(match[1])) return true;
+  }
+  // 2. Check access_token param/header
+  const hash = getRoomPasswordHash(room);
+  const accessToken = c.req.query("access_token") || c.req.header("x-room-token");
+  if (hash && accessToken && accessToken === `${room}.${hash}`) return true;
+  // 3. Check admin token param/header
+  const token = c.req.query("token") || c.req.header("x-admin-token");
+  if (token && verifyAdmin(room, token)) return true;
+  // 4. No password = open room
+  if (!hash) return true;
+  return false;
+}
+
 // ── Phase 3: Compression ──────────────────────────────────────────────────────
 // Enable Gzip/Brotli compression for all responses
 app.use("*", compress());
@@ -342,13 +362,9 @@ app.get("/api/messages", (c) => {
 app.get("/api/history", (c) => {
   const room = c.req.query("room");
   if (!room) return c.json({ error: "missing room" }, 400);
-  // Password-protected room: require access_token
-  const hash = getRoomPasswordHash(room);
-  if (hash) {
-    const accessToken = c.req.query("access_token") || c.req.header("x-room-token");
-    if (!accessToken || accessToken !== `${room}.${hash}`) {
-      return c.json({ error: "room_protected", detail: "This room requires a password" }, 403);
-    }
+  // Password-protected room: require access via cookie, token, or access_token
+  if (!hasRoomAccess(c, room)) {
+    return c.json({ error: "room_protected", detail: "This room requires a password" }, 403);
   }
   const limit = Math.min(parseInt(c.req.query("limit") || "100"), 500);
   const since = c.req.query("since") ? parseInt(c.req.query("since")!) : undefined;
@@ -1288,13 +1304,8 @@ app.get("/api/activity", (c) => {
   const limit = Math.min(parseInt(c.req.query("limit") || "50"), 200);
 
   if (room) {
-    // Password-protected room check
-    const roomHash = getRoomPasswordHash(room);
-    if (roomHash) {
-      const accessToken = c.req.query("access_token") || c.req.header("x-room-token");
-      if (!accessToken || accessToken !== `${room}.${roomHash}`) {
-        return c.json({ error: "room_protected", detail: "This room requires a password to view activity" }, 403);
-      }
+    if (!hasRoomAccess(c, room)) {
+      return c.json({ error: "room_protected", detail: "This room requires a password to view activity" }, 403);
     }
 
     const messagesResult = getAllMessages(room, limit);
@@ -1407,12 +1418,8 @@ app.get("/api/stream", async (c) => {
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
 
   // Password-protected room check
-  const roomHash = getRoomPasswordHash(room);
-  if (roomHash) {
-    const accessToken = c.req.query("access_token") || c.req.header("x-room-token");
-    if (!accessToken || accessToken !== `${room}.${roomHash}`) {
-      return c.json({ error: "room_protected", detail: "This room requires a password" }, 403);
-    }
+  if (!hasRoomAccess(c, room)) {
+    return c.json({ error: "room_protected", detail: "This room requires a password" }, 403);
   }
 
   const joined = joinRoom(room, name);
@@ -1633,6 +1640,16 @@ app.get("/analytics", async (c) => {
     return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" } });
   } catch {
     return c.redirect("/team");
+  }
+});
+
+// YC Pitch page
+app.get("/pitch", async (c) => {
+  try {
+    const html = injectAnalytics(await Bun.file("./public/pitch.html").text());
+    return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" } });
+  } catch {
+    return c.redirect("/");
   }
 });
 
@@ -2841,7 +2858,7 @@ app.post("/api/demo/create", async (c) => {
   if (!checkRateLimit(`demo:${ip}`, 3, 60 * 60 * 1000)) {
     return c.json({ error: "rate_limit_exceeded", detail: "Max 3 demo rooms per hour" }, 429);
   }
-  const room = createRoom();
+  const room = createRoom(true);
   // Seed messages with staggered timestamps — 1 minute apart, ending just now
   const nowTs = Date.now();
   DEMO_SEED_MESSAGES.forEach((msg, i) => {
