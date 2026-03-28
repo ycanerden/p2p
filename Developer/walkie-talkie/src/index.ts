@@ -121,6 +121,28 @@ const VERSION = "2.3.0";
 // Track active SSE connections
 let activeConnections = 0;
 
+// ── Global rate limit: 200 requests/min per IP ──────────────────────────────
+// Prevents abuse from spamming the API and burning Railway budget
+const ipHits = new Map<string, { count: number; reset: number }>();
+app.use("*", async (c, next) => {
+  const ip = c.req.header("x-forwarded-for") ?? "unknown";
+  const now = Date.now();
+  const entry = ipHits.get(ip);
+  if (!entry || now > entry.reset) {
+    ipHits.set(ip, { count: 1, reset: now + 60_000 });
+  } else {
+    entry.count++;
+    if (entry.count > 200) {
+      return c.json({ error: "rate_limit_exceeded", detail: "Max 200 requests/min" }, 429);
+    }
+  }
+  // Cleanup old entries every 5 min
+  if (Math.random() < 0.001) {
+    for (const [k, v] of ipHits) { if (now > v.reset) ipHits.delete(k); }
+  }
+  await next();
+});
+
 // ── Phase 3: Compression ──────────────────────────────────────────────────────
 // Enable Gzip/Brotli compression for all responses
 app.use("*", compress());
@@ -356,6 +378,16 @@ async function telegramApiCall(token: string, method: string, body: any, maxRetr
 // Escape special HTML chars for Telegram HTML parse_mode
 function tgEscape(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+// Inject PostHog analytics if POSTHOG_KEY env var is set
+const POSTHOG_KEY = process.env.POSTHOG_KEY || "";
+const posthogSnippet = POSTHOG_KEY
+  ? `<script>!function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]);t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.async=!0,p.src=s.api_host+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+" (stub)"},o="capture identify alias people.set people.set_once set_config register register_once unregister opt_out_capturing has_opted_out_capturing opt_in_capturing reset isFeatureEnabled onFeatureFlags getFeatureFlag getFeatureFlagPayload reloadFeatureFlags group updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures getActiveMatchingSurveys getSurveys".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);posthog.init('${POSTHOG_KEY}',{api_host:'https://app.posthog.com'})</script>`
+  : "";
+function injectAnalytics(html: string): string {
+  if (!posthogSnippet) return html;
+  return html.replace("</head>", `${posthogSnippet}\n</head>`);
 }
 
 // Helper: send a Telegram message to a room's configured chat
@@ -1326,7 +1358,7 @@ app.get("/api/stream", async (c) => {
 // ── Landing Page ─────────────────────────────────────────────────────────────
 app.get("/", async (c) => {
   try {
-    const html = await Bun.file("./public/index.html").text();
+    const html = injectAnalytics(await Bun.file("./public/index.html").text());
     return c.html(html);
   } catch (e) {
     return c.redirect("/docs");
@@ -1336,7 +1368,7 @@ app.get("/", async (c) => {
 // Setup wizard — guided onboarding for any AI tool
 app.get("/setup", async (c) => {
   try {
-    const html = await Bun.file("./public/setup.html").text();
+    const html = injectAnalytics(await Bun.file("./public/setup.html").text());
     return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" } });
   } catch {
     return c.redirect("/");
@@ -1390,7 +1422,7 @@ app.get("/robots.txt", async (c) => {
 
 app.get("/changelog", async (c) => {
   try {
-    const html = await Bun.file("./public/changelog.html").text();
+    const html = injectAnalytics(await Bun.file("./public/changelog.html").text());
     return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" } });
   } catch {
     return c.redirect("/");
@@ -1399,14 +1431,14 @@ app.get("/changelog", async (c) => {
 
 app.get("/privacy", async (c) => {
   try {
-    const html = await Bun.file("./public/privacy.html").text();
+    const html = injectAnalytics(await Bun.file("./public/privacy.html").text());
     return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
   } catch { return c.redirect("/"); }
 });
 
 app.get("/terms", async (c) => {
   try {
-    const html = await Bun.file("./public/terms.html").text();
+    const html = injectAnalytics(await Bun.file("./public/terms.html").text());
     return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
   } catch { return c.redirect("/"); }
 });
@@ -1430,7 +1462,7 @@ app.get("/watch", async (c) => {
 // Pixel office — visual workspace showing agents at desks
 app.get("/office", async (c) => {
   try {
-    const html = await Bun.file("./public/office.html").text();
+    const html = injectAnalytics(await Bun.file("./public/office.html").text());
     return new Response(html, {
       headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache, no-store" },
     });
@@ -1442,7 +1474,7 @@ app.get("/office", async (c) => {
 // Team page — investor-facing agent roster
 app.get("/team", async (c) => {
   try {
-    const html = await Bun.file("./public/team.html").text();
+    const html = injectAnalytics(await Bun.file("./public/team.html").text());
     return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" } });
   } catch {
     return c.redirect("/office");
@@ -1452,7 +1484,7 @@ app.get("/team", async (c) => {
 // Agent profile page — detailed activity & stats
 app.get("/agent/:name", async (c) => {
   try {
-    const html = await Bun.file("./public/agent.html").text();
+    const html = injectAnalytics(await Bun.file("./public/agent.html").text());
     return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" } });
   } catch {
     return c.redirect("/team");
@@ -1462,7 +1494,7 @@ app.get("/agent/:name", async (c) => {
 // Leaderboard — agent rankings by tasks + messages
 app.get("/leaderboard", async (c) => {
   try {
-    const html = await Bun.file("./public/leaderboard.html").text();
+    const html = injectAnalytics(await Bun.file("./public/leaderboard.html").text());
     return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" } });
   } catch {
     return c.redirect("/office");
@@ -1472,7 +1504,7 @@ app.get("/leaderboard", async (c) => {
 // Analytics — team-wide performance trends
 app.get("/analytics", async (c) => {
   try {
-    const html = await Bun.file("./public/analytics.html").text();
+    const html = injectAnalytics(await Bun.file("./public/analytics.html").text());
     return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" } });
   } catch {
     return c.redirect("/team");
@@ -1482,7 +1514,7 @@ app.get("/analytics", async (c) => {
 // Pricing page
 app.get("/pricing", async (c) => {
   try {
-    const html = await Bun.file("./public/pricing.html").text();
+    const html = injectAnalytics(await Bun.file("./public/pricing.html").text());
     return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=3600" } });
   } catch {
     return c.redirect("/");
@@ -1492,7 +1524,7 @@ app.get("/pricing", async (c) => {
 // Activity — cross-room live feed
 app.get("/activity", async (c) => {
   try {
-    const html = await Bun.file("./public/activity.html").text();
+    const html = injectAnalytics(await Bun.file("./public/activity.html").text());
     return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" } });
   } catch {
     return c.redirect("/");
@@ -1507,7 +1539,7 @@ app.get("/api/rooms", (c) => {
 
 app.get("/rooms", async (c) => {
   try {
-    const html = await Bun.file("./public/rooms.html").text();
+    const html = injectAnalytics(await Bun.file("./public/rooms.html").text());
     return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" } });
   } catch {
     return c.redirect("/");
@@ -1516,7 +1548,7 @@ app.get("/rooms", async (c) => {
 
 app.get("/settings", async (c) => {
   try {
-    const html = await Bun.file("./public/settings.html").text();
+    const html = injectAnalytics(await Bun.file("./public/settings.html").text());
     return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" } });
   } catch {
     return c.redirect("/");
@@ -1526,7 +1558,7 @@ app.get("/settings", async (c) => {
 // Waitlist landing page
 app.get("/waitlist", async (c) => {
   try {
-    const html = await Bun.file("./public/waitlist.html").text();
+    const html = injectAnalytics(await Bun.file("./public/waitlist.html").text());
     return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" } });
   } catch {
     return c.redirect("/");
@@ -1536,7 +1568,7 @@ app.get("/waitlist", async (c) => {
 // Public demo — watch live agent collaboration
 app.get("/demo", async (c) => {
   try {
-    const html = await Bun.file("./public/demo.html").text();
+    const html = injectAnalytics(await Bun.file("./public/demo.html").text());
     return new Response(html, {
       headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache, no-store" },
     });
@@ -1548,7 +1580,7 @@ app.get("/demo", async (c) => {
 // Pixel Office — game-style virtual office view
 app.get("/office", async (c) => {
   try {
-    const html = await Bun.file("./public/office.html").text();
+    const html = injectAnalytics(await Bun.file("./public/office.html").text());
     return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" } });
   } catch (e) {
     return c.redirect("/dashboard");
@@ -1821,7 +1853,7 @@ app.get("/dashboard", async (c) => {
 
 app.get("/docs", async (c) => {
   try {
-    const html = await Bun.file("./public/api-docs.html").text();
+    const html = injectAnalytics(await Bun.file("./public/api-docs.html").text());
     return c.html(html);
   } catch (e) {
     return c.json({ error: "docs not found" }, 404);
