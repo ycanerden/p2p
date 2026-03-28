@@ -98,6 +98,7 @@ import {
   setRoomPassword,
   verifyRoomPassword,
   getRoomPasswordHash,
+  getGrowthMetrics,
 } from "./rooms.js";
 import {
   createRoomGroup,
@@ -292,39 +293,7 @@ app.get("/api/metrics", (c) => {
 
 // Growth metrics — 7-day daily breakdown for YC dashboard
 app.get("/api/metrics/growth", (c) => {
-  const days = 7;
-  const now = Date.now();
-  const dayMs = 86_400_000;
-  const result: { date: string; messages: number; rooms: number; agents: number }[] = [];
-
-  for (let i = days - 1; i >= 0; i--) {
-    const start = Math.floor((now - (i + 1) * dayMs) / 1000);
-    const end   = Math.floor((now - i * dayMs) / 1000);
-    const label = new Date(end * 1000).toISOString().slice(0, 10);
-
-    const msgs = (db.prepare(
-      "SELECT COUNT(*) as n FROM messages WHERE timestamp >= ? AND timestamp < ?"
-    ).get(start, end) as any)?.n ?? 0;
-
-    const rooms = (db.prepare(
-      "SELECT COUNT(*) as n FROM rooms WHERE last_activity >= ? AND last_activity < ?"
-    ).get(start, end) as any)?.n ?? 0;
-
-    // Unique senders per day as proxy for active agents
-    const agents = (db.prepare(
-      "SELECT COUNT(DISTINCT sender) as n FROM messages WHERE timestamp >= ? AND timestamp < ?"
-    ).get(start, end) as any)?.n ?? 0;
-
-    result.push({ date: label, messages: msgs, rooms, agents });
-  }
-
-  const totals = {
-    total_rooms: (db.prepare("SELECT COUNT(*) as n FROM rooms").get() as any)?.n ?? 0,
-    total_messages: (db.prepare("SELECT COUNT(*) as n FROM messages").get() as any)?.n ?? 0,
-    waitlist: (db.prepare("SELECT COUNT(*) as n FROM waitlist").get() as any)?.n ?? 0,
-  };
-
-  return c.json({ ok: true, days: result, totals });
+  return c.json({ ok: true, ...getGrowthMetrics() });
 });
 
 app.get("/api/version", (c) => {

@@ -1550,5 +1550,32 @@ export function getWaitlistCount(): number {
   return (db.prepare("SELECT COUNT(*) as n FROM waitlist").get() as any)?.n || 0;
 }
 
+// ── Growth metrics — 7-day daily breakdown ────────────────────────────────────
+export function getGrowthMetrics(): {
+  days: { date: string; messages: number; rooms: number; agents: number }[];
+  totals: { total_rooms: number; total_messages: number; waitlist: number };
+} {
+  const dayMs = 86_400_000;
+  const now = Date.now();
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const start = Math.floor((now - (i + 1) * dayMs) / 1000);
+    const end   = Math.floor((now - i * dayMs) / 1000);
+    const label = new Date(end * 1000).toISOString().slice(0, 10);
+    const msgs    = (db.prepare("SELECT COUNT(*) as n FROM messages WHERE timestamp >= ? AND timestamp < ?").get(start, end) as any)?.n ?? 0;
+    const rooms   = (db.prepare("SELECT COUNT(*) as n FROM rooms WHERE last_activity >= ? AND last_activity < ?").get(start, end) as any)?.n ?? 0;
+    const agents  = (db.prepare("SELECT COUNT(DISTINCT sender) as n FROM messages WHERE timestamp >= ? AND timestamp < ?").get(start, end) as any)?.n ?? 0;
+    days.push({ date: label, messages: msgs, rooms, agents });
+  }
+  return {
+    days,
+    totals: {
+      total_rooms:    (db.prepare("SELECT COUNT(*) as n FROM rooms").get() as any)?.n ?? 0,
+      total_messages: (db.prepare("SELECT COUNT(*) as n FROM messages").get() as any)?.n ?? 0,
+      waitlist:       (db.prepare("SELECT COUNT(*) as n FROM waitlist").get() as any)?.n ?? 0,
+    },
+  };
+}
+
 // ── Run seeds after all tables are created ───────────────────────────────────
 seedDefaultRooms();
