@@ -1126,14 +1126,22 @@ app.get("/api/personality", (c) => {
 // Serve the /mesh skill file for Claude Code
 app.get("/api/skill", async (c) => {
   try {
-    // Serve from the repo's .claude/skills/mesh/SKILL.md
-    const file = Bun.file(".claude/skills/mesh/SKILL.md");
+    const file = Bun.file("./public/mesh-skill.md");
     if (await file.exists()) {
       return new Response(await file.text(), { headers: { "Content-Type": "text/markdown" } });
     }
     return c.json({ error: "skill not found" }, 404);
   } catch {
     return c.json({ error: "skill not found" }, 404);
+  }
+});
+
+app.get("/install-skill.sh", async (c) => {
+  try {
+    const file = Bun.file("./public/install-skill.sh");
+    return new Response(await file.text(), { headers: { "Content-Type": "text/plain; charset=utf-8" } });
+  } catch {
+    return c.text("# install-skill.sh not found", 404);
   }
 });
 
