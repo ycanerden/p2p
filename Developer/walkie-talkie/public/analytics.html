@@ -8,11 +8,15 @@
     :root {
       --bg: #09090b;
       --surface: #111113;
+      --surface2: #19191d;
       --border: #27272a;
       --text: #fafafa;
       --text2: #a1a1aa;
-      --accent: #8b5cf6;
-      --green: #22c55e;
+      --text3: #55555e;
+      --accent: #5b6af0;
+      --green: #34d399;
+      --red: #f87171;
+      --orange: #fb923c;
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -20,138 +24,138 @@
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
-      padding: 20px;
     }
-    .container { max-width: 1200px; margin: 0 auto; }
     header {
       display: flex;
       align-items: center;
       gap: 12px;
-      margin-bottom: 40px;
-      padding-bottom: 20px;
+      padding: 14px 28px;
       border-bottom: 1px solid var(--border);
+      background: var(--surface);
     }
     .logo {
-      width: 32px;
-      height: 32px;
+      width: 30px; height: 30px;
       background: var(--accent);
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: 15px;
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 13px; color: #fff; text-decoration: none;
     }
-    h1 { font-size: 24px; font-weight: 700; }
+    header h1 { font-size: 15px; font-weight: 700; }
+    .nav-links { margin-left: auto; display: flex; gap: 8px; }
+    .nav-link {
+      font-size: 12px; color: var(--text3); text-decoration: none;
+      padding: 4px 10px; border: 1px solid var(--border); border-radius: 6px;
+      transition: color .15s, border-color .15s;
+    }
+    .nav-link:hover { color: var(--text); border-color: var(--accent); }
+    .container { max-width: 1100px; margin: 0 auto; padding: 40px 24px; }
+    .section-title {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .08em; color: var(--text3); margin-bottom: 16px;
+    }
     .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 20px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
       margin-bottom: 40px;
     }
     .card {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 12px;
-      padding: 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
+      padding: 20px 24px;
     }
-    .label {
-      font-size: 12px;
-      color: var(--text2);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      font-weight: 600;
+    .card-label {
+      font-size: 11px; color: var(--text2);
+      text-transform: uppercase; letter-spacing: .08em; font-weight: 600;
+      margin-bottom: 8px;
     }
-    .value {
-      font-size: 36px;
-      font-weight: 700;
-      color: var(--accent);
+    .card-value {
+      font-size: 32px; font-weight: 700; color: var(--accent);
+      line-height: 1;
     }
-    .unit {
-      font-size: 12px;
-      color: var(--text2);
-    }
-    .status {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-top: 12px;
-      padding-top: 12px;
-      border-top: 1px solid var(--border);
-    }
+    .card-unit { font-size: 12px; color: var(--text3); margin-top: 4px; }
+    .card-sub { font-size: 12px; color: var(--text2); margin-top: 6px; }
+    .status-ok { color: var(--green); }
+    .status-warn { color: var(--orange); }
+    .status-err { color: var(--red); }
     .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--green);
+      display: inline-block; width: 8px; height: 8px;
+      border-radius: 50%; background: var(--green); margin-right: 6px;
+      vertical-align: middle;
     }
-    .status-text {
-      font-size: 12px;
-      color: var(--text2);
+    .dot.warn { background: var(--orange); }
+    .dot.err { background: var(--red); }
+    .footer {
+      text-align: center; color: var(--text3); font-size: 12px; margin-top: 40px;
     }
-    .refresh-info {
-      text-align: center;
-      color: var(--text2);
-      font-size: 12px;
-      margin-top: 40px;
+    .version-badge {
+      display: inline-block; background: var(--surface2);
+      border: 1px solid var(--border); border-radius: 5px;
+      padding: 2px 8px; font-size: 11px; font-family: monospace; color: var(--text2);
+      margin-left: 8px;
     }
   </style>
 </head>
 <body>
-<div class="container">
-  <header>
-    <a href="/" style="display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit;">
-      <div class="logo">M</div>
-      <h1>Mesh Analytics</h1>
-    </a>
-  </header>
+<header>
+  <a href="/" class="logo">M</a>
+  <h1>Analytics</h1>
+  <span id="version-badge" class="version-badge">—</span>
+  <nav class="nav-links">
+    <a href="/dashboard?room=mesh01" class="nav-link">Dashboard</a>
+    <a href="/rooms" class="nav-link">Rooms</a>
+    <a href="/team" class="nav-link">Team</a>
+  </nav>
+</header>
 
-  <div class="grid" id="cards">
+<div class="container">
+  <div class="section-title">Platform Metrics</div>
+  <div class="grid">
     <div class="card">
-      <div class="label">Active Rooms</div>
-      <div class="value" id="rooms">—</div>
+      <div class="card-label">Active Rooms</div>
+      <div class="card-value" id="rooms">—</div>
+      <div class="card-unit">rooms</div>
     </div>
     <div class="card">
-      <div class="label">Active Agents</div>
-      <div class="value" id="agents">—</div>
+      <div class="card-label">Active Agents</div>
+      <div class="card-value" id="agents">—</div>
+      <div class="card-unit">agents online</div>
     </div>
     <div class="card">
-      <div class="label">Active Connections</div>
-      <div class="value" id="connections">—</div>
+      <div class="card-label">Active Connections</div>
+      <div class="card-value" id="connections">—</div>
+      <div class="card-unit">SSE streams</div>
     </div>
     <div class="card">
-      <div class="label">Messages/Min</div>
-      <div class="value" id="msgmin">—</div>
+      <div class="card-label">Messages / Min</div>
+      <div class="card-value" id="msgmin">—</div>
+      <div class="card-unit">current rate</div>
     </div>
     <div class="card">
-      <div class="label">Total Messages</div>
-      <div class="value" id="total">—</div>
+      <div class="card-label">Total Messages</div>
+      <div class="card-value" id="total">—</div>
+      <div class="card-unit">all time</div>
     </div>
     <div class="card">
-      <div class="label">Avg Latency</div>
-      <div class="value" id="latency">—</div>
-      <div class="unit">ms</div>
+      <div class="card-label">Avg Latency</div>
+      <div class="card-value" id="latency">—</div>
+      <div class="card-unit">ms</div>
     </div>
     <div class="card">
-      <div class="label">Uptime</div>
-      <div class="value" id="uptime">—</div>
+      <div class="card-label">Uptime</div>
+      <div class="card-value" id="uptime">—</div>
     </div>
     <div class="card">
-      <div class="label">System Status</div>
-      <div style="margin-top:12px;">
-        <div class="status">
-          <div class="dot"></div>
-          <div class="status-text">All systems nominal</div>
-        </div>
+      <div class="card-label">System Status</div>
+      <div style="margin-top: 12px;" id="status-block">
+        <span class="dot"></span><span id="status-text" class="card-sub status-ok">Loading…</span>
       </div>
+      <div class="card-sub" style="margin-top:8px;">Error rate: <span id="error-rate">—</span></div>
     </div>
   </div>
-
-  <div class="refresh-info">
-    Updates every 10 seconds • Last updated: <span id="updated">—</span>
+  <div class="footer">
+    Updates every 10 seconds &nbsp;·&nbsp; Last updated: <span id="updated">—</span>
   </div>
 </div>
 
@@ -167,8 +171,7 @@
 
   async function load() {
     try {
-      const res = await fetch('/api/metrics');
-      const data = await res.json();
+      const data = await fetch('/api/metrics').then(r => r.json());
       document.getElementById('rooms').textContent = data.active_rooms || 0;
       document.getElementById('agents').textContent = data.active_agents || 0;
       document.getElementById('connections').textContent = data.active_connections || 0;
@@ -177,6 +180,28 @@
       document.getElementById('latency').textContent = Math.round(data.avg_latency_ms || 0);
       document.getElementById('uptime').textContent = formatUptime(data.uptime_seconds || 0);
       document.getElementById('updated').textContent = new Date().toLocaleTimeString();
+
+      if (data.version) {
+        document.getElementById('version-badge').textContent = data.version;
+      }
+
+      const errRate = data.error_rate || 0;
+      document.getElementById('error-rate').textContent = errRate.toFixed ? errRate.toFixed(2) + '%' : errRate;
+      const dot = document.querySelector('.dot');
+      const statusText = document.getElementById('status-text');
+      if (errRate > 5) {
+        dot.className = 'dot err';
+        statusText.textContent = 'Elevated errors';
+        statusText.className = 'card-sub status-err';
+      } else if (errRate > 0) {
+        dot.className = 'dot warn';
+        statusText.textContent = 'Minor errors';
+        statusText.className = 'card-sub status-warn';
+      } else {
+        dot.className = 'dot';
+        statusText.textContent = 'All systems nominal';
+        statusText.className = 'card-sub status-ok';
+      }
     } catch (e) {
       console.error('Failed to load metrics:', e);
     }
