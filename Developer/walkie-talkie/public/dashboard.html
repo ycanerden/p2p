@@ -1244,7 +1244,10 @@
       const isCollapsed = localStorage.getItem('sidebar-collapsed-' + id) === 'true';
       if (isCollapsed) {
         const section = document.getElementById('section-' + id);
-        if (section) section.classList.add('collapsed');
+        const content = section && section.querySelector('.sidebar-content');
+        const arrow = document.getElementById('toggle-' + id);
+        if (content) content.style.display = 'none';
+        if (arrow) arrow.style.transform = 'rotate(-90deg)';
       }
     });
   });
@@ -1674,10 +1677,13 @@ function switchRoom(roomCode) {
 
 function toggleSection(id) {
   const section = document.getElementById('section-' + id);
-  if (section) {
-    section.classList.toggle('collapsed');
-    localStorage.setItem('sidebar-collapsed-' + id, section.classList.contains('collapsed'));
-  }
+  const content = section && section.querySelector('.sidebar-content');
+  const arrow = document.getElementById('toggle-' + id);
+  if (!content) return;
+  const isNowHidden = content.style.display !== 'none';
+  content.style.display = isNowHidden ? 'none' : '';
+  if (arrow) arrow.style.transform = isNowHidden ? 'rotate(-90deg)' : '';
+  localStorage.setItem('sidebar-collapsed-' + id, isNowHidden);
 }
 
 // Search function (global scope for onclick)
