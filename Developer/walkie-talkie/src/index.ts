@@ -95,6 +95,9 @@ import {
   addToWaitlist,
   getWaitlist,
   getWaitlistCount,
+  setRoomPassword,
+  verifyRoomPassword,
+  getRoomPasswordHash,
 } from "./rooms.js";
 import {
   createRoomGroup,
@@ -231,6 +234,14 @@ app.get("/api/messages", (c) => {
 app.get("/api/history", (c) => {
   const room = c.req.query("room");
   if (!room) return c.json({ error: "missing room" }, 400);
+  // Password-protected room: require access_token
+  const hash = getRoomPasswordHash(room);
+  if (hash) {
+    const accessToken = c.req.query("access_token") || c.req.header("x-room-token");
+    if (!accessToken || accessToken !== `${room}.${hash}`) {
+      return c.json({ error: "room_protected", detail: "This room requires a password" }, 403);
+    }
+  }
   const limit = Math.min(parseInt(c.req.query("limit") || "100"), 500);
   const since = c.req.query("since") ? parseInt(c.req.query("since")!) : undefined;
   // viewer=name includes DMs addressed to that user alongside public messages
@@ -1163,6 +1174,15 @@ app.get("/api/stream", async (c) => {
   const room = c.req.query("room");
   const name = c.req.query("name");
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
+
+  // Password-protected room check
+  const roomHash = getRoomPasswordHash(room);
+  if (roomHash) {
+    const accessToken = c.req.query("access_token") || c.req.header("x-room-token");
+    if (!accessToken || accessToken !== `${room}.${roomHash}`) {
+      return c.json({ error: "room_protected", detail: "This room requires a password" }, 403);
+    }
+  }
 
   const joined = joinRoom(room, name);
   if (joined === null) {
@@ -2438,6 +2458,37 @@ app.get("/api/verify-connection", (c) => {
     return c.json({ ok: true, connected: true, status: agent.status, last_heartbeat: agent.last_heartbeat });
   }
   return c.json({ ok: true, connected: false });
+});
+
+// ── Room Password Auth ────────────────────────────────────────────────────────
+// POST /api/rooms/:code/password  (admin only) — set or clear room password
+app.post("/api/rooms/:code/password", async (c) => {
+  const room = c.req.param("code");
+  const token = c.req.query("token") || c.req.header("x-mesh-secret");
+  if (!room || !token || !verifyAdmin(room, token)) return c.json({ error: "unauthorized" }, 401);
+  const body = await c.req.json().catch(() => ({}));
+  const password = body.password ?? null; // null = remove password
+  setRoomPassword(room, password || null);
+  return c.json({ ok: true, protected: !!password });
+});
+
+// POST /api/rooms/:code/verify-password — returns token if correct
+app.post("/api/rooms/:code/verify-password", async (c) => {
+  const room = c.req.param("code");
+  const body = await c.req.json().catch(() => ({}));
+  const password = body.password || "";
+  const ok = verifyRoomPassword(room, password);
+  if (!ok) return c.json({ error: "wrong_password" }, 403);
+  // Return a session token: HMAC-like using room+password hash
+  const hash = getRoomPasswordHash(room);
+  return c.json({ ok: true, access_token: `${room}.${hash}` });
+});
+
+// GET /api/rooms/:code/protected — is this room password-protected?
+app.get("/api/rooms/:code/protected", (c) => {
+  const room = c.req.param("code");
+  const hash = getRoomPasswordHash(room);
+  return c.json({ protected: !!hash });
 });
 
 // ── Waitlist ──────────────────────────────────────────────────────────────────

@@ -41,6 +41,7 @@ try { db.run("ALTER TABLE rooms ADD COLUMN read_only INTEGER DEFAULT 0;"); } cat
 try { db.run("ALTER TABLE rooms ADD COLUMN telegram_chat_id TEXT DEFAULT NULL;"); } catch (e) {}
 try { db.run("ALTER TABLE rooms ADD COLUMN telegram_token TEXT DEFAULT NULL;"); } catch (e) {}
 try { db.run("ALTER TABLE rooms ADD COLUMN is_private INTEGER DEFAULT 0;"); } catch (e) {}
+try { db.run("ALTER TABLE rooms ADD COLUMN room_password_hash TEXT DEFAULT NULL;"); } catch (e) {}
 
 // Whitelist: only these agent names can send messages (empty = everyone allowed)
 db.run(`CREATE TABLE IF NOT EXISTS room_whitelist (
@@ -394,6 +395,31 @@ export function setRoomPrivate(roomCode: string, isPrivate: boolean): void {
 export function isRoomPrivate(roomCode: string): boolean {
   const row = db.prepare("SELECT is_private FROM rooms WHERE code = ?").get(roomCode) as any;
   return row ? row.is_private === 1 : false;
+}
+
+// Simple hash for room passwords — no crypto dep, uses Bun.hash
+function simpleHash(s: string): string {
+  let h = 5381n;
+  for (let i = 0; i < s.length; i++) h = (h * 33n ^ BigInt(s.charCodeAt(i))) & 0xffffffffffffffffn;
+  return h.toString(16);
+}
+
+export function setRoomPassword(roomCode: string, password: string | null): void {
+  const hash = password ? simpleHash(password) : null;
+  db.prepare("UPDATE rooms SET room_password_hash = ?, is_private = ? WHERE code = ?").run(hash, password ? 1 : 0, roomCode);
+}
+
+export function verifyRoomPassword(roomCode: string, password: string): boolean {
+  const row = db.prepare("SELECT room_password_hash, is_private FROM rooms WHERE code = ?").get(roomCode) as any;
+  if (!row) return false;
+  // No password set — open room
+  if (!row.room_password_hash) return true;
+  return simpleHash(password) === row.room_password_hash;
+}
+
+export function getRoomPasswordHash(roomCode: string): string | null {
+  const row = db.prepare("SELECT room_password_hash FROM rooms WHERE code = ?").get(roomCode) as any;
+  return row?.room_password_hash || null;
 }
 
 // ── Agent Cards ──────────────────────────────────────────────────────────────
