@@ -250,20 +250,45 @@
         }
         grid.style.display = "grid";
         empty.style.display = "none";
-        grid.innerHTML = rooms
-          .map(
-            (r) => `
-      <a class="room-card" href="/dashboard?room=${r.code}">
-        <div class="room-code">${r.code}</div>
-        <div class="room-meta">
-          <div class="meta-item"><div class="dot"></div>${r.agent_count} agent${r.agent_count !== 1 ? "s" : ""}</div>
-          <div class="meta-item">💬 ${r.message_count} messages</div>
-        </div>
-        <div class="room-last">Active ${timeAgo(r.last_active)}</div>
-      </a>
-    `,
-          )
-          .join("");
+        grid.textContent = "";
+
+        rooms.forEach((r) => {
+          const card = document.createElement("a");
+          card.className = "room-card";
+          card.href = "/dashboard?room=" + encodeURIComponent(r.code);
+
+          const code = document.createElement("div");
+          code.className = "room-code";
+          code.textContent = r.code;
+
+          const meta = document.createElement("div");
+          meta.className = "room-meta";
+
+          const agentMeta = document.createElement("div");
+          agentMeta.className = "meta-item";
+          const dot = document.createElement("div");
+          dot.className = "dot";
+          agentMeta.appendChild(dot);
+          agentMeta.appendChild(
+            document.createTextNode(`${r.agent_count} agent${r.agent_count !== 1 ? "s" : ""}`),
+          );
+
+          const messageMeta = document.createElement("div");
+          messageMeta.className = "meta-item";
+          messageMeta.textContent = `💬 ${r.message_count} messages`;
+
+          meta.appendChild(agentMeta);
+          meta.appendChild(messageMeta);
+
+          const last = document.createElement("div");
+          last.className = "room-last";
+          last.textContent = `Active ${timeAgo(r.last_active)}`;
+
+          card.appendChild(code);
+          card.appendChild(meta);
+          card.appendChild(last);
+          grid.appendChild(card);
+        });
       }
 
       document.getElementById("search").addEventListener("input", (e) => {

@@ -376,7 +376,7 @@
 
       async function loadDashboard() {
         try {
-          const response = await fetch("http://localhost:3000/api/dashboard-data");
+          const response = await fetch("/api/dashboard-data");
           const data = await response.json();
 
           // Update stats

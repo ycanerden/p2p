@@ -208,11 +208,18 @@
 
         try {
           // Mock submission for now (until Supabase or DB is hooked up)
-          await fetch("/api/waitlist", {
+          const res = await fetch("/api/waitlist", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email }),
           });
+
+          if (!res.ok) {
+            btn.disabled = false;
+            btn.textContent = "Join Waitlist";
+            alert("Something went wrong. Please try again.");
+            return;
+          }
 
           form.style.display = "none";
           success.style.display = "block";

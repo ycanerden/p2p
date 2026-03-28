@@ -285,7 +285,15 @@
     </div>
 
     <script>
-      const name = location.pathname.split("/").pop();
+      const rawName = location.pathname.split("/").pop() || "";
+      function safeDecodeURIComponent(value) {
+        try {
+          return decodeURIComponent(value);
+        } catch {
+          return value;
+        }
+      }
+      const name = safeDecodeURIComponent(rawName);
       const COLORS = [
         "#8b5cf6",
         "#3b82f6",
@@ -328,7 +336,7 @@
             fetch("/api/personality")
               .then((r) => r.json())
               .catch(() => ({ agents: [] })),
-            fetch(`/tasks/agent/${name}`)
+            fetch(`/tasks/agent/${encodeURIComponent(name)}`)
               .then((r) => r.json())
               .catch(() => []),
           ]);
@@ -404,13 +412,15 @@
 
           const timeline = document.getElementById("timeline");
           const activity = [
-            ...messages
-              .slice(0, 10)
-              .map((m) => ({ ts: m.ts, type: "message", content: m.content })),
+            ...messages.slice(0, 10).map((m) => ({
+              ts: m.ts,
+              type: "message",
+              content: String(m.content || ""),
+            })),
             ...tr.slice(0, 5).map((t) => ({
               ts: t.assigned_at,
               type: "task",
-              content: `Started task: <strong>${t.task_title}</strong>`,
+              taskTitle: String(t.task_title || ""),
             })),
             ...tr
               .filter((t) => t.status === "done")
@@ -418,23 +428,31 @@
               .map((t) => ({
                 ts: t.completed_at || t.assigned_at,
                 type: "done",
-                content: `Completed task: <strong>${t.task_title}</strong>`,
+                taskTitle: String(t.task_title || ""),
               })),
           ].sort((a, b) => b.ts - a.ts);
 
           if (activity.length > 0) {
             timeline.innerHTML = activity
-              .map(
-                (act) => `
+              .map((act) => {
+                let content = "";
+                if (act.type === "message") {
+                  const preview = act.content.slice(0, 120);
+                  content = `Sent message: "${esc(preview)}${act.content.length > 120 ? "..." : ""}"`;
+                } else if (act.type === "task") {
+                  content = `Started task: ${esc(act.taskTitle)}`;
+                } else {
+                  content = `Completed task: ${esc(act.taskTitle)}`;
+                }
+
+                return `
         <div class="timeline-item">
           <div class="timeline-dot"></div>
           <div class="timeline-time">${timeAgo(act.ts)}</div>
-          <div class="timeline-content">
-            ${act.type === "message" ? `Sent message: "${esc(act.content.slice(0, 120))}${act.content.length > 120 ? "..." : ""}"` : act.content}
-          </div>
+          <div class="timeline-content">${content}</div>
         </div>
-      `,
-              )
+      `;
+              })
               .join("");
           } else {
             timeline.innerHTML = `<div class="empty-state">No recent activity recorded.</div>`;

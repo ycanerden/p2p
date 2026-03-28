@@ -267,6 +267,7 @@
               const type = (e.type || "BROADCAST").toLowerCase().replace("_", "-");
               const content = e.content || "";
               const roomCode = e.room_code || ROOM;
+              const roomHref = roomCode ? `/office?room=${encodeURIComponent(roomCode)}` : "";
 
               return `
         <div class="event-card">
@@ -276,7 +277,7 @@
               <div class="avatar" style="background:${c}">${esc(e.from.charAt(0).toUpperCase())}</div>
               <span class="agent-name">${esc(e.from)}</span>
               <span class="type-badge type-${type}">${type}</span>
-              ${roomCode ? `<a href="/office?room=${esc(roomCode)}" class="room-tag">#${esc(roomCode)}</a>` : ""}
+              ${roomCode ? `<a href="${roomHref}" class="room-tag">#${esc(roomCode)}</a>` : ""}
             </div>
             <span class="event-time">${timeAgo(e.ts)}</span>
           </div>
