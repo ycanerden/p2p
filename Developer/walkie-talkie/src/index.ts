@@ -88,6 +88,8 @@ import {
   getActiveRooms,
   setRoomPrivate,
   isRoomPrivate,
+  deleteMessage,
+  redactMessage,
 } from "./rooms.js";
 import {
   createRoomGroup,
@@ -624,6 +626,19 @@ app.get("/api/reactions/:messageId", (c) => {
   const messageId = c.req.param("messageId");
   const reactions = getMessageReactions(messageId);
   return c.json({ ok: true, reactions });
+});
+
+// ── Message Admin (delete/redact) ──────────────────────────────────────────
+// DELETE /api/messages/:id?room=ROOM  body: {secret: "admin_token", mode: "delete"|"redact"}
+app.delete("/api/messages/:id", async (c) => {
+  const room = c.req.query("room");
+  const id = c.req.param("id");
+  if (!room || !id) return c.json({ error: "missing room or message id" }, 400);
+  const { secret, mode } = await c.req.json().catch(() => ({} as any));
+  if (!verifyAdmin(room, secret)) return c.json({ ok: false, error: "unauthorized" }, 401);
+  const ok = mode === "redact" ? redactMessage(id, room) : deleteMessage(id, room);
+  if (!ok) return c.json({ ok: false, error: "message not found" }, 404);
+  return c.json({ ok: true, id, mode: mode || "delete" });
 });
 
 // ── Webhooks ───────────────────────────────────────────────────────────────

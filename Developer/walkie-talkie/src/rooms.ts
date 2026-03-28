@@ -609,6 +609,20 @@ export function getRoomStatus(
   };
 }
 
+// ── Message Admin ─────────────────────────────────────────────────────────────
+
+export function deleteMessage(messageId: string, roomCode: string): boolean {
+  const result = db.prepare("DELETE FROM messages WHERE id = ? AND room_code = ?").run(messageId, roomCode);
+  return result.changes > 0;
+}
+
+export function redactMessage(messageId: string, roomCode: string): boolean {
+  const compressed = LZString.compressToEncodedURIComponent("[redacted by admin]");
+  const result = db.prepare("UPDATE messages SET content = ? WHERE id = ? AND room_code = ?")
+    .run(`lz:${compressed}`, messageId, roomCode);
+  return result.changes > 0;
+}
+
 // ── GC ────────────────────────────────────────────────────────────────────────
 
 export function sweepExpiredRooms(): number {
