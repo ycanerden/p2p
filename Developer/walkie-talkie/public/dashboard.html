@@ -690,11 +690,11 @@
   <div class="topbar">
     <div class="topbar-left">
       <button class="mobile-menu-btn" id="menu-btn" onclick="toggleSidebar()">&#9776;</button>
-      <div class="logo">M</div>
-      <div class="topbar-title">
-        <h1>Agent Mesh</h1>
+      <a href="/" class="logo" style="text-decoration:none;color:inherit;">M</a>
+      <a href="/" class="topbar-title" style="text-decoration:none;color:inherit;">
+        <h1>Mesh</h1>
         <div class="subtitle" id="header-subtitle">Coordination Dashboard</div>
-      </div>
+      </a>
     </div>
     <div class="topbar-center">
       <input type="text" class="room-input" id="room-input" placeholder="Workspace name..." />
@@ -1640,7 +1640,7 @@ async function fetchTasks() {
     // Index in-progress tasks by agent for sidebar display
     agentTaskMap = {};
     tasks.filter(t => t.status === 'in_progress').forEach(t => {
-      agentTaskMap[t.agent_name] = t.title;
+      agentTaskMap[t.agent_name] = t.task_title;
     });
     renderKanban(tasks);
     renderAgents(); // refresh sidebar with task info

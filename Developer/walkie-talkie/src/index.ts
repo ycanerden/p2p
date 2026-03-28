@@ -85,6 +85,7 @@ import {
   isExemptFromRateLimit,
   setRateLimitExempt,
   getRateLimitExemptList,
+  getActiveRooms,
 } from "./rooms.js";
 import {
   createRoomGroup,
@@ -1050,6 +1051,21 @@ app.get("/leaderboard", async (c) => {
     return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" } });
   } catch {
     return c.redirect("/office");
+  }
+});
+
+// Active rooms list
+app.get("/api/rooms", (c) => {
+  const rooms = getActiveRooms();
+  return c.json({ rooms });
+});
+
+app.get("/rooms", async (c) => {
+  try {
+    const html = await Bun.file("./public/rooms.html").text();
+    return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" } });
+  } catch {
+    return c.redirect("/");
   }
 });
 

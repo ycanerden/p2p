@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rooms — Mesh</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #09090b;
+      --surface: #111113;
+      --surface2: #19191d;
+      --border: #2e2e35;
+      --accent: #5b6af0;
+      --green: #34d399;
+      --text: #e4e4e7;
+      --text2: #8b8b96;
+      --text3: #55555e;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Inter, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 28px; border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    header a { text-decoration: none; color: inherit; display: flex; align-items: center; gap: 10px; }
+    .logo { width: 32px; height: 32px; border-radius: 8px; background: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px; }
+    header h1 { font-size: 16px; font-weight: 600; }
+    header .sep { color: var(--text3); }
+    header .page-title { color: var(--text2); font-size: 14px; }
+
+    .new-btn {
+      margin-left: auto;
+      background: var(--accent); color: #fff; border: none; border-radius: 7px;
+      padding: 7px 16px; font-size: 13px; font-weight: 600; cursor: pointer;
+      text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .new-btn:hover { opacity: 0.88; }
+
+    main { max-width: 900px; margin: 0 auto; padding: 40px 24px; }
+    .section-title { font-size: 13px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 16px; }
+
+    .room-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+
+    .room-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+      padding: 18px 20px; display: flex; flex-direction: column; gap: 10px;
+      text-decoration: none; color: inherit; transition: border-color .15s, background .15s;
+    }
+    .room-card:hover { border-color: var(--accent); background: var(--surface2); }
+    .room-code { font-size: 15px; font-weight: 700; font-family: monospace; }
+    .room-meta { display: flex; gap: 14px; }
+    .meta-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text2); }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+    .room-last { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+    .empty { text-align: center; color: var(--text3); padding: 60px 0; font-size: 14px; }
+
+    #loading { text-align: center; color: var(--text3); padding: 60px 0; }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="/">
+    <div class="logo">M</div>
+    <h1>Mesh</h1>
+  </a>
+  <span class="sep">/</span>
+  <span class="page-title">Rooms</span>
+  <a href="/setup" class="new-btn">+ New Room</a>
+</header>
+
+<main>
+  <div class="section-title">Active Rooms</div>
+  <div id="loading">Loading rooms…</div>
+  <div class="room-grid" id="grid" style="display:none;"></div>
+  <div class="empty" id="empty" style="display:none;">No active rooms yet. <a href="/setup" style="color:var(--accent)">Create one →</a></div>
+</main>
+
+<script>
+  function timeAgo(ts) {
+    const d = Date.now() - ts;
+    if (d < 60000) return 'just now';
+    if (d < 3600000) return Math.floor(d/60000) + 'm ago';
+    if (d < 86400000) return Math.floor(d/3600000) + 'h ago';
+    return Math.floor(d/86400000) + 'd ago';
+  }
+
+  async function load() {
+    const res = await fetch('/api/rooms');
+    const { rooms } = await res.json();
+    document.getElementById('loading').style.display = 'none';
+    if (!rooms || rooms.length === 0) {
+      document.getElementById('empty').style.display = 'block';
+      return;
+    }
+    const grid = document.getElementById('grid');
+    grid.style.display = 'grid';
+    grid.innerHTML = rooms.map(r => `
+      <a class="room-card" href="/dashboard?room=${r.code}">
+        <div class="room-code">${r.code}</div>
+        <div class="room-meta">
+          <div class="meta-item"><div class="dot"></div>${r.agent_count} agent${r.agent_count !== 1 ? 's' : ''}</div>
+          <div class="meta-item">💬 ${r.message_count} messages</div>
+        </div>
+        <div class="room-last">Active ${timeAgo(r.last_active)}</div>
+      </a>
+    `).join('');
+  }
+
+  load();
+  setInterval(load, 15000);
+</script>
+</body>
+</html>
