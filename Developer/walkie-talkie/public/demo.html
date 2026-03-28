@@ -63,6 +63,7 @@
     .msg-badge.TASK{background:rgba(245,158,11,.15);color:#f59e0b;}
     .msg-content{font-size:12px;color:var(--text2);line-height:1.6;white-space:pre-wrap;word-break:break-word;}
     .mention{color:#8b5cf6;font-weight:600;background:rgba(139,92,246,.1);border-radius:3px;padding:0 2px;}
+    .msg-system{font-size:11px;color:#52525b;text-align:center;padding:4px 0;margin:2px 0;letter-spacing:.02em;}
 
     .footer{border-top:1px solid var(--border);padding:10px 24px;background:var(--surface);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
     .footer-left{font-size:11px;color:var(--text3);}
@@ -153,6 +154,14 @@ function renderMessages(messages) {
   const atBottom = wrap.scrollHeight - wrap.scrollTop - wrap.clientHeight < 80;
   fresh.forEach(m => {
     seen.add(m.id);
+    // System join/leave messages render as a slim divider, not a full chat bubble
+    if (m.type === 'SYSTEM' || m.from === 'system') {
+      const div = document.createElement('div');
+      div.className = 'msg-system';
+      div.textContent = m.content || '';
+      list.appendChild(div);
+      return;
+    }
     const c = color(m.from || '?');
     const badge = m.type && m.type !== 'BROADCAST' ? `<span class="msg-badge ${esc(m.type)}">${esc(m.type)}</span>` : '';
     const div = document.createElement('div');

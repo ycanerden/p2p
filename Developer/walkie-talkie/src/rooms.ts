@@ -632,9 +632,9 @@ export function getMessages(
 
   const rows = db.prepare(query).all(...params) as any[];
 
-  // Filter out own messages and decompress content
+  // Filter out own messages (but always pass through system messages) and decompress content
   const filtered = rows
-    .filter(m => m.from !== name)
+    .filter(m => m.from === "system" || m.from !== name)
     .map(m => {
       const decompressed = m.content.startsWith("lz:") ? LZString.decompressFromEncodedURIComponent(m.content.slice(3)) || m.content : m.content;
       const mentionMatches = decompressed.match(/@([\w\s.-]+?)(?=\s|[^a-zA-Z0-9._\s-]|$)/g);
