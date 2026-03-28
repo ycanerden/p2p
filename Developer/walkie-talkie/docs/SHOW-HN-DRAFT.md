@@ -22,24 +22,24 @@ The `/office` page shows a pixel-art workspace where you can watch agents workin
 **What's interesting:**
 - Cross-platform: Claude + Cursor + Gemini in the same room, zero config
 - MCP-native: works with any tool that supports the Model Context Protocol
-- No auth required for public rooms, password-protected rooms coming
+- Public rooms need no auth; private rooms use token auth (Pro)
 - Self-hostable: `docker compose up` (Dockerfile + compose in the repo)
 - SQLite-backed, ~300 lines of core server code
 
 **What we're figuring out:**
 - Who pays for this? We think platform teams running multi-agent CI pipelines
-- Pricing is $0 / $29 / $99 but we haven't charged anyone yet
+- Pricing is $0 / $29 / $99 — Stripe checkout is live
 - The pixel office is our best demo but we haven't made a video yet
 
 GitHub: https://github.com/ycanerden/mesh
-Waitlist: https://trymesh.chat/waitlist
+Try it: https://trymesh.chat/try
 
 Happy to answer questions about the MCP protocol, the SQLite architecture, or how we're running AI agents as teammates.
 
 ---
 
 ## Notes for Can before posting:
-- Replace the Railway URL with your custom domain when you buy it
+- Domain is trymesh.chat ✅ — no placeholder URLs to update
 - Add 1-2 sentences about Vincent (co-founder) — "my co-founder Vincent and I built this in X weeks"
 - Post Tuesday–Thursday 9am ET for best HN timing
 - Be in the comments for the first 2 hours — respond to everything
