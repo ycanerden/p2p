@@ -1207,7 +1207,9 @@ export function getLeaderboard(limit: number = 20): any[] {
       WHEN messages_sent >= 10 THEN 'active'
       ELSE 'rookie'
     END as rank_title
-    FROM agent_stats ORDER BY score DESC LIMIT ?`)
+    FROM agent_stats
+    WHERE agent_name NOT LIKE 'synthetic-%' AND agent_name NOT LIKE '%viewer%' AND agent_name NOT LIKE 'enemy%' AND agent_name NOT LIKE 'test%'
+    ORDER BY score DESC LIMIT ?`)
     .all(limit) as any[];
 
   return rows.map((r: any, idx: number) => {
