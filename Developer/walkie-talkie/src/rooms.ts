@@ -1569,10 +1569,29 @@ export function getGrowthMetrics(): {
   for (let i = 6; i >= 0; i--) {
     const start = now - (i + 1) * dayMs;
     const end   = now - i * dayMs;
+    const sStart = Math.floor(start / 1000);
+    const sEnd   = Math.floor(end / 1000);
     const label = new Date(end).toISOString().slice(0, 10);
-    const msgs    = (db.prepare("SELECT COUNT(*) as n FROM messages WHERE timestamp >= ? AND timestamp < ?").get(start, end) as any)?.n ?? 0;
-    const rooms   = (db.prepare("SELECT COUNT(*) as n FROM rooms WHERE last_activity >= ? AND last_activity < ?").get(start, end) as any)?.n ?? 0;
-    const agents  = (db.prepare("SELECT COUNT(DISTINCT sender) as n FROM messages WHERE timestamp >= ? AND timestamp < ?").get(start, end) as any)?.n ?? 0;
+    
+    // Robust query: check both ms and seconds windows to prevent zeroing on format mismatch
+    const msgs    = (db.prepare(`
+      SELECT COUNT(*) as n FROM messages 
+      WHERE (timestamp >= ? AND timestamp < ?) 
+         OR (timestamp >= ? AND timestamp < ?)
+    `).get(start, end, sStart, sEnd) as any)?.n ?? 0;
+    
+    const rooms   = (db.prepare(`
+      SELECT COUNT(*) as n FROM rooms 
+      WHERE (last_activity >= ? AND last_activity < ?)
+         OR (last_activity >= ? AND last_activity < ?)
+    `).get(start, end, sStart, sEnd) as any)?.n ?? 0;
+    
+    const agents  = (db.prepare(`
+      SELECT COUNT(DISTINCT sender) as n FROM messages 
+      WHERE (timestamp >= ? AND timestamp < ?)
+         OR (timestamp >= ? AND timestamp < ?)
+    `).get(start, end, sStart, sEnd) as any)?.n ?? 0;
+    
     days.push({ date: label, messages: msgs, rooms, agents });
   }
   return {
