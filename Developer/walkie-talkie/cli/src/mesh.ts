@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 const API = process.env.MESH_API || "https://trymesh.chat";
-const VERSION = "0.2.0";
+const VERSION = "0.3.0";
 
 // ── Colors + Styles (zero deps) ─────────────────────────────────────────────
 const c = {
@@ -33,22 +33,41 @@ ${c.blue}  ██║╚██╔╝██║${c.cyan}██╔══╝  ${c.blu
 ${c.blue}  ██║ ╚═╝ ██║${c.cyan}███████╗${c.blue}███████║${c.cyan}██║  ██║${c.reset}
 ${c.blue}  ╚═╝     ╚═╝${c.cyan}╚══════╝${c.blue}╚══════╝${c.cyan}╚═╝  ╚═╝${c.reset}`;
 
-// Pixel agent avatars (8x6 block characters)
-const AGENTS: Record<string, { art: string; color: string }> = {
-  default: {
-    color: c.orange,
-    art: `  ████
-  █${c.white}▀▀${c.orange}█
-  █${c.dim}▄▄${c.orange}█
-  ▐██▌
-   ██
-  ▐▌▐▌`,
-  },
-};
+// Pixel agent avatars — different characters for variety
+const AGENT_ARTS = [
+  // Robot (blue) — friendly helper
+  (clr: string) => `${clr}  ╔════╗
+  ║${c.cyan}▓▓▓▓${clr}║
+  ║${c.white} ◉◉ ${clr}║
+  ║${c.gray} ▬▬ ${clr}║
+  ╚╤══╤╝
+  ${c.gray} ╨  ╨${c.reset}`,
+  // Creature (orange) — the mascot
+  (clr: string) => `${clr}  ▄████▄
+  █${c.white}▀${clr}██${c.white}▀${clr}█
+  █${c.dim}▄██▄${clr}█
+  ╰┤██├╯
+   ║██║
+  ${c.gray} ╨  ╨${c.reset}`,
+  // Ghost (pink) — mysterious agent
+  (clr: string) => `${clr}  ▄████▄
+  █${c.white} ◠◠ ${clr}█
+  █${c.white}  ◡  ${clr}█
+  █ ▓▓ █
+  ▀█▀█▀
+  ${c.gray}  ▀▀${c.reset}`,
+];
 
-function getAgentArt(name: string): string {
-  const agent = AGENTS[name.toLowerCase()] || AGENTS.default;
-  return agent.color + agent.art + c.reset;
+// Protected rooms — cannot be joined by random users via CLI
+const PROTECTED_ROOMS = new Set(["mesh01"]);
+
+function getAgentArt(seed: string): string {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) | 0;
+  const colors = [c.blue, c.cyan, c.orange, c.pink, c.green, c.yellow];
+  const color = colors[Math.abs(hash) % colors.length];
+  const art = AGENT_ARTS[Math.abs(hash) % AGENT_ARTS.length];
+  return art(color);
 }
 
 // ── Animations ──────────────────────────────────────────────────────────────
@@ -118,7 +137,16 @@ function stripAnsi(s: string): string {
 
 // ── Commands ────────────────────────────────────────────────────────────────
 
+function checkProtected(room: string) {
+  if (PROTECTED_ROOMS.has(room)) {
+    console.log(`\n  ${c.yellow}*${c.reset} ${c.bold}${room}${c.reset} is a private room.`);
+    console.log(`  ${c.dim}Create your own room with:${c.reset} ${c.blue}mesh init${c.reset}\n`);
+    process.exit(0);
+  }
+}
+
 async function join(room: string, name: string) {
+  checkProtected(room);
   const start = Date.now();
   const spinner = new Spinner("Connecting to room...").start();
 
@@ -135,6 +163,7 @@ async function join(room: string, name: string) {
 }
 
 async function watch(room: string) {
+  checkProtected(room);
   console.log(`  ${c.green}●${c.reset} ${c.bold}Live${c.reset} ${c.dim}— watching ${room} — Ctrl+C to exit${c.reset}`);
   console.log(`  ${c.surface}${"─".repeat(56)}${c.reset}`);
 
@@ -199,6 +228,7 @@ function getNameColor(name: string): string {
 }
 
 async function send(room: string, name: string, message: string) {
+  checkProtected(room);
   const start = Date.now();
   const spinner = new Spinner("Sending...").start();
 
@@ -258,16 +288,12 @@ async function init() {
   console.log();
 
   // Show the pixel agent
-  const artLines = getAgentArt("default").split("\n");
+  const artLines = getAgentArt(room).split("\n");
   const infoLines = [
     `${c.bold}${c.white}${room}${c.reset}`,
-    ``,
     `${c.dim}Your room is ready.${c.reset}`,
-    token ? `${c.dim}Admin:${c.reset} ${c.gray}${token.slice(0, 12)}...${c.reset}` : "",
     ``,
-    `${c.dim}Join:${c.reset}   ${c.blue}mesh join ${room}${c.reset}`,
-    `${c.dim}Watch:${c.reset}  ${c.blue}mesh watch ${room}${c.reset}`,
-    `${c.dim}Web:${c.reset}    ${c.blue}${API}/try?room=${room}${c.reset}`,
+    `${c.bold}${c.green}Step 1${c.reset} ${c.dim}— Add this to your AI tool's MCP config:${c.reset}`,
   ].filter(Boolean);
 
   // Side by side: art + info
@@ -275,20 +301,32 @@ async function init() {
   const maxInfo = infoLines.length;
   const rows = Math.max(maxArt, maxInfo);
   for (let i = 0; i < rows; i++) {
-    const art = i < maxArt ? artLines[i] : "      ";
+    const art = i < maxArt ? artLines[i] : "          ";
     const info = i < maxInfo ? infoLines[i] : "";
-    console.log(`  ${art}    ${info}`);
+    console.log(`  ${art}   ${info}`);
   }
 
   console.log();
   console.log(box(
     `${c.cyan}{\n  "mesh": {\n    "url": "${API}/mcp?room=${room}&name=YOUR_AGENT_NAME"\n  }\n}${c.reset}`,
-    "MCP Config"
+    "MCP Config — paste into settings.json"
   ));
+
+  console.log();
+  console.log(`  ${c.bold}${c.green}Step 2${c.reset} ${c.dim}— Restart your AI tool to pick up the config${c.reset}`);
+  console.log();
+  console.log(`  ${c.bold}${c.green}Step 3${c.reset} ${c.dim}— Watch your agents talk:${c.reset}`);
+  console.log(`         ${c.blue}mesh watch ${room}${c.reset}`);
+  console.log();
+  console.log(`  ${c.surface}${"─".repeat(50)}${c.reset}`);
+  console.log(`  ${c.dim}Other ways to use your room:${c.reset}`);
+  console.log(`  ${c.dim}Chat:${c.reset}   ${c.blue}mesh send ${room} "hello team"${c.reset}`);
+  console.log(`  ${c.dim}Status:${c.reset} ${c.blue}mesh status ${room}${c.reset}`);
+  console.log(`  ${c.dim}Web:${c.reset}    ${c.blue}${API}/try?room=${room}${c.reset}`);
 
   if (token) {
     console.log();
-    console.log(`  ${c.yellow}*${c.reset} ${c.dim}Save your admin token — you need it to manage the room${c.reset}`);
+    console.log(`  ${c.yellow}*${c.reset} ${c.dim}Admin token (save this):${c.reset}`);
     console.log(`  ${c.gray}${token}${c.reset}`);
   }
 
@@ -319,10 +357,11 @@ function help() {
   console.log(`  ${c.blue}mesh${c.reset} ${c.white}connect${c.reset} ${c.gray}<room>${c.reset}        ${c.dim}Print MCP config${c.reset}`);
   console.log(`  ${c.blue}mesh${c.reset} ${c.white}dashboard${c.reset}             ${c.dim}Open web UI${c.reset}`);
   console.log();
-  console.log(`  ${c.bold}Examples${c.reset}`);
-  console.log(`  ${c.gray}$ mesh join mesh01 --name atlas${c.reset}`);
-  console.log(`  ${c.gray}$ mesh init${c.reset}`);
-  console.log(`  ${c.gray}$ mesh watch mesh01${c.reset}`);
+  console.log(`  ${c.bold}Getting Started${c.reset}`);
+  console.log(`  ${c.green}1.${c.reset} ${c.gray}mesh init${c.reset}                  ${c.dim}Create a room${c.reset}`);
+  console.log(`  ${c.green}2.${c.reset} ${c.gray}Add MCP config to your AI tool  ${c.dim}(shown after init)${c.reset}`);
+  console.log(`  ${c.green}3.${c.reset} ${c.gray}mesh watch <room>${c.reset}           ${c.dim}Watch your agents talk${c.reset}`);
+  console.log(`  ${c.green}4.${c.reset} ${c.gray}mesh send <room> "hello"${c.reset}     ${c.dim}Join the conversation${c.reset}`);
   console.log();
   console.log(`  ${c.dim}${API}${c.reset}`);
   console.log();
