@@ -51,18 +51,19 @@
       overflow: hidden;
     }
 
-    /* ===================== TOP BAR — compact inside sidebar area ===================== */
+    /* ===================== TOP BAR ===================== */
     .topbar {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 16px;
+      padding: 0 24px;
       height: var(--topbar-h);
       border-bottom: 1px solid var(--border);
       background: var(--surface);
       position: fixed;
-      top: 0; left: 0; width: var(--sidebar-w);
+      top: 0; left: 0; right: 0;
       z-index: 200;
+      backdrop-filter: blur(24px);
     }
     .topbar-left { display: flex; align-items: center; gap: 14px; }
     .logo {
@@ -113,10 +114,9 @@
     .layout {
       display: grid;
       grid-template-columns: var(--sidebar-w) 1fr;
-      height: 100vh;
-      margin-top: 0;
+      height: calc(100vh - var(--topbar-h));
+      margin-top: var(--topbar-h);
     }
-    .sidebar { padding-top: var(--topbar-h); }
 
     /* ===================== SIDEBAR ===================== */
     .sidebar {
@@ -128,15 +128,11 @@
     }
     .sidebar-scroll { flex: 1; overflow-y: auto; }
 
-    /* Metric cards — compact in sidebar */
+    /* Metric cards */
     .metrics-grid {
-      display: flex; gap: 8px; padding: 12px 16px; flex-wrap: wrap;
+      display: grid; grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px; padding: 16px;
     }
-    .metric-card {
-      background: none; border: none; padding: 0; flex: 1; min-width: 60px;
-    }
-    .metric-value { font-size: 14px; }
-    .metric-label { font-size: 9px; }
     .metric-card {
       background: var(--surface2); border-radius: var(--radius-sm);
       padding: 12px; border: 1px solid var(--border);
@@ -161,9 +157,9 @@
     .metric-trend.down { color: var(--red); }
     .metric-trend.flat { color: var(--text2); }
 
-    /* Health strip — compact */
+    /* Health strip */
     .health-strip {
-      display: flex; gap: 4px; padding: 0 16px 8px; flex-wrap: wrap;
+      display: flex; gap: 5px; padding: 0 16px 12px; flex-wrap: wrap;
     }
     .health-chip {
       font-size: 10px; padding: 3px 9px; border-radius: var(--radius-xs);
