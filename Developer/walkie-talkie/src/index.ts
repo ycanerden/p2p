@@ -160,12 +160,6 @@ const GOG_CLIENT = process.env.GOG_CLIENT;
 // Agents that should never trigger join notifications (viewers, sentinels, system)
 const SYSTEM_AGENT_NAMES = new Set(["Scout", "Pulse", "Archie", "system"]);
 
-// Google Workspace via gogcli
-const GOOGLE_BACKEND = (process.env.GOOGLE_BACKEND || "gog").toLowerCase();
-const GOG_BIN = process.env.GOG_BIN || "gog";
-const GOG_ACCOUNT = process.env.GOG_ACCOUNT;
-const GOG_CLIENT = process.env.GOG_CLIENT;
-
 // Track active SSE connections
 let activeConnections = 0;
 
