@@ -17,20 +17,23 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     :root {
-      --bg: #09090b;
-      --surface: #18181b;
-      --surface2: #27272a;
-      --border: #27272a;
-      --text: #fafafa;
-      --muted: #a1a1aa;
+      --bg: #131316;
+      --surface: #1a1a1f;
+      --surface2: #202027;
+      --border: #2a2a32;
+      --text: #e8e8ed;
+      --muted: #9d9daa;
       --accent: #4d94ff;
-      --green: #22c55e;
+      --green: #34d399;
       --orange: #f97316;
     }
 
     body {
       font-family: 'Inter', -apple-system, sans-serif;
-      background: var(--bg);
+      background:
+        repeating-linear-gradient(90deg, rgba(255,255,255,.02) 0, rgba(255,255,255,.02) 1px, transparent 1px, transparent 48px),
+        repeating-linear-gradient(0deg, rgba(255,255,255,.02) 0, rgba(255,255,255,.02) 1px, transparent 1px, transparent 48px),
+        var(--bg);
       color: var(--text);
       line-height: 1.6;
     }
