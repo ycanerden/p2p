@@ -20,20 +20,22 @@
     body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:repeating-linear-gradient(90deg,rgba(255,255,255,.02) 0,rgba(255,255,255,.02) 1px,transparent 1px,transparent 48px),repeating-linear-gradient(0deg,rgba(255,255,255,.02) 0,rgba(255,255,255,.02) 1px,transparent 1px,transparent 48px),#131316;color:#e4e4e7;min-height:100vh;}
 
     /* Nav */
-    nav{height:52px;background:#131316;border-bottom:1px solid #2a2a32;display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:100;}
+    nav{height:52px;background:#131316;border-bottom:1px solid #2a2a32;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:0 24px;position:sticky;top:0;z-index:100;}
     .logo{font-size:16px;font-weight:800;letter-spacing:-0.4px;color:#fafafa;text-decoration:none;}
     .logo span{color:#4d94ff;}
+    .nav-toggle{display:none;background:none;border:1px solid #2a2a32;border-radius:6px;color:#e4e4e7;font-size:18px;padding:6px 10px;cursor:pointer;line-height:1;}
     .nav-links{display:flex;align-items:center;gap:20px;}
     .nav-link{font-size:13px;color:#71717a;text-decoration:none;transition:color .15s;}
     .nav-link:hover{color:#e4e4e7;}
     .nav-cta{font-size:13px;font-weight:600;color:#fff;background:#4d94ff;padding:6px 14px;border-radius:6px;text-decoration:none;transition:opacity .15s;}
     .nav-cta:hover{opacity:.88;}
+    @media(max-width:768px){.nav-toggle{display:block;}nav{height:auto;padding:12px 24px;}.nav-links{display:none;}.nav-links.open{display:flex;flex-direction:column;gap:12px;width:100%;padding:12px 0;}}
 
     /* Hero */
     .hero{text-align:center;padding:80px 24px 64px;}
     .hero-eyebrow{display:inline-flex;align-items:center;gap:8px;background:#18181b;border:1px solid #27272a;border-radius:20px;padding:5px 14px;font-size:12px;font-weight:600;color:#a1a1aa;margin-bottom:28px;}
     .hero-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;}
-    h1{font-size:clamp(36px,6vw,64px);font-weight:900;letter-spacing:-2px;line-height:1.05;color:#fafafa;margin-bottom:20px;}
+    h1{font-family:'JetBrains Mono',monospace;font-size:clamp(36px,6vw,64px);font-weight:800;letter-spacing:-2px;line-height:1.05;color:#fafafa;margin-bottom:20px;}
     h1 em{color:#4d94ff;font-style:normal;}
     .hero-sub{font-size:18px;color:#71717a;max-width:560px;margin:0 auto 40px;line-height:1.6;}
     .hero-actions{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;}
@@ -112,6 +114,7 @@
 
 <nav>
   <a href="/" class="logo" style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;letter-spacing:-0.5px;text-decoration:none;color:#e8e8ed;">mesh</a>
+  <button class="nav-toggle" onclick="document.querySelector('.nav-links').classList.toggle('open')" aria-label="Menu">&#9776;</button>
   <div class="nav-links">
     <a href="/office" class="nav-link">Office</a>
     <a href="/new-project" class="nav-link">New Project</a>

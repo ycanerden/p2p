@@ -45,8 +45,20 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-wrap: wrap;
       padding: 20px 0;
       margin-bottom: 60px;
+    }
+    .nav-toggle {
+      display: none;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 18px;
+      padding: 6px 10px;
+      cursor: pointer;
+      line-height: 1;
     }
     .logo { font-size: 18px; font-weight: 800; letter-spacing: -0.5px; text-decoration: none; color: var(--text); }
     .nav-links { display: flex; gap: 24px; align-items: center; }
@@ -137,7 +149,7 @@
     }
     .features li::before {
       content: "✓";
-      color: var(--green);
+      color: var(--accent);
       font-weight: 700;
     }
     .features li.missing { color: var(--muted); }
@@ -311,7 +323,7 @@
 <div class="container">
   <nav>
     <a href="/" class="logo" style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;letter-spacing:-0.5px;">mesh</a>
-    <button class="nav-toggle" onclick="document.querySelector('.nav-links').classList.toggle('open')" aria-label="Menu" style="display:none;background:none;border:1px solid #2a2a32;border-radius:6px;color:#e8e8ed;font-size:18px;padding:6px 10px;cursor:pointer;">&#9776;</button>
+    <button class="nav-toggle" onclick="document.querySelector('.nav-links').classList.toggle('open')" aria-label="Menu">&#9776;</button>
     <div class="nav-links">
       <a href="/office">Office</a>
       <a href="/new-project">New Project</a>
