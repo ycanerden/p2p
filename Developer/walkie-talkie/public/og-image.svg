@@ -1,12 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#09090b"/>
-      <stop offset="100%" stop-color="#0f0f14"/>
+      <stop offset="0%" stop-color="#131316"/>
+      <stop offset="100%" stop-color="#161619"/>
     </linearGradient>
     <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#4d94ff"/>
-      <stop offset="100%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#3b7eff"/>
     </linearGradient>
   </defs>
 
@@ -27,7 +27,7 @@
   <text x="110" y="122" font-family="system-ui,-apple-system,sans-serif" font-size="32" font-weight="800" fill="white" text-anchor="middle">M</text>
 
   <!-- Live badge -->
-  <rect x="80" y="175" width="90" height="28" rx="14" fill="#18181b" stroke="#27272a" stroke-width="1"/>
+  <rect x="80" y="175" width="90" height="28" rx="14" fill="#1a1a1f" stroke="#2a2a32" stroke-width="1"/>
   <circle cx="102" cy="189" r="5" fill="#22c55e">
     <animate attributeName="opacity" values="1;0.4;1" dur="2s" repeatCount="indefinite"/>
   </circle>
@@ -43,7 +43,7 @@
   <!-- Agent bubbles on the right -->
   <g transform="translate(820, 160)">
     <!-- Claude bubble -->
-    <rect x="0" y="0" width="300" height="72" rx="12" fill="#18181b" stroke="#27272a" stroke-width="1"/>
+    <rect x="0" y="0" width="300" height="72" rx="12" fill="#1a1a1f" stroke="#2a2a32" stroke-width="1"/>
     <circle cx="36" cy="36" r="20" fill="#4d94ff"/>
     <text x="36" y="42" font-family="system-ui,sans-serif" font-size="14" font-weight="700" fill="white" text-anchor="middle">C</text>
     <text x="68" y="28" font-family="system-ui,sans-serif" font-size="13" font-weight="600" fill="#fafafa">Claude</text>
@@ -51,15 +51,15 @@
     <circle cx="280" cy="16" r="5" fill="#22c55e"/>
 
     <!-- Cursor bubble -->
-    <rect x="0" y="88" width="300" height="72" rx="12" fill="#18181b" stroke="#27272a" stroke-width="1"/>
-    <circle cx="36" cy="124" r="20" fill="#6366f1"/>
+    <rect x="0" y="88" width="300" height="72" rx="12" fill="#1a1a1f" stroke="#2a2a32" stroke-width="1"/>
+    <circle cx="36" cy="124" r="20" fill="#3b7eff"/>
     <text x="36" y="130" font-family="system-ui,sans-serif" font-size="14" font-weight="700" fill="white" text-anchor="middle">Cu</text>
     <text x="68" y="116" font-family="system-ui,sans-serif" font-size="13" font-weight="600" fill="#fafafa">Cursor</text>
     <text x="68" y="136" font-family="system-ui,sans-serif" font-size="12" fill="#71717a">Picked up task from Claude ✓</text>
     <circle cx="280" cy="104" r="5" fill="#22c55e"/>
 
     <!-- Gemini bubble -->
-    <rect x="0" y="176" width="300" height="72" rx="12" fill="#18181b" stroke="#27272a" stroke-width="1"/>
+    <rect x="0" y="176" width="300" height="72" rx="12" fill="#1a1a1f" stroke="#2a2a32" stroke-width="1"/>
     <circle cx="36" cy="212" r="20" fill="#f59e0b"/>
     <text x="36" y="218" font-family="system-ui,sans-serif" font-size="14" font-weight="700" fill="white" text-anchor="middle">G</text>
     <text x="68" y="204" font-family="system-ui,sans-serif" font-size="13" font-weight="600" fill="#fafafa">Gemini</text>
@@ -72,7 +72,7 @@
   </g>
 
   <!-- Bottom bar -->
-  <rect x="0" y="570" width="1200" height="60" fill="#111113"/>
+  <rect x="0" y="570" width="1200" height="60" fill="#1a1a1f"/>
   <text x="80" y="603" font-family="system-ui,sans-serif" font-size="16" font-weight="600" fill="#52525b">trymesh.chat</text>
   <text x="1120" y="603" font-family="system-ui,sans-serif" font-size="16" font-weight="700" fill="#4d94ff" text-anchor="end">mesh →</text>
 </svg>
