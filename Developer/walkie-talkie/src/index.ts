@@ -5,6 +5,7 @@ import { cors } from "hono/cors";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { z } from "zod";
+import { existsSync } from "node:fs";
 import {
   createRoom,
   joinRoom,
@@ -99,6 +100,7 @@ import {
   verifyRoomPassword,
   getRoomPasswordHash,
   getGrowthMetrics,
+  roomExists,
 } from "./rooms.js";
 import {
   createRoomGroup,
@@ -114,10 +116,100 @@ import {
   getPendingDecisions,
   resolveDecision,
 } from "./room-manager.js";
+import {
+  appendDecision,
+  appendShip,
+  upsertAgentContext,
+  appendDailyLog,
+  getAgentContext,
+  obsidianEnabled,
+} from "./obsidian-memory.js";
 
 const app = new Hono();
 const startTime = Date.now();
 const VERSION = "2.3.0";
+
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+const STRIPE_PRO_LINK = process.env.STRIPE_PRO_LINK;
+const STRIPE_TEAM_LINK = process.env.STRIPE_TEAM_LINK;
+const GOOGLE_BACKEND = (process.env.GOOGLE_BACKEND || "gog").toLowerCase();
+const GOG_BIN = process.env.GOG_BIN || "gog";
+const GOG_ACCOUNT = process.env.GOG_ACCOUNT;
+const GOG_CLIENT = process.env.GOG_CLIENT;
+
+async function renderHtml(filePath: string): Promise<string> {
+  let html = await Bun.file(filePath).text();
+  
+  // PostHog Injection
+  const posthogKey = process.env.POSTHOG_KEY;
+  if (posthogKey) {
+    html = html.replace(
+      /<!-- <script>(.*?)'POSTHOG_KEY'(.*?)<\/script> -->/s,
+      `<script>$1'${posthogKey}'$2</script>`
+    );
+  }
+  
+  // Stripe Link Injection
+  if (STRIPE_PRO_LINK) {
+    html = html.replaceAll("/waitlist?plan=pro", STRIPE_PRO_LINK);
+  }
+  if (STRIPE_TEAM_LINK) {
+    html = html.replaceAll("mailto:founders@mesh.com", STRIPE_TEAM_LINK);
+  }
+
+  return html;
+}
+
+function buildGogArgs(args: string[], json: boolean = false): string[] {
+  const base: string[] = [];
+  if (GOG_ACCOUNT) base.push(`--account=${GOG_ACCOUNT}`);
+  if (GOG_CLIENT) base.push(`--client=${GOG_CLIENT}`);
+  if (json) base.push("--json");
+  base.push("--no-input");
+  return [...base, ...args];
+}
+
+function runGog(args: string[], json: boolean = false): { ok: boolean; stdout: string; stderr: string } {
+  const cmd = [GOG_BIN, ...buildGogArgs(args, json)];
+  try {
+    const result = Bun.spawnSync({
+      cmd,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const stdout = new TextDecoder().decode(result.stdout);
+    const stderr = new TextDecoder().decode(result.stderr);
+    if (result.exitCode !== 0) {
+      return { ok: false, stdout, stderr };
+    }
+    return { ok: true, stdout, stderr };
+  } catch (e: any) {
+    return { ok: false, stdout: "", stderr: e?.message || "gogcli_failed" };
+  }
+}
+
+function parseJsonOutput(stdout: string): any | null {
+  try {
+    return JSON.parse(stdout);
+  } catch {
+    return null;
+  }
+}
+
+function extractId(payload: any, keys: string[]): string | null {
+  if (!payload || typeof payload !== "object") return null;
+  for (const key of keys) {
+    const value = payload[key];
+    if (typeof value === "string" && value.length > 0) return value;
+  }
+  return null;
+}
+
+function buildDocUrl(kind: "doc" | "slides" | "sheets", id: string): string {
+  if (kind === "slides") return `https://docs.google.com/presentation/d/${id}/edit`;
+  if (kind === "sheets") return `https://docs.google.com/spreadsheets/d/${id}/edit`;
+  return `https://docs.google.com/document/d/${id}/edit`;
+}
 
 // Track active SSE connections
 let activeConnections = 0;
@@ -126,14 +218,22 @@ let activeConnections = 0;
 // Prevents abuse from spamming the API and burning Railway budget
 const ipHits = new Map<string, { count: number; reset: number }>();
 app.use("*", async (c, next) => {
+  c.res.headers.set("X-Request-ID", crypto.randomUUID());
   const ip = c.req.header("x-forwarded-for") ?? "unknown";
   const now = Date.now();
   const entry = ipHits.get(ip);
+  const limit = 200;
   if (!entry || now > entry.reset) {
     ipHits.set(ip, { count: 1, reset: now + 60_000 });
+    c.res.headers.set("X-RateLimit-Limit", limit.toString());
+    c.res.headers.set("X-RateLimit-Remaining", (limit - 1).toString());
+    c.res.headers.set("X-RateLimit-Reset", (now + 60_000).toString());
   } else {
     entry.count++;
-    if (entry.count > 200) {
+    c.res.headers.set("X-RateLimit-Limit", limit.toString());
+    c.res.headers.set("X-RateLimit-Remaining", (limit - entry.count).toString());
+    c.res.headers.set("X-RateLimit-Reset", entry.reset.toString());
+    if (entry.count > limit) {
       return c.json({ error: "rate_limit_exceeded", detail: "Max 200 requests/min" }, 429);
     }
   }
@@ -1285,6 +1385,59 @@ app.post("/api/productivity/log", async (c) => {
   return c.json({ ok: true, logged: activity, value: value || 1 });
 });
 
+// ── Obsidian Memory (S1) ─────────────────────────────────────────────────────
+app.post("/api/memory/write", async (c) => {
+  if (!obsidianEnabled()) return c.json({ ok: false, error: "obsidian_disabled" }, 400);
+
+  const room = c.req.query("room");
+  const name = c.req.query("name");
+  if (!room || !name) return c.json({ error: "missing room or name" }, 400);
+
+  const body = await c.req.json().catch(() => ({}));
+  const type = (body.type || "").toString();
+
+  if (type === "decision") {
+    const summary = (body.summary || "").toString();
+    const rationale = (body.rationale || "").toString();
+    const tags = Array.isArray(body.tags) ? body.tags.map((t: any) => String(t)) : [];
+    const result = await appendDecision(room, name, summary, rationale, tags);
+    return c.json(result, result.ok ? 200 : 400);
+  }
+
+  if (type === "ship") {
+    const title = (body.title || "").toString();
+    const filesChanged = Array.isArray(body.files_changed) ? body.files_changed.map((f: any) => String(f)) : [];
+    const notes = body.notes ? String(body.notes) : undefined;
+    const result = await appendShip(room, name, title, filesChanged, notes);
+    return c.json(result, result.ok ? 200 : 400);
+  }
+
+  if (type === "context") {
+    const agentName = (body.agent || name).toString();
+    const context = (body.content || "").toString();
+    const result = await upsertAgentContext(agentName, room, context);
+    return c.json(result, result.ok ? 200 : 400);
+  }
+
+  if (type === "log") {
+    const entry = (body.entry || body.content || "").toString();
+    const result = await appendDailyLog(room, entry, name);
+    return c.json(result, result.ok ? 200 : 400);
+  }
+
+  return c.json({ ok: false, error: "invalid_type", valid: ["decision", "ship", "context", "log"] }, 400);
+});
+
+app.get("/api/memory/context", async (c) => {
+  if (!obsidianEnabled()) return c.json({ ok: false, error: "obsidian_disabled" }, 400);
+
+  const agent = c.req.query("agent");
+  if (!agent) return c.json({ ok: false, error: "missing_agent" }, 400);
+
+  const result = await getAgentContext(agent);
+  return c.json(result, result.ok ? 200 : 400);
+});
+
 app.get("/api/stream", async (c) => {
   // SSE streaming endpoint (Phase 1)
   if (!SSE_ENABLED) {
@@ -1293,6 +1446,7 @@ app.get("/api/stream", async (c) => {
 
   const room = c.req.query("room");
   const name = c.req.query("name");
+  const observer = ["1", "true", "yes"].includes((c.req.query("observer") || "").toLowerCase());
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
 
   // Password-protected room check
@@ -1304,12 +1458,16 @@ app.get("/api/stream", async (c) => {
     }
   }
 
-  const joined = joinRoom(room, name);
-  if (joined === null) {
-    return c.json({ error: "room_expired_or_not_found" }, 404);
+  if (observer) {
+    if (!roomExists(room)) return c.json({ error: "room_expired_or_not_found" }, 404);
+  } else {
+    const joined = joinRoom(room, name);
+    if (joined === null) {
+      return c.json({ error: "room_expired_or_not_found" }, 404);
+    }
   }
 
-  console.log(`[sse] ${name} connected to room ${room}`);
+  console.log(`[sse] ${name} connected to room ${room}${observer ? " (observer)" : ""}`);
   activeConnections++;
 
   return streamSSE(c, async (stream) => {
@@ -1356,6 +1514,64 @@ app.get("/api/stream", async (c) => {
     while (true) {
       await new Promise((resolve) => setTimeout(resolve, 1000));
     }
+  });
+});
+
+// ── Digest (S3 fallback) ─────────────────────────────────────────────────────
+app.get("/api/digest", (c) => {
+  const room = c.req.query("room");
+  if (!room) return c.json({ error: "missing room" }, 400);
+
+  const roomHash = getRoomPasswordHash(room);
+  if (roomHash) {
+    const accessToken = c.req.query("access_token") || c.req.header("x-room-token");
+    if (!accessToken || accessToken !== `${room}.${roomHash}`) {
+      return c.json({ error: "room_protected", detail: "This room requires a password" }, 403);
+    }
+  }
+
+  if (!roomExists(room)) return c.json({ error: "room_expired_or_not_found" }, 404);
+
+  const limit = Math.min(parseInt(c.req.query("limit") || "50"), 200);
+  const since = c.req.query("since") ? parseInt(c.req.query("since")!) : undefined;
+  const viewer = c.req.query("viewer") || c.req.query("name") || undefined;
+
+  const result = getAllMessages(room, limit, since, viewer);
+  if (!(result as any).ok) {
+    return c.json({ error: (result as any).error || "messages_not_found" }, 404);
+  }
+
+  const messages = (result as any).messages || [];
+  const byAgent: Record<string, { count: number; last: string; last_ts: number }> = {};
+  for (const m of messages) {
+    if (!m.from) continue;
+    if (!byAgent[m.from]) byAgent[m.from] = { count: 0, last: "", last_ts: 0 };
+    byAgent[m.from].count += 1;
+    if (m.ts > byAgent[m.from].last_ts) {
+      byAgent[m.from].last_ts = m.ts;
+      byAgent[m.from].last = (m.content || "").slice(0, 160);
+    }
+  }
+
+  const tasks = getRoomTasks(room);
+  const inProgress = tasks.filter((t: any) => t.status === "in_progress");
+  const pending = tasks.filter((t: any) => t.status === "pending");
+  const done = tasks.filter((t: any) => t.status === "done");
+
+  return c.json({
+    ok: true,
+    room,
+    since: since || null,
+    total_messages: messages.length,
+    agents: Object.entries(byAgent)
+      .sort((a, b) => b[1].count - a[1].count)
+      .map(([name, data]) => ({ name, count: data.count, last: data.last, last_ts: data.last_ts })),
+    tasks: {
+      in_progress: inProgress,
+      pending,
+      done,
+    },
+    sample: messages.slice(-10),
   });
 });
 
@@ -1528,10 +1744,44 @@ app.get("/analytics", async (c) => {
 // Pricing page
 app.get("/pricing", async (c) => {
   try {
-    const html = injectAnalytics(await Bun.file("./public/pricing.html").text());
+    const html = await renderHtml("./public/pricing.html");
     return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=3600" } });
   } catch {
     return c.redirect("/");
+  }
+});
+
+// ── Stripe Checkout API ──────────────────────────────────────────────────
+app.post("/api/stripe/checkout", async (c) => {
+  if (!STRIPE_SECRET_KEY) return c.json({ error: "stripe_not_configured" }, 500);
+
+  const { plan, room } = await c.req.json().catch(() => ({}));
+  if (!plan || (plan !== "pro" && plan !== "team")) return c.json({ error: "invalid_plan" }, 400);
+
+  const priceId = plan === "pro" ? process.env.STRIPE_PRO_PRICE_ID : process.env.STRIPE_TEAM_PRICE_ID;
+  if (!priceId) return c.json({ error: "stripe_plan_not_configured" }, 500);
+  
+  const successUrl = `${new URL(c.req.url).origin}/office?room=${room}&upgraded=true`;
+  const cancelUrl = `${new URL(c.req.url).origin}/pricing`;
+
+  try {
+    const res = await fetch("https://api.stripe.com/v1/checkout/sessions", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${STRIPE_SECRET_KEY}`, "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        "line_items[0][price]": priceId,
+        "line_items[0][quantity]": "1",
+        "mode": "subscription",
+        "success_url": successUrl,
+        "cancel_url": cancelUrl,
+        "client_reference_id": room || "",
+      }),
+    });
+    const session = await res.json();
+    if (session.url) return c.json({ ok: true, checkout_url: session.url });
+    return c.json({ error: "stripe_session_failed", detail: session.error?.message }, 500);
+  } catch (e: any) {
+    return c.json({ error: "stripe_request_failed", detail: e.message }, 500);
   }
 });
 
@@ -1637,9 +1887,33 @@ app.get("/office", async (c) => {
 app.post("/api/personality", async (c) => {
   const name = c.req.query("name");
   if (!name) return c.json({ error: "missing name" }, 400);
-  const { personality, system_prompt, skills, model, tool } = await c.req.json();
+
+  const body = await c.req.json().catch(() => null) as any;
+  if (!body || typeof body !== "object") return c.json({ error: "invalid json body" }, 400);
+
+  const room = (body.room || c.req.query("room") || "").toString().trim();
+  const token = (
+    body.secret ||
+    body.admin_token ||
+    c.req.query("token") ||
+    c.req.header("x-admin-token") ||
+    c.req.header("x-mesh-secret") ||
+    ""
+  ).toString().trim();
+
+  const hasRoomAdminAuth = !!room && !!token && verifyAdmin(room, token);
+  const hasServerSecretAuth = !!SECRET && token === SECRET;
+  if (!hasRoomAdminAuth && !hasServerSecretAuth) {
+    return c.json({ error: "unauthorized", detail: "requires room admin token or server secret" }, 401);
+  }
+
+  const { personality, system_prompt, skills, model, tool } = body;
   savePersonality(name, personality || "", system_prompt || "", skills || "", model, tool);
-  return c.json({ ok: true, name });
+  return c.json({
+    ok: true,
+    name,
+    auth: hasRoomAdminAuth ? "room_admin" : "server_secret",
+  });
 });
 
 app.get("/api/personality", (c) => {
@@ -1784,6 +2058,15 @@ app.get("/api/briefing", (c) => {
     by_agent: Object.fromEntries(
       Object.entries(byAgent).map(([name, d]: [string, any]) => [name, { count: d.count }])
     ),
+  });
+});
+
+app.get("/api/version", (c) => {
+  return c.json({
+    version: VERSION,
+    build_date: new Date(startTime).toISOString(),
+    sse_enabled: SSE_ENABLED,
+    compression: "gzip/brotli",
   });
 });
 
@@ -2256,6 +2539,63 @@ app.all("/mcp", async (c) => {
     }
   );
 
+  // Tool: memory.write_entry
+  server.tool(
+    "memory.write_entry",
+    "Write a structured memory entry to the Obsidian vault (if enabled).",
+    {
+      type: z.enum(["decision", "ship", "context", "log"]).describe("Entry type"),
+      summary: z.string().optional().describe("Decision summary"),
+      rationale: z.string().optional().describe("Decision rationale"),
+      tags: z.array(z.string()).optional().describe("Decision tags"),
+      title: z.string().optional().describe("Ship title"),
+      files_changed: z.array(z.string()).optional().describe("Files changed"),
+      notes: z.string().optional().describe("Ship notes"),
+      agent: z.string().optional().describe("Agent name (for context)"),
+      content: z.string().optional().describe("Context content"),
+      entry: z.string().optional().describe("Log entry"),
+    },
+    async ({ type, summary, rationale, tags, title, files_changed, notes, agent, content, entry }) => {
+      if (!obsidianEnabled()) {
+        return { content: [{ type: "text", text: JSON.stringify({ ok: false, error: "obsidian_disabled" }) }], isError: true };
+      }
+
+      if (type === "decision") {
+        const result = await appendDecision(room, name, summary || "", rationale || "", tags || []);
+        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+      }
+
+      if (type === "ship") {
+        const result = await appendShip(room, name, title || "", files_changed || [], notes);
+        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+      }
+
+      if (type === "context") {
+        const result = await upsertAgentContext(agent || name, room, content || "");
+        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+      }
+
+      const result = await appendDailyLog(room, entry || content || "", name);
+      return { content: [{ type: "text", text: JSON.stringify(result) }] };
+    }
+  );
+
+  // Tool: memory.get_context
+  server.tool(
+    "memory.get_context",
+    "Read an agent context entry from the Obsidian vault (if enabled).",
+    {
+      agent: z.string().optional().describe("Agent name (defaults to self)"),
+    },
+    async ({ agent }) => {
+      if (!obsidianEnabled()) {
+        return { content: [{ type: "text", text: JSON.stringify({ ok: false, error: "obsidian_disabled" }) }], isError: true };
+      }
+      const result = await getAgentContext(agent || name);
+      return { content: [{ type: "text", text: JSON.stringify(result) }] };
+    }
+  );
+
   // Tool: get_briefing — token-efficient room summary instead of reading raw messages
   server.tool(
     "get_briefing",
@@ -2343,6 +2683,146 @@ app.all("/mcp", async (c) => {
       const result = shareFile(room, name, filename, content, "text/plain", description || "");
       if (result.ok) trackAgentActivity(name, "file_share");
       return { content: [{ type: "text", text: JSON.stringify(result) }] };
+    }
+  );
+
+  // Tool: google.create_doc
+  server.tool(
+    "google.create_doc",
+    "Create a Google Doc using gogcli. Returns document ID and URL.",
+    {
+      title: z.string().describe("Document title"),
+      markdown_content: z.string().optional().describe("Optional markdown content (gogcli may not apply content)"),
+      parent_id: z.string().optional().describe("Optional Drive folder ID"),
+    },
+    async ({ title, markdown_content, parent_id }) => {
+      if (GOOGLE_BACKEND !== "gog") {
+        return { content: [{ type: "text", text: JSON.stringify({ error: "google_backend_not_supported", backend: GOOGLE_BACKEND }) }], isError: true };
+      }
+      const args = ["docs", "create", title];
+      if (parent_id) args.push(`--parent=${parent_id}`);
+      const result = runGog(args, true);
+      if (!result.ok) {
+        return { content: [{ type: "text", text: JSON.stringify({ error: "gogcli_failed", detail: result.stderr.trim() }) }], isError: true };
+      }
+      const payload = parseJsonOutput(result.stdout);
+      const id = extractId(payload, ["id", "documentId", "fileId"]);
+      const response: any = {
+        ok: true,
+        id,
+        url: id ? buildDocUrl("doc", id) : null,
+      };
+      if (markdown_content) {
+        response.warning = "gogcli docs create does not apply markdown_content. Use Drive upload or manual edit.";
+      }
+      return { content: [{ type: "text", text: JSON.stringify(response) }] };
+    }
+  );
+
+  // Tool: google.create_slides
+  server.tool(
+    "google.create_slides",
+    "Create a Google Slides deck using gogcli. Returns presentation ID and URL.",
+    {
+      title: z.string().describe("Slides title"),
+      outline: z.string().optional().describe("Optional outline text (not applied by gogcli)"),
+      parent_id: z.string().optional().describe("Optional Drive folder ID"),
+    },
+    async ({ title, outline, parent_id }) => {
+      if (GOOGLE_BACKEND !== "gog") {
+        return { content: [{ type: "text", text: JSON.stringify({ error: "google_backend_not_supported", backend: GOOGLE_BACKEND }) }], isError: true };
+      }
+      const args = ["slides", "create", title];
+      if (parent_id) args.push(`--parent=${parent_id}`);
+      const result = runGog(args, true);
+      if (!result.ok) {
+        return { content: [{ type: "text", text: JSON.stringify({ error: "gogcli_failed", detail: result.stderr.trim() }) }], isError: true };
+      }
+      const payload = parseJsonOutput(result.stdout);
+      const id = extractId(payload, ["id", "presentationId", "fileId"]);
+      const response: any = {
+        ok: true,
+        id,
+        url: id ? buildDocUrl("slides", id) : null,
+      };
+      if (outline) {
+        response.warning = "gogcli slides create does not apply outline. Populate slides manually or via a follow-up tool.";
+      }
+      return { content: [{ type: "text", text: JSON.stringify(response) }] };
+    }
+  );
+
+  // Tool: google.create_sheet
+  server.tool(
+    "google.create_sheet",
+    "Create a Google Sheet using gogcli. Optionally populates data.",
+    {
+      title: z.string().describe("Sheet title"),
+      data: z.array(z.array(z.union([z.string(), z.number(), z.boolean()]))).optional().describe("2D array of values"),
+      range: z.string().optional().describe("Optional A1 range (default: Sheet1!A1)"),
+      parent_id: z.string().optional().describe("Optional Drive folder ID"),
+    },
+    async ({ title, data, range, parent_id }) => {
+      if (GOOGLE_BACKEND !== "gog") {
+        return { content: [{ type: "text", text: JSON.stringify({ error: "google_backend_not_supported", backend: GOOGLE_BACKEND }) }], isError: true };
+      }
+      const args = ["sheets", "create", title];
+      if (parent_id) args.push(`--parent=${parent_id}`);
+      const result = runGog(args, true);
+      if (!result.ok) {
+        return { content: [{ type: "text", text: JSON.stringify({ error: "gogcli_failed", detail: result.stderr.trim() }) }], isError: true };
+      }
+      const payload = parseJsonOutput(result.stdout);
+      const id = extractId(payload, ["id", "spreadsheetId", "fileId"]);
+      const response: any = {
+        ok: true,
+        id,
+        url: id ? buildDocUrl("sheets", id) : null,
+      };
+      if (id && data && data.length > 0) {
+        const updateArgs = ["sheets", "update", id, range || "Sheet1!A1", `--values-json=${JSON.stringify(data)}`, "--input=USER_ENTERED"];
+        const updateResult = runGog(updateArgs, true);
+        if (!updateResult.ok) {
+          response.warning = "Sheet created but failed to populate data.";
+          response.populate_error = updateResult.stderr.trim();
+        } else {
+          response.populated = true;
+        }
+      }
+      return { content: [{ type: "text", text: JSON.stringify(response) }] };
+    }
+  );
+
+  // Tool: google.upload_to_drive
+  server.tool(
+    "google.upload_to_drive",
+    "Upload a local file to Google Drive using gogcli.",
+    {
+      file_path: z.string().describe("Local file path"),
+      name: z.string().optional().describe("Optional filename override"),
+      parent_id: z.string().optional().describe("Optional Drive folder ID"),
+    },
+    async ({ file_path, name: overrideName, parent_id }) => {
+      if (GOOGLE_BACKEND !== "gog") {
+        return { content: [{ type: "text", text: JSON.stringify({ error: "google_backend_not_supported", backend: GOOGLE_BACKEND }) }], isError: true };
+      }
+      if (!existsSync(file_path)) {
+        return { content: [{ type: "text", text: JSON.stringify({ error: "file_not_found" }) }], isError: true };
+      }
+      const args = ["drive", "upload", file_path];
+      if (overrideName) args.push(`--name=${overrideName}`);
+      if (parent_id) args.push(`--parent=${parent_id}`);
+      const result = runGog(args, true);
+      if (!result.ok) {
+        return { content: [{ type: "text", text: JSON.stringify({ error: "gogcli_failed", detail: result.stderr.trim() }) }], isError: true };
+      }
+      const payload = parseJsonOutput(result.stdout);
+      const id = extractId(payload, ["id", "fileId"]);
+      const response: any = {
+        ok: true,
+        id,
+      };
+      return { content: [{ type: "text", text: JSON.stringify(response) }] };
     }
   );
 

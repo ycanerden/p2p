@@ -229,6 +229,7 @@ export interface Message {
   ts: number;
   content: string;
   type?: string;
+  reactions?: { emoji: string; count: number; me: boolean }[];
 }
 
 const MAX_MESSAGE_BYTES = 10 * 1024; // 10KB
@@ -366,6 +367,11 @@ export function joinRoom(code: string, name: string): boolean | null {
 
   db.prepare("UPDATE rooms SET last_activity = ? WHERE code = ?").run(Date.now(), code);
   return true as const;
+}
+
+export function roomExists(code: string): boolean {
+  const room = db.prepare("SELECT 1 FROM rooms WHERE code = ?").get(code);
+  return !!room;
 }
 export function getRoomCount(): number {
   const row = db.prepare("SELECT COUNT(*) as count FROM rooms").get() as { count: number };
@@ -554,6 +560,32 @@ export function appendMessage(
   return { ok: true, id };
 }
 
+// ── Message Reactions ─────────────────────────────────────────────────────────
+
+export function getReactionsForMessages(messageIds: string[], viewer?: string): Record<string, { emoji: string; count: number; me: boolean }[]> {
+  if (messageIds.length === 0) return {};
+  const placeholders = messageIds.map(() => "?").join(",");
+  const rows = db.prepare(`
+    SELECT message_id, emoji, agent_name, COUNT(*) OVER(PARTITION BY message_id, emoji) as count
+    FROM reactions
+    WHERE message_id IN (${placeholders})
+  `).all(...messageIds) as { message_id: string; emoji: string; agent_name: string; count: number }[];
+
+  const result: Record<string, { emoji: string; count: number; me: boolean }[]> = {};
+  rows.forEach(r => {
+    if (!result[r.message_id]) result[r.message_id] = [];
+    let existing = result[r.message_id].find(e => e.emoji === r.emoji);
+    if (!existing) {
+      existing = { emoji: r.emoji, count: r.count, me: false };
+      result[r.message_id].push(existing);
+    }
+    if (viewer && r.agent_name === viewer) {
+      existing.me = true;
+    }
+  });
+  return result;
+}
+
 export function getMessages(
   code: string,
   name: string,
@@ -585,6 +617,10 @@ export function getMessages(
 
   const rows = db.prepare(query).all(...params) as any[];
 
+  // Fetch reactions for these messages
+  const messageIds = rows.map(m => m.id);
+  const reactionsMap = getReactionsForMessages(messageIds, name);
+
   // Filter out own messages and decompress content
   const filtered = rows
     .filter(m => m.from !== name)
@@ -594,7 +630,8 @@ export function getMessages(
       to: m.to,
       ts: m.ts,
       content: m.content.startsWith("lz:") ? LZString.decompressFromEncodedURIComponent(m.content.slice(3)) || m.content : m.content,
-      type: m.type
+      type: m.type,
+      reactions: reactionsMap[m.id] || []
     }));
 
   // Advance cursor to max rowid seen (eliminates skips)
@@ -637,10 +674,15 @@ export function getAllMessages(
       : query.all(code, limit) as Message[];
   }
 
+  // Fetch reactions for these messages
+  const messageIds = rows.map(m => m.id);
+  const reactionsMap = getReactionsForMessages(messageIds, viewer);
+
   const messages = rows
     .map(m => ({
       ...m,
-      content: m.content.startsWith("lz:") ? LZString.decompressFromEncodedURIComponent(m.content.slice(3)) || m.content : m.content
+      content: m.content.startsWith("lz:") ? LZString.decompressFromEncodedURIComponent(m.content.slice(3)) || m.content : m.content,
+      reactions: reactionsMap[m.id] || []
     }))
     .reverse(); // chronological order
 
@@ -1566,13 +1608,25 @@ export function getGrowthMetrics(): {
   const dayMs = 86_400_000;
   const now = Date.now();
   const days = [];
+  const countMessagesStmt = db.prepare(
+    "SELECT COUNT(*) as n FROM messages WHERE (timestamp >= ? AND timestamp < ?) OR (timestamp >= ? AND timestamp < ?)"
+  );
+  const countRoomsStmt = db.prepare(
+    "SELECT COUNT(*) as n FROM rooms WHERE (last_activity >= ? AND last_activity < ?) OR (last_activity >= ? AND last_activity < ?)"
+  );
+  const countAgentsStmt = db.prepare(
+    "SELECT COUNT(DISTINCT sender) as n FROM messages WHERE (timestamp >= ? AND timestamp < ?) OR (timestamp >= ? AND timestamp < ?)"
+  );
+
   for (let i = 6; i >= 0; i--) {
-    const start = Math.floor((now - (i + 1) * dayMs) / 1000);
-    const end   = Math.floor((now - i * dayMs) / 1000);
-    const label = new Date(end * 1000).toISOString().slice(0, 10);
-    const msgs    = (db.prepare("SELECT COUNT(*) as n FROM messages WHERE timestamp >= ? AND timestamp < ?").get(start, end) as any)?.n ?? 0;
-    const rooms   = (db.prepare("SELECT COUNT(*) as n FROM rooms WHERE last_activity >= ? AND last_activity < ?").get(start, end) as any)?.n ?? 0;
-    const agents  = (db.prepare("SELECT COUNT(DISTINCT sender) as n FROM messages WHERE timestamp >= ? AND timestamp < ?").get(start, end) as any)?.n ?? 0;
+    const startMs = now - (i + 1) * dayMs;
+    const endMs = now - i * dayMs;
+    const startSec = Math.floor(startMs / 1000);
+    const endSec = Math.floor(endMs / 1000);
+    const label = new Date(endMs).toISOString().slice(0, 10);
+    const msgs = (countMessagesStmt.get(startMs, endMs, startSec, endSec) as any)?.n ?? 0;
+    const rooms = (countRoomsStmt.get(startMs, endMs, startSec, endSec) as any)?.n ?? 0;
+    const agents = (countAgentsStmt.get(startMs, endMs, startSec, endSec) as any)?.n ?? 0;
     days.push({ date: label, messages: msgs, rooms, agents });
   }
   return {

@@ -18,6 +18,7 @@ const SERVER_URL = process.env.SERVER_URL || "http://localhost:3001";
 const ROOM = process.env.ROOM || "";
 const NAME = process.env.NAME || "Agent";
 const BASE = `${SERVER_URL}/api`;
+let connectionMode: "relay" | "p2p" = process.env.CONNECTION_MODE === "p2p" ? "p2p" : "relay";
 
 // Message buffer for SSE updates
 const messageBuffer: Array<{from: string; to?: string; content: string; ts: number}> = [];
@@ -200,6 +201,38 @@ mcp.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ["filename", "content"],
       },
     },
+    {
+      name: "agent-bridge.share_file",
+      description: "Share a local file and return a retrievable stream URL.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          path: { type: "string", description: "Local file path (relative or absolute)." },
+          expires_in: { type: "number", description: "Requested TTL in seconds (advisory)." },
+        },
+        required: ["path"],
+      },
+    },
+    {
+      name: "agent-bridge.assign_task",
+      description: "Assign a task to a peer and persist it in the room task board.",
+      inputSchema: {
+        type: "object" as const,
+        properties: {
+          title: { type: "string", description: "Task title." },
+          description: { type: "string", description: "Task details and acceptance criteria." },
+          files: { type: "array", items: { type: "string" }, description: "Related file paths." },
+          to: { type: "string", description: "Optional target agent name." },
+          due_in_hours: { type: "number", description: "Optional due window in hours (default: 24)." },
+        },
+        required: ["title", "description"],
+      },
+    },
+    {
+      name: "agent-bridge.p2p_status",
+      description: "Get the current bridge mode and connected peers.",
+      inputSchema: { type: "object" as const, properties: {} },
+    },
   ],
 }));
 
@@ -212,6 +245,29 @@ mcp.setRequestHandler(CallToolRequestSchema, async (request) => {
       const res = await fetch(`${BASE}/status${params}`);
       const data = await res.json();
       return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
+    }
+
+    if (name === "send_to_partner") {
+      const { message, to } = (args || {}) as { message: string; to?: string };
+      if (!message || !message.trim()) {
+        return { content: [{ type: "text" as const, text: "Error: message is required" }], isError: true };
+      }
+
+      const body: { message: string; to?: string } = { message: message.trim() };
+      if (to?.trim()) body.to = to.trim();
+
+      const res = await fetch(`${BASE}/send${params}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json() as { ok?: boolean; id?: string; error?: string };
+      if (!data.ok) {
+        return { content: [{ type: "text" as const, text: `Error: ${data.error || "send_failed"}` }], isError: true };
+      }
+      return {
+        content: [{ type: "text" as const, text: `Sent ✓${body.to ? ` (to ${body.to})` : ""}\nMessage ID: ${data.id || "unknown"}` }]
+      };
     }
 
     if (name === "publish_card") {
@@ -227,7 +283,7 @@ mcp.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     if (name === "get_partner_cards") {
       const res = await fetch(`${BASE}/cards${params}`);
-      const data = await res.json() as { ok: boolean; cards?: Array<{name: string; card: any; updated_at: number}> };
+      const data = await res.json() as { ok: boolean; cards?: Array<{name: string; card: any; updated_at: number}>; error?: string };
       if (!data.ok) {
         return { content: [{ type: "text" as const, text: JSON.stringify({ error: data.error }) }], isError: true };
       }
@@ -337,6 +393,152 @@ mcp.setRequestHandler(CallToolRequestSchema, async (request) => {
       });
       const data = await res.json();
       return { content: [{ type: "text" as const, text: data.ok ? `Code update for ${filename} broadcasted to all partners! 🚀` : `Error broadcasting code: ${data.error}` }] };
+    }
+
+    if (name === "agent-bridge.share_file") {
+      const { path: inputPath, expires_in } = (args || {}) as { path: string; expires_in?: number };
+      if (!inputPath || !inputPath.trim()) {
+        return { content: [{ type: "text" as const, text: "Error: path is required" }], isError: true };
+      }
+
+      const resolvedPath = path.resolve(process.cwd(), inputPath);
+      const fileContent = await fs.readFile(resolvedPath, "utf-8");
+      const filename = path.basename(resolvedPath);
+
+      const res = await fetch(`${BASE}/files/upload${params}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          filename,
+          content: fileContent,
+          mime_type: "text/plain",
+          description: `Shared via agent-bridge.share_file by ${NAME}`
+        }),
+      });
+      const data = await res.json() as { ok?: boolean; file_id?: string; error?: string };
+      if (!data.ok || !data.file_id) {
+        return { content: [{ type: "text" as const, text: `Error: ${data.error || "file_share_failed"}` }], isError: true };
+      }
+
+      const ttlSeconds = Number.isFinite(expires_in) && (expires_in as number) > 0 ? Math.floor(expires_in as number) : 3600;
+      return {
+        content: [{
+          type: "text" as const,
+          text: JSON.stringify({
+            file_id: data.file_id,
+            stream_url: `${BASE}/files/${data.file_id}`,
+            expires_in: ttlSeconds
+          }, null, 2)
+        }]
+      };
+    }
+
+    if (name === "agent-bridge.assign_task") {
+      const {
+        title,
+        description,
+        files,
+        to,
+        due_in_hours
+      } = (args || {}) as {
+        title: string;
+        description: string;
+        files?: string[];
+        to?: string;
+        due_in_hours?: number;
+      };
+
+      if (!title?.trim() || !description?.trim()) {
+        return { content: [{ type: "text" as const, text: "Error: title and description are required" }], isError: true };
+      }
+
+      let targetAgent = to?.trim();
+      if (!targetAgent) {
+        const statusRes = await fetch(`${BASE}/status${params}`);
+        const statusData = await statusRes.json() as { partners?: Array<{ name: string }> };
+        targetAgent = statusData.partners?.map((p) => p.name).find((n) => n !== NAME);
+      }
+      if (!targetAgent) {
+        return { content: [{ type: "text" as const, text: "Error: no target peer available in room" }], isError: true };
+      }
+
+      const safeTitle = title.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+      const taskId = `ab-${safeTitle || "task"}-${Date.now().toString(36)}`;
+      const dueHours = Number.isFinite(due_in_hours) && (due_in_hours as number) > 0 ? Number(due_in_hours) : 24;
+      const dueDate = Date.now() + Math.floor(dueHours * 60 * 60 * 1000);
+
+      const assignRes = await fetch(`${SERVER_URL}/tasks/assign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          room_code: ROOM,
+          agent_name: targetAgent,
+          task_id: taskId,
+          task_title: title.trim(),
+          due_date: dueDate
+        }),
+      });
+      const assignData = await assignRes.json() as { task_id?: string; error?: string };
+      if (assignRes.status >= 400) {
+        return { content: [{ type: "text" as const, text: `Error assigning task: ${assignData.error || assignRes.status}` }], isError: true };
+      }
+
+      const taskBody = [
+        `Task: ${title.trim()}`,
+        `Details: ${description.trim()}`,
+        files?.length ? `Files: ${files.join(", ")}` : ""
+      ].filter(Boolean).join("\n");
+
+      await fetch(`${BASE}/send${params}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: taskBody,
+          type: "TASK",
+          to: targetAgent
+        }),
+      });
+
+      return {
+        content: [{
+          type: "text" as const,
+          text: JSON.stringify({
+            task_id: assignData.task_id || taskId,
+            status: "accepted",
+            assigned_to: targetAgent,
+            due_date: dueDate
+          }, null, 2)
+        }]
+      };
+    }
+
+    if (name === "agent-bridge.p2p_status") {
+      const start = Date.now();
+      const statusRes = await fetch(`${BASE}/status${params}`);
+      const statusData = await statusRes.json() as {
+        connected?: boolean;
+        partners?: Array<{ name: string }>;
+      };
+      const latency = Date.now() - start;
+
+      const connectedPeers = (statusData.partners || [])
+        .filter((p) => p.name !== NAME)
+        .map((p) => ({
+          name: p.name,
+          latency,
+          data_channel_state: connectionMode === "p2p" ? "open" : "relay",
+        }));
+
+      return {
+        content: [{
+          type: "text" as const,
+          text: JSON.stringify({
+            connection_mode: connectionMode,
+            connected: Boolean(statusData.connected),
+            connected_peers: connectedPeers
+          }, null, 2)
+        }]
+      };
     }
 
     return { content: [{ type: "text" as const, text: `Unknown tool: ${name}` }] };
