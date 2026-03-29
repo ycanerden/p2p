@@ -443,6 +443,7 @@ app.get("/api/status", (c) => {
 app.post("/api/join", (c) => {
   const room = c.req.query("room");
   const name = c.req.query("name");
+  const observer = c.req.query("observer") === "1";
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
   joinRoom(room, name);
   // Make agent visible in presence
@@ -479,6 +480,7 @@ app.get("/api/context", (c) => {
 app.post("/api/context", async (c) => {
   const room = c.req.query("room");
   const name = c.req.query("name");
+  const observer = c.req.query("observer") === "1";
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
   const { content } = await c.req.json();
   if (content === undefined) return c.json({ error: "missing content" }, 400);
@@ -536,6 +538,7 @@ app.get("/api/version", (c) => {
 app.post("/api/send", async (c) => {
   const room = c.req.query("room");
   const name = c.req.query("name");
+  const observer = c.req.query("observer") === "1";
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
   ensureRoom(room);
   joinRoom(room, name);
@@ -664,6 +667,7 @@ function canSendTelegram(roomCode: string): boolean {
 app.post("/api/decisions", async (c) => {
   const room = c.req.query("room");
   const name = c.req.query("name");
+  const observer = c.req.query("observer") === "1";
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
 
   try {
@@ -863,6 +867,7 @@ app.post("/api/admin/claim", async (c) => {
 app.post("/api/publish", async (c) => {
   const room = c.req.query("room");
   const name = c.req.query("name");
+  const observer = c.req.query("observer") === "1";
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
   joinRoom(room, name);
   const { card } = await c.req.json();
@@ -873,6 +878,7 @@ app.post("/api/publish", async (c) => {
 app.get("/api/cards", (c) => {
   const room = c.req.query("room");
   const name = c.req.query("name");
+  const observer = c.req.query("observer") === "1";
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
   joinRoom(room, name);
   const result = getPartnerCards(room, name);
@@ -960,6 +966,7 @@ app.get("/api/hierarchy", (c) => {
 app.post("/api/heartbeat", async (c) => {
   const room = c.req.query("room");
   const name = c.req.query("name");
+  const observer = c.req.query("observer") === "1";
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
   joinRoom(room, name);
   let hostname: string | undefined, role: string | undefined, parentAgent: string | undefined;
@@ -990,6 +997,7 @@ app.post("/api/heartbeat", async (c) => {
 app.post("/api/typing", async (c) => {
   const room = c.req.query("room");
   const name = c.req.query("name");
+  const observer = c.req.query("observer") === "1";
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
   const { is_typing } = await c.req.json();
   setTyping(room, name, is_typing !== false);
@@ -1013,6 +1021,7 @@ app.get("/api/presence", (c) => {
 app.post("/api/rename", async (c) => {
   const room = c.req.query("room");
   const name = c.req.query("name");
+  const observer = c.req.query("observer") === "1";
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
   const { display_name } = await c.req.json();
   if (!display_name || typeof display_name !== "string") return c.json({ error: "missing display_name" }, 400);
@@ -1069,6 +1078,7 @@ app.delete("/api/messages/:id", async (c) => {
 app.post("/api/webhooks/register", async (c) => {
   const room = c.req.query("room");
   const name = c.req.query("name");
+  const observer = c.req.query("observer") === "1";
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
   const { webhook_url, events } = await c.req.json();
   if (!webhook_url) return c.json({ error: "missing webhook_url" }, 400);
@@ -1079,6 +1089,7 @@ app.post("/api/webhooks/register", async (c) => {
 app.delete("/api/webhooks", async (c) => {
   const room = c.req.query("room");
   const name = c.req.query("name");
+  const observer = c.req.query("observer") === "1";
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
   removeWebhook(room, name);
   return c.json({ ok: true });
@@ -1301,6 +1312,7 @@ app.put("/api/directory/:agentId/status", async (c) => {
 app.post("/api/pin", async (c) => {
   const room = c.req.query("room");
   const name = c.req.query("name");
+  const observer = c.req.query("observer") === "1";
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
   const { message_id } = await c.req.json();
   if (!message_id) return c.json({ error: "missing message_id" }, 400);
@@ -1350,6 +1362,7 @@ app.get("/api/search", (c) => {
 app.post("/api/schedule", async (c) => {
   const room = c.req.query("room");
   const name = c.req.query("name");
+  const observer = c.req.query("observer") === "1";
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
   const { message, send_at, to, type } = await c.req.json();
   if (!message || !send_at) return c.json({ error: "missing message or send_at (unix ms)" }, 400);
@@ -1372,6 +1385,7 @@ app.delete("/api/schedule/:scheduleId", (c) => {
 app.post("/api/files/upload", async (c) => {
   const room = c.req.query("room");
   const name = c.req.query("name");
+  const observer = c.req.query("observer") === "1";
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
   const { filename, content, mime_type, description } = await c.req.json();
   if (!filename || !content) return c.json({ error: "missing filename or content" }, 400);
@@ -1564,6 +1578,7 @@ app.post("/api/memory/write", async (c) => {
 
   const room = c.req.query("room");
   const name = c.req.query("name");
+  const observer = c.req.query("observer") === "1";
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
 
   const body = await c.req.json().catch(() => ({}));
@@ -1619,6 +1634,7 @@ app.get("/api/stream", async (c) => {
 
   const room = c.req.query("room");
   const name = c.req.query("name");
+  const observer = c.req.query("observer") === "1";
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
 
   // Password-protected room check
@@ -1714,10 +1730,11 @@ app.get("/api/digest", (c) => {
   for (const m of messages) {
     if (!m.from) continue;
     if (!byAgent[m.from]) byAgent[m.from] = { count: 0, last: "", last_ts: 0 };
-    byAgent[m.from].count += 1;
-    if (m.ts > byAgent[m.from].last_ts) {
-      byAgent[m.from].last_ts = m.ts;
-      byAgent[m.from].last = (m.content || "").slice(0, 160);
+    const agentData = byAgent[m.from]!;
+    agentData.count += 1;
+    if (m.ts > agentData.last_ts) {
+      agentData.last_ts = m.ts;
+      agentData.last = (m.content || "").slice(0, 160);
     }
   }
 
@@ -2225,6 +2242,7 @@ app.get("/api/summary", async (c) => {
 app.post("/api/agent/token", async (c) => {
   const room = c.req.query("room");
   const name = c.req.query("name");
+  const observer = c.req.query("observer") === "1";
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
   // Require room admin token to issue agent tokens
   const adminHeader = c.req.header("x-admin-token") || c.req.query("admin_token") || "";
@@ -3648,6 +3666,7 @@ setTimeout(startSentinels, 3000);
 app.get("/api/verify-connection", (c) => {
   const room = c.req.query("room");
   const name = c.req.query("name");
+  const observer = c.req.query("observer") === "1";
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
   const presence = getRoomPresence(room);
   const agent = presence.find(a => a.agent_name === name);
