@@ -710,12 +710,14 @@ export function getRoomCount(): number {
   return row.count;
 }
 
-export function getActiveRooms(): { code: string; agent_count: number; message_count: number; last_active: number }[] {
+export function getActiveRooms(): { code: string; agent_count: number; message_count: number; last_active: number; mode?: string; project_title?: string; deadline?: number; total_deliverables?: number; done_deliverables?: number }[] {
   const rows = db.prepare(`
-    SELECT r.code,
+    SELECT r.code, r.mode, r.project_title, r.deadline,
       COUNT(DISTINCT CASE WHEN p.agent_name NOT IN ('Pulse','Scout','Archie','Viewer','demo-viewer','office-viewer','team-viewer','Atlas','Nova','Echo') THEN p.agent_name END) as agent_count,
       COUNT(DISTINCT CASE WHEN m.sender NOT IN ('Pulse','Scout','Archie','Viewer','system','Atlas','Nova','Echo') THEN m.id END) as message_count,
-      MAX(COALESCE(p.last_heartbeat, 0)) as last_active
+      MAX(COALESCE(p.last_heartbeat, 0)) as last_active,
+      (SELECT COUNT(*) FROM project_deliverables WHERE room_code = r.code) as total_deliverables,
+      (SELECT COUNT(*) FROM project_deliverables WHERE room_code = r.code AND status = 'done') as done_deliverables
     FROM rooms r
     LEFT JOIN presence p ON p.room_code = r.code
     LEFT JOIN messages m ON m.room_code = r.code

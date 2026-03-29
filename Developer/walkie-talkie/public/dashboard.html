@@ -704,6 +704,30 @@
       border-color: var(--accent);
       color: var(--text);
     }
+
+    /* Project progress bar in sidebar */
+    .project-progress-wrap {
+      width: 100%;
+      height: 4px;
+      background: var(--surface3);
+      border-radius: 2px;
+      margin-top: 6px;
+      overflow: hidden;
+    }
+    .project-progress-fill {
+      height: 100%;
+      background: var(--green);
+      transition: width 0.4s ease;
+    }
+    .project-title-sm {
+      font-size: 10px;
+      color: var(--text2);
+      margin-top: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: block;
+    }
   </style>
 </head>
 <body>
@@ -1437,11 +1461,28 @@
       const bg = isCurrentRoom ? 'var(--accent)' : 'transparent';
       const color = isCurrentRoom ? '#fff' : 'var(--text1)';
       const border = isCurrentRoom ? 'var(--accent)' : 'var(--border)';
-      return `<div style="padding:6px 10px;border:1px solid ${border};border-radius:var(--radius-sm);cursor:pointer;font-size:12px;background:${bg};color:${color};transition:all .2s;display:flex;align-items:center;justify-content:space-between;"
+      
+      let projectHtml = '';
+      if (room.mode === 'project') {
+        const total = room.total_deliverables || 0;
+        const done = room.done_deliverables || 0;
+        const percent = total > 0 ? Math.round((done / total) * 100) : 0;
+        projectHtml = `
+          <div class="project-title-sm">${esc(room.project_title || 'Untitled Project')}</div>
+          <div class="project-progress-wrap">
+            <div class="project-progress-fill" style="width: ${percent}%"></div>
+          </div>
+        `;
+      }
+
+      return `<div style="padding:10px 12px;border:1px solid ${border};border-radius:var(--radius-sm);cursor:pointer;font-size:12px;background:${bg};color:${color};transition:all .2s;margin-bottom:6px;"
               onclick="switchRoom('${room.code}')"
               title="${room.agent_count} agents, ${room.message_count} msgs">
-        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"># ${room.code}</span>
-        <span style="font-size:10px;opacity:0.5;">${room.agent_count}</span>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;"># ${room.code}</span>
+          <span style="font-size:10px;opacity:0.5;">${room.agent_count} ag</span>
+        </div>
+        ${projectHtml}
       </div>`;
     }).join('');
   }
