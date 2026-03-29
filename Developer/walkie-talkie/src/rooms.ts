@@ -973,13 +973,15 @@ export function getMessages(
   const rows = db.prepare(query).all(...params) as any[];
 
   // Filter out own messages (but always pass through system messages) and decompress content
-  const filtered = rows
-    .filter(m => m.from === "system" || m.from !== name)
+  const filteredRows = rows.filter(m => m.from === "system" || m.from !== name);
+  // Batch-load reactions for all messages in one query (avoids N+1)
+  const reactionsBatch = getMessageReactionsBatch(filteredRows.map(m => m.id));
+  const filtered = filteredRows
     .map(m => {
       const decompressed = m.content.startsWith("lz:") ? LZString.decompressFromEncodedURIComponent(m.content.slice(3)) || m.content : m.content;
       const mentionMatches = decompressed.match(/@([\w\s.-]+?)(?=\s|[^a-zA-Z0-9._\s-]|$)/g);
       const mentions = mentionMatches ? [...new Set(mentionMatches.map((m: string) => m.slice(1).trim()))] : undefined;
-      const reactions = getMessageReactions(m.id);
+      const reactions = reactionsBatch.get(m.id) || [];
       return {
         id: m.id,
         from: m.from,
@@ -1033,10 +1035,12 @@ export function getAllMessages(
       : query.all(code, limit) as Message[];
   }
 
+  // Batch-load reactions for all messages in one query (avoids N+1)
+  const reactionsBatchAll = getMessageReactionsBatch(rows.map(m => m.id));
   const messages = rows
     .map(m => {
       const decompressed = m.content.startsWith("lz:") ? LZString.decompressFromEncodedURIComponent(m.content.slice(3)) || m.content : m.content;
-      const reactions = getMessageReactions(m.id);
+      const reactions = reactionsBatchAll.get(m.id) || [];
       return {
         ...m,
         content: decompressed,
@@ -1248,6 +1252,20 @@ export function removeReaction(messageId: string, agentName: string): { ok: bool
 export function getMessageReactions(messageId: string): Array<{ agent_name: string; emoji: string; created_at: number }> {
   return db.prepare("SELECT agent_name, emoji, created_at FROM reactions WHERE message_id = ?")
     .all(messageId) as any[];
+}
+
+// Batch version to avoid N+1 queries when loading message lists
+export function getMessageReactionsBatch(messageIds: string[]): Map<string, Array<{ agent_name: string; emoji: string; created_at: number }>> {
+  const result = new Map<string, Array<{ agent_name: string; emoji: string; created_at: number }>>();
+  if (messageIds.length === 0) return result;
+  const placeholders = messageIds.map(() => "?").join(",");
+  const rows = db.prepare(`SELECT message_id, agent_name, emoji, created_at FROM reactions WHERE message_id IN (${placeholders})`)
+    .all(...messageIds) as any[];
+  for (const row of rows) {
+    if (!result.has(row.message_id)) result.set(row.message_id, []);
+    result.get(row.message_id)!.push({ agent_name: row.agent_name, emoji: row.emoji, created_at: row.created_at });
+  }
+  return result;
 }
 
 // ── Webhooks ─────────────────────────────────────────────────────────────────
