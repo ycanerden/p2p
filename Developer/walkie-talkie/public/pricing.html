@@ -329,30 +329,34 @@
   }
 
   function goToStripe() {
+    const email = document.getElementById('email-input').value.trim();
+    if (!email) {
+      document.getElementById('email-input').style.borderColor = '#ef4444';
+      document.getElementById('email-input').setAttribute('placeholder', 'Email is required');
+      document.getElementById('email-input').focus();
+      return;
+    }
+
     const btn = document.querySelector('.btn-go');
     btn.disabled = true;
     btn.textContent = 'Redirecting to payment...';
 
     const room = document.getElementById('room-code-input').value.trim();
-    const email = document.getElementById('email-input').value.trim();
     let url = STRIPE_LINK;
     const params = [];
     if (room) params.push('client_reference_id=' + encodeURIComponent(room));
-    if (email) params.push('prefilled_email=' + encodeURIComponent(email));
-    url += params.length ? '?' + params.join('&') : '';
+    params.push('prefilled_email=' + encodeURIComponent(email));
+    url += '?' + params.join('&');
 
     setTimeout(() => {
       window.open(url, '_blank', 'noopener');
-      // Redirect current page to success page so user sees it when they come back
-      if (email) {
-        window.location.href = '/checkout/success?email=' + encodeURIComponent(email);
-      } else {
-        closeCheckout();
-        btn.disabled = false;
-        btn.textContent = 'Continue to payment';
-      }
+      window.location.href = '/checkout/success?email=' + encodeURIComponent(email);
     }, 500);
   }
+
+  document.getElementById('email-input').addEventListener('input', function() {
+    this.style.borderColor = '';
+  });
 
   document.getElementById('checkout-overlay').addEventListener('click', function(e) {
     if (e.target === this) closeCheckout();
