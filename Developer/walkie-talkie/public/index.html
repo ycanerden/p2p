@@ -581,29 +581,30 @@
     }
 
     /* ── Responsive ── */
-    @media (max-width: 700px) {
-      .container, .container-wide { padding: 0 16px; }
-      .hero { padding: 64px 0 48px; }
-      .hero h1 { font-size: 28px; letter-spacing: -1px; }
-      .hero .tagline { font-size: 15px; }
-      .hero-cta { flex-direction: column; align-items: stretch; }
-      .hero-cta .btn { text-align: center; justify-content: center; }
-      .features { grid-template-columns: 1fr; }
-      .steps-row { grid-template-columns: 1fr; gap: 32px; }
-      .stats-bar { gap: 24px; flex-wrap: wrap; justify-content: space-around; padding: 32px 0; }
-      .stat-value { font-size: 22px; }
-      .case-grid { grid-template-columns: 1fr; }
-      .testimonial-grid { grid-template-columns: 1fr; }
-      .os-stats { gap: 24px; flex-wrap: wrap; }
-      .letter-card { padding: 32px 24px; }
-      .letter-title { font-size: 20px; }
-      .compat-row { gap: 8px; }
-      .compat-tag { padding: 8px 14px; font-size: 12px; }
-      .product-frame iframe { height: 280px; }
-      .nav-links { gap: 14px; }
-      .nav-links a { font-size: 13px; }
-      nav { padding: 14px 0; }
+    @media (max-width: 768px) {
+      .container, .container-wide { padding: 0 20px; }
+      nav { padding: 16px 0; }
+      .nav-links { display: none; } /* Hide complex nav on mobile for simplicity */
+      .nav-links.show-mobile { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; width: 100%; }
+      
+      .hero { padding: 48px 0 40px; text-align: center; }
+      .hero h1 { font-size: 32px; line-height: 1.2; letter-spacing: -1px; }
+      .hero .tagline { font-size: 16px; margin-top: 16px; line-height: 1.5; }
+      .hero-cta { flex-direction: column; gap: 12px; margin-top: 32px; }
+      .hero-cta .btn { width: 100%; justify-content: center; padding: 14px; }
+      
+      .features { grid-template-columns: 1fr; gap: 24px; padding: 40px 0; }
+      .steps-row { grid-template-columns: 1fr; gap: 40px; }
+      .stats-bar { grid-template-columns: 1fr 1fr; gap: 32px; padding: 40px 0; }
+      .stat-value { font-size: 28px; }
+      
+      .product-frame { margin-top: 32px; border-radius: 12px; }
+      .product-frame iframe { height: 300px; }
       .frame-url { display: none; }
+      
+      .letter-card { padding: 32px 20px; }
+      .letter-title { font-size: 22px; }
+      .letter-body { font-size: 15px; }
     }
   </style>
 </head>

@@ -605,31 +605,44 @@
 
     /* ===================== MOBILE ===================== */
     @media (max-width: 860px) {
-      :root { --sidebar-w: 0px; }
+      :root { --sidebar-w: 0px; --topbar-h: 56px; }
       .layout { grid-template-columns: 1fr; }
       .sidebar {
         position: fixed; top: var(--topbar-h); left: 0; bottom: 0;
-        width: 300px; z-index: 150;
+        width: 280px; z-index: 150;
         transform: translateX(-100%);
-        box-shadow: var(--shadow);
+        box-shadow: 20px 0 50px rgba(0,0,0,0.5);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       }
       .sidebar.open { transform: translateX(0); }
       .sidebar-overlay {
         display: none; position: fixed; inset: 0; top: var(--topbar-h);
-        background: rgba(0,0,0,.5); z-index: 140;
+        background: rgba(0,0,0,.6); z-index: 140;
+        backdrop-filter: blur(4px);
       }
       .sidebar-overlay.show { display: block; }
-      .mobile-menu-btn { display: flex; align-items: center; justify-content: center; }
+      .mobile-menu-btn { display: flex !important; align-items: center; justify-content: center; }
       .topbar-center { display: none; }
       .meta-tag { display: none; }
       .messages-container { padding: 16px 12px; }
-      .composer { padding: 10px 12px 14px; }
-      .composer-left { flex-direction: row; }
-      .composer-name { width: 80px; }
-      .composer-type { width: 90px; }
-      .msg { max-width: 88%; }
+      .composer { padding: 12px 12px 16px; gap: 6px; }
+      .composer-left { flex-direction: row; width: 100%; justify-content: space-between; }
+      .composer-name { width: calc(50% - 4px); height: 36px; }
+      .composer-type { width: calc(50% - 4px); height: 36px; }
+      .composer-body { width: 100%; order: -1; }
+      .composer-input { min-height: 44px; font-size: 16px; } /* Prevent iOS zoom */
+      .msg { max-width: 92%; padding: 10px 14px; }
       .files-grid, .directory-grid { grid-template-columns: 1fr; padding: 16px 12px; }
-      .main-tabs { padding: 0 12px; }
+      .main-tabs { padding: 0 8px; gap: 4px; }
+      .main-tab { padding: 12px 14px; font-size: 12px; }
+      .main-tab span { display: block; }
+      
+      #kanban-board {
+        grid-template-columns: 1fr !important;
+        gap: 20px !important;
+      }
+      .workspace-grid { grid-template-columns: 1fr; }
+      .workspace-container { padding: 24px 16px; }
     }
 
     /* Collapsible sections */

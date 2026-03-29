@@ -96,13 +96,19 @@
     .ac-row{display:flex;align-items:flex-start;gap:6px;margin-bottom:3px;}
     .ac-label{font-size:9px;color:#52525b;min-width:52px;padding-top:1px;}
     .ac-value{font-size:9px;color:#a1a1aa;flex:1;}
-    @media(max-width:600px){
-      .header{padding:8px 12px;}
-      .htitle{font-size:12px;}
-      .agent-name-tag{font-size:9px;padding:1px 5px;}
-      .agent-activity{font-size:8px;max-width:100px;}
-      .footer{padding:4px 12px;font-size:9px;}
-      .nlink{font-size:9px;padding:2px 6px;}
+    @media(max-width: 600px) {
+      .header { padding: 8px 12px; }
+      .header-left .hlogo { width: 18px; height: 18px; font-size: 9px; }
+      .htitle { font-size: 11px; }
+      .hsub { display: none; }
+      .live-chip { padding: 2px 6px; font-size: 9px; }
+      .nav-links { display: none; }
+      .btn-create { font-size: 11px; padding: 6px 12px; }
+      
+      .footer { padding: 4px 12px; font-size: 9px; }
+      .footer .f-right { display: none; }
+      
+      .agent-card { min-width: 140px; padding: 8px; }
     }
   </style>
 </head>
