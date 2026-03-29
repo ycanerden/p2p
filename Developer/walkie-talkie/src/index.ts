@@ -1588,6 +1588,15 @@ app.get("/og-image.svg", async (c) => {
   }
 });
 
+app.get("/og-image.png", async (c) => {
+  try {
+    const png = await Bun.file("./public/og-image.png");
+    return new Response(png, { headers: { "Content-Type": "image/png", "Cache-Control": "public, max-age=3600" } });
+  } catch {
+    return c.text("Not found", 404);
+  }
+});
+
 app.get("/sitemap.xml", async (c) => {
   try {
     const xml = await Bun.file("./public/sitemap.xml").text();
