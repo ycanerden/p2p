@@ -48,7 +48,7 @@ db.run(`
     ];
     for (const t of tasks) {
       db.prepare(`INSERT INTO room_assignments (room_code, agent_name, task_id, task_title, status, assigned_at) 
-                 VALUES (?, ?, ?, ?, ?, ?)`).run(t[0], t[1], t[2], t[3], t[4], now);
+                 VALUES (?, ?, ?, ?, ?, ?)`).run(t[0]!, t[1]!, t[2]!, t[3]!, t[4]!, now);
     }
     console.log("[seed] Seeded mesh01 task board");
   }

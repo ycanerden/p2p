@@ -15,13 +15,13 @@ import {
 // static imports, so we rely on unique room codes per test instead.
 
 test("createRoom returns a 6-char code", () => {
-  const code = createRoom();
+  const { code } = createRoom();
   expect(code).toHaveLength(6);
   expect(code).toMatch(/^[a-z0-9]{6}$/);
 });
 
 test("createRoom codes are unique across calls", () => {
-  const codes = new Set(Array.from({ length: 20 }, () => createRoom()));
+  const codes = new Set(Array.from({ length: 20 }, () => createRoom().code));
   expect(codes.size).toBe(20);
 });
 
@@ -30,13 +30,13 @@ test("joinRoom returns null for unknown room", () => {
 });
 
 test("joinRoom creates user state on first join", () => {
-  const code = createRoom();
+  const { code } = createRoom();
   const room = joinRoom(code, "alice");
   expect(room).not.toBeNull();
 });
 
 test("appendMessage: happy path", () => {
-  const code = createRoom();
+  const { code } = createRoom();
   joinRoom(code, "alice");
   const result = appendMessage(code, "alice", "hello");
   expect(result.ok).toBe(true);
@@ -44,7 +44,7 @@ test("appendMessage: happy path", () => {
 });
 
 test("appendMessage: rejects messages over 10KB", () => {
-  const code = createRoom();
+  const { code } = createRoom();
   const big = "x".repeat(10 * 1024 + 1);
   const result = appendMessage(code, "alice", big);
   expect(result.ok).toBe(false);
@@ -58,7 +58,7 @@ test("appendMessage: unknown room returns room_expired error", () => {
 });
 
 test("getMessages: returns partner messages after cursor, not own", () => {
-  const code = createRoom();
+  const { code } = createRoom();
   joinRoom(code, "alice");
   joinRoom(code, "bob");
 
@@ -69,13 +69,13 @@ test("getMessages: returns partner messages after cursor, not own", () => {
   expect(result.ok).toBe(true);
   if (result.ok) {
     expect(result.messages).toHaveLength(1);
-    expect(result.messages[0].from).toBe("alice");
-    expect(result.messages[0].content).toBe("msg from alice");
+    expect((result as any).messages[0].from).toBe("alice");
+    expect((result as any).messages[0].content).toBe("msg from alice");
   }
 });
 
 test("getMessages: cursor advances — second call returns empty", () => {
-  const code = createRoom();
+  const { code } = createRoom();
   joinRoom(code, "alice");
   joinRoom(code, "bob");
   appendMessage(code, "alice", "hi");
@@ -87,7 +87,7 @@ test("getMessages: cursor advances — second call returns empty", () => {
 });
 
 test("getMessages: empty room returns []", () => {
-  const code = createRoom();
+  const { code } = createRoom();
   joinRoom(code, "alice");
   const result = getMessages(code, "alice");
   expect(result.ok).toBe(true);
@@ -101,7 +101,7 @@ test("getMessages: unknown room returns room_expired error", () => {
 });
 
 test("getMessages: returns messages in timestamp order", () => {
-  const code = createRoom();
+  const { code } = createRoom();
   joinRoom(code, "alice");
   joinRoom(code, "bob");
 
@@ -112,7 +112,7 @@ test("getMessages: returns messages in timestamp order", () => {
   const result = getMessages(code, "bob");
   expect(result.ok).toBe(true);
   if (result.ok) {
-    expect(result.messages.map((m) => m.content)).toEqual([
+    expect(result.messages!.map((m) => m.content)).toEqual([
       "first",
       "second",
       "third",
@@ -121,7 +121,7 @@ test("getMessages: returns messages in timestamp order", () => {
 });
 
 test("getRoomStatus: solo user shows not connected", () => {
-  const code = createRoom();
+  const { code } = createRoom();
   joinRoom(code, "alice");
   const result = getRoomStatus(code, "alice");
   expect(result.ok).toBe(true);
@@ -132,15 +132,15 @@ test("getRoomStatus: solo user shows not connected", () => {
 });
 
 test("getRoomStatus: two users shows connected with partner", () => {
-  const code = createRoom();
+  const { code } = createRoom();
   joinRoom(code, "alice");
   joinRoom(code, "bob");
   const result = getRoomStatus(code, "alice");
   expect(result.ok).toBe(true);
   if (result.ok) {
     expect(result.connected).toBe(true);
-    expect(result.partners[0].name).toBe("bob");
-    expect(result.partners.find(p => p.name === "alice")).toBeUndefined();
+    expect(result.partners![0].name).toBe("bob");
+    expect(result.partners!.find(p => p.name === "alice")).toBeUndefined();
   }
 });
 
@@ -151,7 +151,7 @@ test("getRoomStatus: unknown room returns room_expired error", () => {
 });
 
 test("getRoomStatus: includes message_count", () => {
-  const code = createRoom();
+  const { code } = createRoom();
   joinRoom(code, "alice");
   appendMessage(code, "alice", "a");
   appendMessage(code, "alice", "b");
@@ -161,7 +161,7 @@ test("getRoomStatus: includes message_count", () => {
 });
 
 test("publishCard: stores and broadcasts agent card", () => {
-  const code = createRoom();
+  const { code } = createRoom();
   joinRoom(code, "alice");
   joinRoom(code, "bob");
   
@@ -173,13 +173,13 @@ test("publishCard: stores and broadcasts agent card", () => {
   expect(status.ok).toBe(true);
   if (status.ok) {
     expect(status.partners).toHaveLength(1);
-    expect(status.partners[0].name).toBe("alice");
-    expect(status.partners[0].card).toEqual(card);
+    expect(status.partners![0].name).toBe("alice");
+    expect(status.partners![0].card).toEqual(card);
   }
 });
 
 test("publishCard: system message is posted on card update", () => {
-  const code = createRoom();
+  const { code } = createRoom();
   joinRoom(code, "alice");
   joinRoom(code, "bob");
   
@@ -191,8 +191,8 @@ test("publishCard: system message is posted on card update", () => {
   if (msgs.ok) {
     // Should have 1 message (system)
     expect(msgs.messages).toHaveLength(1);
-    expect(msgs.messages[0].from).toBe("system");
-    expect(msgs.messages[0].content).toContain("Batman (gemini-2.0-flash) updated their Agent Card");
+    expect((msgs as any).messages[0].from).toBe("system");
+    expect((msgs as any).messages[0].content).toContain("Batman (gemini-2.0-flash) updated their Agent Card");
   }
 });
 
@@ -205,7 +205,7 @@ test("sweepExpiredRooms: does not delete active rooms", () => {
 });
 
 test("appendMessage: emits messageEvents for SSE streaming", async () => {
-  const code = createRoom();
+  const { code } = createRoom();
   joinRoom(code, "alice");
   joinRoom(code, "bob");
 

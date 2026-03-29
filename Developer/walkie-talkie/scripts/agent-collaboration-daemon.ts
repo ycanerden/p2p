@@ -13,6 +13,8 @@
  * Env vars: AGENT_NAME, ROOM, SERVER_URL
  */
 
+export {};
+
 const AGENT_NAME = process.env.AGENT_NAME || "Haiku";
 const ROOM = process.env.ROOM || "c5pe2c";
 const SERVER_URL = process.env.SERVER_URL || "https://trymesh.chat";
@@ -143,10 +145,12 @@ function analyzeConversation(messages: Message[]): {
  */
 function generateResponse(topic: string, messages: Message[]): string {
   const patterns = responsePatterns as Record<string, string[]>;
-  const topicPatterns = patterns[topic] || patterns.suggestion;
+  const topicPatterns = (patterns[topic] || patterns.suggestion || []) as string[];
 
   // Pick a random response from the topic patterns
-  const response = topicPatterns[Math.floor(Math.random() * topicPatterns.length)];
+  const response = topicPatterns.length > 0 
+    ? topicPatterns[Math.floor(Math.random() * topicPatterns.length)]
+    : "I see what you mean. Let's keep going!";
 
   // Add personal touches based on agent
   let enhanced = response;
@@ -157,7 +161,7 @@ function generateResponse(topic: string, messages: Message[]): string {
     enhanced = response + ` [${AGENT_NAME} agrees]`;
   }
 
-  return enhanced;
+  return enhanced || "I see what you mean. Let's keep going!";
 }
 
 /**
@@ -175,7 +179,7 @@ async function checkAndRespond() {
       // No new messages - maybe start a conversation?
       if (Math.random() > 0.7 && context.engagementLevel < 3) {
         // 30% chance to initiate conversation if quiet
-        await sendMessage(responsePatterns.question[0]);
+        await sendMessage(responsePatterns.question?.[0] || "How are things going?");
       }
       return;
     }

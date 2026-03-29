@@ -7,6 +7,7 @@ import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/
 import { z } from "zod";
 import crypto from "node:crypto";
 import {
+  db,
   createRoom,
   joinRoom,
   appendMessage,
@@ -38,6 +39,7 @@ import {
   getAvailableAgents,
   getAllAgents,
   getAgentProfile,
+  getAllAgentProfiles,
   updateAgentStatus,
   incrementAgentTasks,
   pinMessage,
@@ -115,6 +117,12 @@ import {
   cancelSubscription,
   getSubscriptionStats,
   provisionPaidRoom,
+  createProjectRoom,
+  getProjectRoom,
+  addDeliverable,
+  updateDeliverable,
+  deleteDeliverable,
+  getDeliverables,
 } from "./rooms.js";
 import {
   createRoomGroup,
@@ -230,7 +238,7 @@ app.use("*", async (c, next) => {
   const cookie = c.req.header("cookie") || "";
   const match = cookie.match(new RegExp(`mesh_admin_${room}=([^;]+)`));
   if (match) {
-    const val = decodeURIComponent(match[1]);
+    const val = decodeURIComponent(match[1] || "");
     if (verifyAdmin(room, val) || isValidPasswordSession(room, val)) { await next(); return; }
   }
   // Check query param token
@@ -250,7 +258,7 @@ function hasRoomAccess(c: any, room: string): boolean {
   const cookie = c.req.header("cookie") || "";
   const match = cookie.match(new RegExp(`mesh_admin_${room}=([^;]+)`));
   if (match) {
-    const val = decodeURIComponent(match[1]);
+    const val = decodeURIComponent(match[1] || "");
     if (verifyAdmin(room, val) || isValidPasswordSession(room, val)) return true;
   }
   // 2. Check access_token param/header
@@ -590,7 +598,7 @@ app.post("/api/decisions", async (c) => {
     // Post decision message to room
     const mentions = notifyList.map(u => `@${u}`).join(" ");
     const decisionMsg = `🚨 DECISION REQUIRED: ${description}\n\nNotified: ${mentions}\nID: ${decision.id}`;
-    appendMessage(room, name, decisionMsg, null, "DECISION");
+    appendMessage(room, name, decisionMsg, undefined, "DECISION");
 
     // Notify via Telegram — rate limited to 10/hour to prevent spam
     if (canSendTelegram(room)) {
@@ -608,7 +616,7 @@ app.post("/api/decisions", async (c) => {
 const telegramTestHandler = async (c: any) => {
   const code = c.req.param("code");
   const token = c.req.header("x-mesh-secret") || c.req.query("token") || (await c.req.json().catch(() => ({} as any))).secret;
-  if (!verifyAdmin(code, token)) return c.json({ ok: false, error: "unauthorized" }, 401);
+  if (!verifyAdmin(code, token || "")) return c.json({ ok: false, error: "unauthorized" }, 401);
   const result = await sendTelegramMessage(code, `✅ Mesh test ping — room <b>${code}</b> is connected.`);
   if (!result.ok) {
     return c.json({ ok: false, error: result.error }, 400);
@@ -652,9 +660,10 @@ app.post("/api/decisions/:id", async (c) => {
     resolveDecision(id, status, text || "", name);
 
     // Post resolution to room
-    const emoji = { approved: "✅", rejected: "❌", hold: "⏸️" }[status];
+    const emojiMap: Record<string, string> = { approved: "✅", rejected: "❌", hold: "⏸️" };
+    const emoji = emojiMap[status] || "ℹ️";
     const resolutionMsg = `${emoji} DECISION RESOLVED:\n${decision.description}\n**${status.toUpperCase()}** by @${name}${text ? `: ${text}` : ""}`;
-    appendMessage(room, name, resolutionMsg, null, "RESOLUTION");
+    appendMessage(room, name, resolutionMsg, undefined, "RESOLUTION");
 
     return c.json({ ok: true, decision: getDecision(id) });
   } catch (e) {
@@ -891,7 +900,7 @@ app.post("/api/heartbeat", async (c) => {
     const existing = getRoomPresence(room).find(a => a.agent_name === name);
     const wasOffline = !existing || existing.last_heartbeat < Date.now() - 300_000;
     if (wasOffline) {
-      appendMessage(room, "system", `→ ${name} joined`, null, "SYSTEM");
+      appendMessage(room, "system", `→ ${name} joined`, undefined, "SYSTEM");
     }
   }
 
@@ -1060,7 +1069,7 @@ app.post("/api/rooms/:code/telegram", async (c) => {
   const token = c.req.header("x-mesh-secret") || c.req.query("secret");
   
   // Verify admin token
-  if (!verifyAdmin(code, token)) {
+  if (!verifyAdmin(code, token || "")) {
     return c.json({ ok: false, error: "unauthorized" }, 401);
   }
 
@@ -1096,7 +1105,7 @@ app.post("/api/rooms/:code/telegram", async (c) => {
 app.get("/api/rooms/:code/telegram/status", async (c) => {
   const code = c.req.param("code");
   const token = c.req.header("x-mesh-secret") || c.req.query("token");
-  if (!verifyAdmin(code, token)) return c.json({ ok: false, error: "unauthorized" }, 401);
+  if (!verifyAdmin(code, token || "")) return c.json({ ok: false, error: "unauthorized" }, 401);
   const { token: botToken, chatId } = getTelegramConfig(code);
   const connected = !!(botToken && chatId);
   return c.json({ ok: true, connected, has_token: !!botToken, has_chat_id: !!chatId });
@@ -1144,7 +1153,8 @@ app.post("/api/webhook/telegram/:code", async (c) => {
       const decision = getDecision(decisionId);
       if (decision && decision.status === "pending") {
         resolveDecision(decisionId, status, `Via Telegram by ${from}`, from);
-        const emoji = { approved: "✅", rejected: "❌", hold: "⏸️" }[status];
+        const emojiMap: Record<string, string> = { approved: "✅", rejected: "❌", hold: "⏸️" };
+        const emoji = emojiMap[status] || "ℹ️";
         const roomMsg = `${emoji} DECISION ${status.toUpperCase()} by ${from} (via Telegram):\n${decision.description}`;
         appendMessage(code, `${from} (Telegram)`, roomMsg, undefined, "RESOLUTION");
         await sendTelegramMessage(code, `${emoji} Got it — decision <b>${tgEscape(status)}</b>.\n${tgEscape(decision.description)}`);
@@ -2261,8 +2271,12 @@ app.get("/api/briefing", (c) => {
   for (const m of recent) {
     if (!m.from || m.from === "demo-viewer" || m.from === "office-viewer") continue;
     if (!byAgent[m.from]) byAgent[m.from] = { count: 0, last: "", ts: 0 };
-    byAgent[m.from].count++;
-    if (m.ts > byAgent[m.from].ts) { byAgent[m.from].ts = m.ts; byAgent[m.from].last = m.content.slice(0, 120); }
+    const agentData = byAgent[m.from]!;
+    agentData.count++;
+    if (m.ts > agentData.ts) {
+      agentData.ts = m.ts;
+      agentData.last = m.content.slice(0, 120);
+    }
   }
 
   const tasks = getRoomTasks(room);
@@ -2528,7 +2542,7 @@ app.post("/groups/create", async (c) => {
   const { group_name, description, topic, icon, color } = await c.req.json();
   const creator = c.req.query("creator") || "unknown";
 
-  const roomCode = createRoom();
+  const { code: roomCode } = createRoom();
   const group = createRoomGroup(
     roomCode,
     group_name,
@@ -2589,6 +2603,67 @@ app.get("/tasks/room/:roomCode", (c) => {
   const tasks = getRoomTasks(roomCode);
 
   return c.json({ room: roomCode, tasks, count: tasks.length });
+});
+
+// ── Project Rooms ─────────────────────────────────────────────────────────────
+app.post("/api/projects", async (c) => {
+  const body = await c.req.json();
+  const { title, brief, deadline, deliverables } = body;
+  if (!title || !brief) return c.json({ error: "title and brief are required" }, 400);
+  const code = createProjectRoom({
+    title,
+    brief,
+    deadline: deadline ? new Date(deadline).getTime() : undefined,
+    deliverables: deliverables || [],
+  });
+  appendMessage(code, "system", `📋 PROJECT: ${title}\n\n${brief}${deadline ? `\n\n⏰ Deadline: ${new Date(deadline).toLocaleDateString()}` : ""}`, undefined, "SYSTEM");
+  const project = getProjectRoom(code);
+  return c.json({ ok: true, room_code: code, project }, 201);
+});
+
+app.get("/api/projects/:code", (c) => {
+  const code = c.req.param("code");
+  const project = getProjectRoom(code);
+  if (!project) return c.json({ error: "project not found" }, 404);
+  return c.json({ ok: true, project });
+});
+
+app.post("/api/projects/:code/deliverables", async (c) => {
+  const code = c.req.param("code");
+  const { title, description, assigned_to } = await c.req.json();
+  if (!title) return c.json({ error: "title is required" }, 400);
+  const deliverable = addDeliverable(code, { title, description, assigned_to });
+  return c.json({ ok: true, deliverable }, 201);
+});
+
+app.put("/api/projects/deliverables/:id", async (c) => {
+  const id = c.req.param("id");
+  const patch = await c.req.json();
+  const deliverable = updateDeliverable(id, patch);
+  if (!deliverable) return c.json({ error: "deliverable not found" }, 404);
+  return c.json({ ok: true, deliverable });
+});
+
+app.delete("/api/projects/deliverables/:id", (c) => {
+  const id = c.req.param("id");
+  const ok = deleteDeliverable(id);
+  if (!ok) return c.json({ error: "deliverable not found" }, 404);
+  return c.json({ ok: true });
+});
+
+app.get("/api/projects/:code/deliverables", (c) => {
+  const code = c.req.param("code");
+  const deliverables = getDeliverables(code);
+  return c.json({ ok: true, deliverables });
+});
+
+app.get("/new-project", async (c) => {
+  try {
+    const html = injectAnalytics(await Bun.file("./public/new-project.html").text());
+    return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" } });
+  } catch {
+    return c.redirect("/");
+  }
 });
 
 // ── Master Dashboard Data ─────────────────────────────────────────────────────
@@ -2689,7 +2764,7 @@ app.all("/mcp", async (c) => {
         }).passthrough(),
         skills: z.array(z.string()).optional(),
         availability: z.string().optional(),
-        capabilities: z.record(z.any()).optional(),
+        capabilities: z.record(z.string(), z.any()).optional(),
       }).passthrough().describe("Your Agent Card metadata")
     },
     async ({ card }) => {
@@ -2787,8 +2862,9 @@ app.all("/mcp", async (c) => {
       for (const m of recent) {
         if (!m.from || m.from === "demo-viewer" || m.from === "office-viewer") continue;
         if (!byAgent[m.from]) byAgent[m.from] = { count: 0, last: "" };
-        byAgent[m.from].count++;
-        byAgent[m.from].last = (m.content || "").slice(0, 100);
+        const agentData = byAgent[m.from]!;
+        agentData.count++;
+        agentData.last = (m.content || "").slice(0, 100);
       }
       const tasks = getRoomTasks(room);
       const inProgress = tasks.filter((t: any) => t.status === "in_progress");
@@ -3119,7 +3195,11 @@ app.all("/mcp", async (c) => {
         `Recommendation: ${recommendation}`,
       ].join("\n");
       const result = appendMessage(room, name, lines, undefined, "TASK");
-      return { content: [{ type: "text", text: JSON.stringify({ ok: true, message_id: result.id }) }] };
+      if (result.ok) {
+        return { content: [{ type: "text", text: JSON.stringify({ ok: true, message_id: result.id }) }] };
+      } else {
+        return { content: [{ type: "text", text: JSON.stringify({ ok: false, error: result.error }) }], isError: true };
+      }
     }
   );
 

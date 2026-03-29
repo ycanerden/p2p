@@ -14,7 +14,7 @@ function generateSecureToken(): string {
 }
 const DB_DIR = process.env.NODE_ENV === "production" ? "/app/data" : ".";
 if (DB_DIR !== "." && !existsSync(DB_DIR)) mkdirSync(DB_DIR, { recursive: true });
-const db = new Database(`${DB_DIR}/mesh.db`, { create: true });
+export const db = new Database(`${DB_DIR}/mesh.db`, { create: true });
 
 // Event emitter for real-time updates (SSE)
 export const messageEvents = new EventEmitter();
@@ -584,7 +584,8 @@ export function createRoom(isDemo: boolean = false): { code: string; admin_token
   return { code, admin_token };
 }
 
-export function verifyAdmin(roomCode: string, token: string): boolean {
+export function verifyAdmin(roomCode: string, token: string | null | undefined): boolean {
+  if (!token) return false;
   const row = db.prepare("SELECT admin_token FROM rooms WHERE code = ?").get(roomCode) as any;
   return row?.admin_token === token;
 }
@@ -1048,7 +1049,7 @@ export function getAllMessages(
 export function getRoomStatus(
   code: string,
   name: string
-): Ok<{ connected: boolean; partners: any[]; message_count: number }> | Err {
+): Ok<{ connected: boolean; partners: any[]; message_count: number; context: any }> | Err {
   const room = db.prepare("SELECT 1 FROM rooms WHERE code = ?").get(code);
   if (!room) return { ok: false, error: "room_expired_or_not_found" };
 
@@ -2024,17 +2025,6 @@ export function getGrowthMetrics(): {
   };
 }
 
-// ── Agent Token Generation ───────────────────────────────────────────────────
-export function generateAgentToken(room: string, agentName: string): string {
-  const raw = `${room}:${agentName}:${Date.now()}:${Math.random()}`;
-  // Simple deterministic token — not cryptographic, just unique enough for agent identity
-  let hash = 0;
-  for (let i = 0; i < raw.length; i++) {
-    hash = (Math.imul(31, hash) + raw.charCodeAt(i)) | 0;
-  }
-  return `at_${Math.abs(hash).toString(36)}_${Date.now().toString(36)}`;
-}
-
 // ── Room context (shared pinned context per room) ────────────────────────────
 const _roomContextStore = new Map<string, { content: string; updated_by: string; updated_at: number }>();
 
@@ -2070,6 +2060,133 @@ export function verifyAgentToken(roomCode: string, agentName: string, token: str
   const row = db.prepare("SELECT 1 FROM room_agent_tokens WHERE room_code = ? AND agent_name = ? AND token = ?")
     .get(roomCode, agentName, token);
   return !!row;
+}
+
+// ── Project Rooms ─────────────────────────────────────────────────────────────
+// Rooms can operate in 'chat' mode (default) or 'project' mode.
+// Project rooms have a brief, deadline, and a deliverables checklist.
+
+// Migrations: add project columns to rooms table
+try { db.run("ALTER TABLE rooms ADD COLUMN mode TEXT DEFAULT 'chat';"); } catch (e) {}
+try { db.run("ALTER TABLE rooms ADD COLUMN project_title TEXT DEFAULT NULL;"); } catch (e) {}
+try { db.run("ALTER TABLE rooms ADD COLUMN project_brief TEXT DEFAULT NULL;"); } catch (e) {}
+try { db.run("ALTER TABLE rooms ADD COLUMN deadline INTEGER DEFAULT NULL;"); } catch (e) {}
+
+db.run(`CREATE TABLE IF NOT EXISTS project_deliverables (
+  id TEXT PRIMARY KEY,
+  room_code TEXT NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT DEFAULT '',
+  status TEXT DEFAULT 'pending',
+  assigned_to TEXT DEFAULT NULL,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  FOREIGN KEY(room_code) REFERENCES rooms(code)
+);`);
+
+try { db.run("CREATE INDEX IF NOT EXISTS idx_deliverables_room ON project_deliverables(room_code);"); } catch (e) {}
+
+export interface ProjectRoom {
+  code: string;
+  mode: string;
+  project_title: string | null;
+  project_brief: string | null;
+  deadline: number | null;
+  deliverables: ProjectDeliverable[];
+}
+
+export interface ProjectDeliverable {
+  id: string;
+  room_code: string;
+  title: string;
+  description: string;
+  status: string;
+  assigned_to: string | null;
+  created_at: number;
+  updated_at: number;
+}
+
+export function createProjectRoom(opts: {
+  title: string;
+  brief: string;
+  deadline?: number;
+  deliverables?: Array<{ title: string; description?: string; assigned_to?: string }>;
+}): string {
+  const code = crypto.randomBytes(4).toString("hex");
+  const token = generateSecureToken();
+  const now = Date.now();
+  db.prepare(`
+    INSERT INTO rooms (code, last_activity, admin_token, mode, project_title, project_brief, deadline)
+    VALUES (?, ?, ?, 'project', ?, ?, ?)
+  `).run(code, now, token, opts.title, opts.brief, opts.deadline ?? null);
+
+  if (opts.deliverables?.length) {
+    for (const d of opts.deliverables) {
+      const id = crypto.randomUUID();
+      db.prepare(`
+        INSERT INTO project_deliverables (id, room_code, title, description, assigned_to, status, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)
+      `).run(id, code, d.title, d.description ?? "", d.assigned_to ?? null, now, now);
+    }
+  }
+
+  return code;
+}
+
+export function getProjectRoom(roomCode: string): ProjectRoom | null {
+  const room = db.prepare(
+    "SELECT code, mode, project_title, project_brief, deadline FROM rooms WHERE code = ?"
+  ).get(roomCode) as any;
+  if (!room) return null;
+  const deliverables = db.prepare(
+    "SELECT * FROM project_deliverables WHERE room_code = ? ORDER BY created_at ASC"
+  ).all(roomCode) as ProjectDeliverable[];
+  return { ...room, deliverables };
+}
+
+export function addDeliverable(roomCode: string, opts: {
+  title: string;
+  description?: string;
+  assigned_to?: string;
+}): ProjectDeliverable {
+  const id = crypto.randomUUID();
+  const now = Date.now();
+  db.prepare(`
+    INSERT INTO project_deliverables (id, room_code, title, description, assigned_to, status, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)
+  `).run(id, roomCode, opts.title, opts.description ?? "", opts.assigned_to ?? null, now, now);
+  return db.prepare("SELECT * FROM project_deliverables WHERE id = ?").get(id) as ProjectDeliverable;
+}
+
+export function updateDeliverable(id: string, patch: {
+  title?: string;
+  description?: string;
+  status?: string;
+  assigned_to?: string;
+}): ProjectDeliverable | null {
+  const existing = db.prepare("SELECT * FROM project_deliverables WHERE id = ?").get(id) as ProjectDeliverable | null;
+  if (!existing) return null;
+  const updated = {
+    title: patch.title ?? existing.title,
+    description: patch.description ?? existing.description,
+    status: patch.status ?? existing.status,
+    assigned_to: patch.assigned_to !== undefined ? patch.assigned_to : existing.assigned_to,
+  };
+  db.prepare(`
+    UPDATE project_deliverables SET title=?, description=?, status=?, assigned_to=?, updated_at=? WHERE id=?
+  `).run(updated.title, updated.description, updated.status, updated.assigned_to, Date.now(), id);
+  return db.prepare("SELECT * FROM project_deliverables WHERE id = ?").get(id) as ProjectDeliverable;
+}
+
+export function deleteDeliverable(id: string): boolean {
+  const result = db.prepare("DELETE FROM project_deliverables WHERE id = ?").run(id);
+  return result.changes > 0;
+}
+
+export function getDeliverables(roomCode: string): ProjectDeliverable[] {
+  return db.prepare(
+    "SELECT * FROM project_deliverables WHERE room_code = ? ORDER BY created_at ASC"
+  ).all(roomCode) as ProjectDeliverable[];
 }
 
 // ── Run seeds after all tables are created ───────────────────────────────────

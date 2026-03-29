@@ -15,8 +15,13 @@ async function runHeartbeat() {
       return;
     }
 
-    const lastMessages = data.messages.slice(-20); // Get last 20 messages
-    const summary = lastMessages.map(m => `**[${m.from}]**: ${m.content}`).join("\n\n");
+    interface Message {
+      from: string;
+      content: string;
+    }
+
+    const lastMessages = (data.messages as Message[]).slice(-20); // Get last 20 messages
+    const summary = lastMessages.map((m: Message) => `**[${m.from}]**: ${m.content}`).join("\n\n");
 
     const report = `
 # 🕒 Mesh Progress Report - ${new Date().toISOString()}

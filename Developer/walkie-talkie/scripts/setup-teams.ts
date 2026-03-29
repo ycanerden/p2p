@@ -5,7 +5,7 @@ import {
   createRoomGroup,
   assignTask,
   getAllRoomGroups
-} from "./src/room-manager.js";
+} from "../src/room-manager.ts";
 
 interface TeamSetup {
   groupName: string;
@@ -202,8 +202,9 @@ async function setupTeams() {
     // Create the room/group
     const roomCode = crypto.randomUUID().split("-")[0]; // Short room code
     const group = createRoomGroup(
-      roomCode,
+      roomCode!,
       team.groupName,
+
       team.description,
       team.topic,
       "Claude-Code",
@@ -221,7 +222,7 @@ async function setupTeams() {
 
       for (const task of agent.tasks) {
         const dueDate = Date.now() + (task.dueHours || 24) * 60 * 60 * 1000;
-        assignTask(roomCode, agent.name, task.id, task.title, dueDate);
+        assignTask(roomCode!, agent.name, task.id, task.title, dueDate);
         console.log(`      ✓ ${task.id}: ${task.title}`);
       }
       console.log("");

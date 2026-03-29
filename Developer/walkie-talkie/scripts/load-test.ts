@@ -5,6 +5,8 @@
  * Usage: bun walkie-talkie/load-test.ts <room> <num_agents> <duration_sec>
  */
 
+export {};
+
 const ROOM = process.argv[2] || "loadtest-" + Math.random().toString(36).substring(7);
 const NUM_AGENTS = parseInt(process.argv[3] || "10");
 const DURATION_SEC = parseInt(process.argv[4] || "20");
@@ -25,7 +27,8 @@ const stats: Record<string, AgentStats> = {};
 const agentNames = Array.from({ length: NUM_AGENTS }, (_, i) => `synthetic-${i}`);
 
 async function runAgent(name: string) {
-  stats[name] = { published: false, broadcast_sent: 0, targeted_sent: 0, received: 0, errors: 0 };
+  const agentStats: AgentStats = { published: false, broadcast_sent: 0, targeted_sent: 0, received: 0, errors: 0 };
+  stats[name] = agentStats;
   
   // 1. Publish Card
   try {
@@ -39,9 +42,9 @@ async function runAgent(name: string) {
         }
       })
     });
-    if (cardRes.ok) stats[name].published = true;
+    if (cardRes.ok) agentStats.published = true;
   } catch (e) {
-    stats[name].errors++;
+    agentStats.errors++;
   }
 
   // 2. Connect SSE
@@ -52,7 +55,7 @@ async function runAgent(name: string) {
     try {
       const response = await fetch(sseUrl, { signal: abortController.signal });
       if (!response.body) {
-        stats[name].errors++;
+        agentStats.errors++;
         return;
       }
       
@@ -71,12 +74,10 @@ async function runAgent(name: string) {
         let currentMessageData = '';
         let currentMessageEvent = '';
 
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i];
-
+        for (const line of lines) {
           // --- START DETAILED DEBUGGING LOGS ---
           // Log each line to inspect buffer state and parsing flow
-          // console.log(`[${name}] Line ${i}: "${line}"`);
+          // console.log(`[${name}] Line: "${line}"`);
           // console.log(`[${name}] Buffer state before processing line: "${buffer}"`);
           // --- END DEBUGGING LOGS ---
 
@@ -92,14 +93,14 @@ async function runAgent(name: string) {
                 // Only attempt JSON.parse if data looks like a JSON object
                 if (cleanedData.startsWith('{') && cleanedData.endsWith('}')) {
                   JSON.parse(cleanedData); 
-                  stats[name].received++;
+                  agentStats.received++;
                 } else {
                   // Log non-JSON data for inspection
                   console.log(`[${name}] Non-JSON data received: ${cleanedData}`);
                 }
               } catch (e) {
                 console.error(`[${name}] SSE Parse Error: ${e} for data: ${currentMessageData.trimEnd()}`);
-                stats[name].errors++;
+                agentStats.errors++;
               }
             }
             // Reset for the next message block
@@ -112,7 +113,7 @@ async function runAgent(name: string) {
       }
     } catch (e) {
       if ((e as Error).name !== "AbortError") {
-        stats[name].errors++;
+        agentStats.errors++;
       }
     }
   })();
@@ -138,13 +139,13 @@ async function runAgent(name: string) {
       });
       
       if (res.ok) {
-        if (target) stats[name].targeted_sent++;
-        else stats[name].broadcast_sent++;
+        if (target) agentStats.targeted_sent++;
+        else agentStats.broadcast_sent++;
       } else {
-        stats[name].errors++;
+        agentStats.errors++;
       }
     } catch (e) {
-      stats[name].errors++;
+      agentStats.errors++;
     }
   }, 1500 + Math.random() * 1500); // Every 1.5-3 seconds
 
