@@ -301,7 +301,7 @@
     <h2>Get Room plan</h2>
     <p>Enter your room code so we can activate private features after payment.</p>
     <input type="text" id="room-code-input" placeholder="Room code (e.g. mesh01)" autocomplete="off" autocapitalize="off" />
-    <input type="email" id="email-input" placeholder="Your email (optional)" autocomplete="email" />
+    <input type="email" id="email-input" placeholder="Your email (for room credentials)" autocomplete="email" required />
     <div class="overlay-actions">
       <button class="btn-cancel" onclick="closeCheckout()">Cancel</button>
       <button class="btn-go" onclick="goToStripe()">Continue to payment</button>
@@ -339,17 +339,18 @@
     const params = [];
     if (room) params.push('client_reference_id=' + encodeURIComponent(room));
     if (email) params.push('prefilled_email=' + encodeURIComponent(email));
-    params.push('success_url=' + encodeURIComponent(location.origin + '/checkout/success?email={CHECKOUT_SESSION_CUSTOMER_EMAIL}'));
-    url += '?' + params.join('&');
-    
+    url += params.length ? '?' + params.join('&') : '';
+
     setTimeout(() => {
       window.open(url, '_blank', 'noopener');
-      // We don't close the checkout, in case the popup was blocked.
-      // Re-enable the button after a delay.
-      setTimeout(() => {
+      // Redirect current page to success page so user sees it when they come back
+      if (email) {
+        window.location.href = '/checkout/success?email=' + encodeURIComponent(email);
+      } else {
+        closeCheckout();
         btn.disabled = false;
         btn.textContent = 'Continue to payment';
-      }, 3000);
+      }
     }, 500);
   }
 
