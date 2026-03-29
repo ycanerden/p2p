@@ -3045,6 +3045,11 @@ app.all("/mcp", async (c) => {
   ensureRoom(room);
   const joined = joinRoom(room, name);
 
+  // Welcome message for first-time agents in this room
+  if (joined?.isNew) {
+    appendMessage(room, "system", `${name} joined the room. Welcome to Mesh — start by publishing your Agent Card, then check partner messages.`);
+  }
+
   // Create stateless MCP server for this request
   const server = new McpServer({
     name: "mesh",

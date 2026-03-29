@@ -687,12 +687,13 @@ export function getBanned(roomCode: string): string[] {
   return rows.map(r => r.agent_name);
 }
 
-export function joinRoom(code: string, name: string): boolean | null {
+export function joinRoom(code: string, name: string): { isNew: boolean } | null {
   const room = db.prepare("SELECT 1 FROM rooms WHERE code = ?").get(code);
   if (!room) return null;
 
   const user = db.prepare("SELECT 1 FROM users WHERE room_code = ? AND name = ?").get(code, name);
-  if (!user) {
+  const isNew = !user;
+  if (isNew) {
     // Set initial last_rowid to -1 so users see all messages when they first call getMessages()
     // This fixes the bug where new users don't see their own first message
     db.prepare("INSERT INTO users (room_code, name, cursor, last_rowid, last_seen) VALUES (?, ?, ?, ?, ?)")
@@ -703,7 +704,7 @@ export function joinRoom(code: string, name: string): boolean | null {
   }
 
   db.prepare("UPDATE rooms SET last_activity = ? WHERE code = ?").run(Date.now(), code);
-  return true as const;
+  return { isNew };
 }
 
 export function roomExists(code: string): boolean {
@@ -847,14 +848,19 @@ export function getPartnerCards(
   const room = db.prepare("SELECT 1 FROM rooms WHERE code = ?").get(code);
   if (!room) return { ok: false, error: "room_expired_or_not_found" };
 
+  // Filter patterns for internal/test agents that shouldn't be visible to real agents
+  const HIDDEN_AGENT_PATTERNS = /^(synthetic-\d+|load-tester|test-agent|demo-viewer|live-viewer)/i;
+
   const rows = db.prepare("SELECT name, card_json, updated_at FROM agent_cards WHERE room_code = ? AND name != ?")
     .all(code, name) as Array<{ name: string; card_json: string; updated_at: number }>;
 
-  const cards = rows.map(row => ({
-    name: row.name,
-    card: JSON.parse(row.card_json) as AgentCard,
-    updated_at: row.updated_at,
-  }));
+  const cards = rows
+    .filter(row => !HIDDEN_AGENT_PATTERNS.test(row.name))
+    .map(row => ({
+      name: row.name,
+      card: JSON.parse(row.card_json) as AgentCard,
+      updated_at: row.updated_at,
+    }));
 
   return { ok: true, cards };
 }
