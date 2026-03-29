@@ -430,7 +430,6 @@ setInterval(() => {
 app.get("/api/status", (c) => {
   const room = c.req.query("room");
   const name = c.req.query("name");
-  const observer = ["1", "true", "yes"].includes((c.req.query("observer") || "").toLowerCase());
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
   joinRoom(room, name);
   const result = getRoomStatus(room, name);
@@ -441,7 +440,6 @@ app.get("/api/status", (c) => {
 app.post("/api/join", (c) => {
   const room = c.req.query("room");
   const name = c.req.query("name");
-  const observer = c.req.query("observer") === "1";
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
   joinRoom(room, name);
   // Make agent visible in presence
@@ -478,7 +476,6 @@ app.get("/api/context", (c) => {
 app.post("/api/context", async (c) => {
   const room = c.req.query("room");
   const name = c.req.query("name");
-  const observer = c.req.query("observer") === "1";
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
   const { content } = await c.req.json();
   if (content === undefined) return c.json({ error: "missing content" }, 400);
@@ -536,7 +533,6 @@ app.get("/api/version", (c) => {
 app.post("/api/send", async (c) => {
   const room = c.req.query("room");
   const name = c.req.query("name");
-  const observer = c.req.query("observer") === "1";
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
   ensureRoom(room);
   joinRoom(room, name);
@@ -665,7 +661,6 @@ function canSendTelegram(roomCode: string): boolean {
 app.post("/api/decisions", async (c) => {
   const room = c.req.query("room");
   const name = c.req.query("name");
-  const observer = c.req.query("observer") === "1";
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
 
   try {
@@ -863,7 +858,6 @@ app.post("/api/admin/claim", async (c) => {
 app.post("/api/publish", async (c) => {
   const room = c.req.query("room");
   const name = c.req.query("name");
-  const observer = c.req.query("observer") === "1";
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
   joinRoom(room, name);
   const { card } = await c.req.json();
@@ -874,7 +868,6 @@ app.post("/api/publish", async (c) => {
 app.get("/api/cards", (c) => {
   const room = c.req.query("room");
   const name = c.req.query("name");
-  const observer = c.req.query("observer") === "1";
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
   joinRoom(room, name);
   const result = getPartnerCards(room, name);
@@ -974,7 +967,6 @@ app.get("/api/hierarchy", (c) => {
 app.post("/api/heartbeat", async (c) => {
   const room = c.req.query("room");
   const name = c.req.query("name");
-  const observer = c.req.query("observer") === "1";
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
   joinRoom(room, name);
   let hostname: string | undefined, role: string | undefined, parentAgent: string | undefined;
@@ -1005,7 +997,6 @@ app.post("/api/heartbeat", async (c) => {
 app.post("/api/typing", async (c) => {
   const room = c.req.query("room");
   const name = c.req.query("name");
-  const observer = c.req.query("observer") === "1";
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
   const { is_typing } = await c.req.json();
   setTyping(room, name, is_typing !== false);
@@ -1029,7 +1020,6 @@ app.get("/api/presence", (c) => {
 app.post("/api/rename", async (c) => {
   const room = c.req.query("room");
   const name = c.req.query("name");
-  const observer = c.req.query("observer") === "1";
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
   const { display_name } = await c.req.json();
   if (!display_name || typeof display_name !== "string") return c.json({ error: "missing display_name" }, 400);
@@ -1099,7 +1089,6 @@ app.post("/api/webhooks/register", async (c) => {
 app.delete("/api/webhooks", async (c) => {
   const room = c.req.query("room");
   const name = c.req.query("name");
-  const observer = c.req.query("observer") === "1";
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
   removeWebhook(room, name);
   return c.json({ ok: true });
@@ -1322,7 +1311,6 @@ app.put("/api/directory/:agentId/status", async (c) => {
 app.post("/api/pin", async (c) => {
   const room = c.req.query("room");
   const name = c.req.query("name");
-  const observer = c.req.query("observer") === "1";
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
   const { message_id } = await c.req.json();
   if (!message_id) return c.json({ error: "missing message_id" }, 400);
@@ -1372,7 +1360,6 @@ app.get("/api/search", (c) => {
 app.post("/api/schedule", async (c) => {
   const room = c.req.query("room");
   const name = c.req.query("name");
-  const observer = c.req.query("observer") === "1";
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
   const { message, send_at, to, type } = await c.req.json();
   if (!message || !send_at) return c.json({ error: "missing message or send_at (unix ms)" }, 400);
@@ -1395,7 +1382,6 @@ app.delete("/api/schedule/:scheduleId", (c) => {
 app.post("/api/files/upload", async (c) => {
   const room = c.req.query("room");
   const name = c.req.query("name");
-  const observer = c.req.query("observer") === "1";
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
   const { filename, content, mime_type, description } = await c.req.json();
   if (!filename || !content) return c.json({ error: "missing filename or content" }, 400);
@@ -1587,7 +1573,6 @@ app.post("/api/memory/write", async (c) => {
 
   const room = c.req.query("room");
   const name = c.req.query("name");
-  const observer = c.req.query("observer") === "1";
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
 
   const body = await c.req.json().catch(() => ({}));
@@ -2141,65 +2126,6 @@ app.get("/api/billing/stats", (c) => {
   return c.json(getSubscriptionStats());
 });
 
-// GET /api/digest?room=&hours= — shareable daily activity summary for a room
-// Returns top agent messages, deploy count, message count, and a pre-formatted tweet thread
-app.get("/api/digest", async (c) => {
-  const room = c.req.query("room") || "mesh01";
-  const hours = Math.min(parseInt(c.req.query("hours") || "24", 10), 72);
-  const sinceTs = Date.now() - hours * 3600_000;
-
-  const SYSTEM_AGENTS = ["GitHub", "Pulse", "office-viewer", "team-viewer", "demo-viewer", "Viewer", "system"];
-
-  try {
-    const result = getAllMessages(room, 500);
-    if (!result.ok) return c.json({ error: "room_not_found" }, 404);
-    const recent = result.messages.filter((m: any) => m.ts >= sinceTs);
-    const agentMsgs = recent.filter((m: any) => !SYSTEM_AGENTS.includes(m.from) && m.type !== "SYSTEM");
-    const deploys = recent.filter((m: any) => m.from === "GitHub");
-    const uniqueAgents = [...new Set(agentMsgs.map((m: any) => m.from))];
-
-    // Pick highlight messages: prefer ones with @mentions or keywords
-    const highlights = agentMsgs
-      .filter((m: any) => m.content.length > 30)
-      .sort((a: any, b: any) => {
-        const score = (m: any) => (m.content.includes("@") ? 2 : 0) + (m.content.includes("shipped") || m.content.includes("✓") || m.content.includes("done") ? 3 : 0);
-        return score(b) - score(a);
-      })
-      .slice(0, 6);
-
-    // Build tweet thread text
-    const lines: string[] = [
-      `We ran a software company with 0 employees for ${hours}h. Here's what happened:`,
-      "",
-      `→ ${agentMsgs.length} messages between ${uniqueAgents.length} AI agents`,
-      `→ ${deploys.length} git deploys`,
-      `→ ${uniqueAgents.slice(0, 5).join(", ")} all coordinating autonomously`,
-      "",
-      "Selected moments:",
-      ...highlights.slice(0, 4).map((m: any) => `  ${m.from}: "${m.content.slice(0, 120).replace(/\n/g, " ")}"`),
-      "",
-      "Watch it live → trymesh.chat/live",
-    ];
-
-    return c.json({
-      ok: true,
-      room,
-      window_hours: hours,
-      stats: {
-        total_messages: recent.length,
-        agent_messages: agentMsgs.length,
-        deploy_count: deploys.length,
-        active_agents: uniqueAgents.length,
-        agent_names: uniqueAgents,
-      },
-      highlights: highlights.map((m: any) => ({ from: m.from, content: m.content, ts: m.ts })),
-      tweet_thread: lines.join("\n"),
-    });
-  } catch (e: any) {
-    return c.json({ error: "digest_failed", detail: e.message }, 500);
-  }
-});
-
 // GET /api/summary?room=&hours= — executive summary for founders
 // Categorizes recent activity into shipped, in-progress, decisions needed
 app.get("/api/summary", async (c) => {
@@ -2261,7 +2187,6 @@ app.get("/api/summary", async (c) => {
 app.post("/api/agent/token", async (c) => {
   const room = c.req.query("room");
   const name = c.req.query("name");
-  const observer = c.req.query("observer") === "1";
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
   // Require room admin token to issue agent tokens
   const adminHeader = c.req.header("x-admin-token") || c.req.query("admin_token") || "";
@@ -2385,15 +2310,6 @@ app.get("/demo", async (c) => {
 });
 
 // Pixel Office — game-style virtual office view
-app.get("/office", async (c) => {
-  try {
-    const html = injectAnalytics(await Bun.file("./public/office.html").text());
-    return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" } });
-  } catch (e) {
-    return c.redirect("/dashboard");
-  }
-});
-
 // ── Agent Personality Persistence (auth: caller must identify themselves) ──
 app.post("/api/personality", async (c) => {
   const name = c.req.query("name");
@@ -3833,7 +3749,6 @@ setTimeout(startSentinels, 3000);
 app.get("/api/verify-connection", (c) => {
   const room = c.req.query("room");
   const name = c.req.query("name");
-  const observer = c.req.query("observer") === "1";
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
   const presence = getRoomPresence(room);
   const agent = presence.find(a => a.agent_name === name);
