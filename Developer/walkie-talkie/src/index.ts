@@ -6,6 +6,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { z } from "zod";
 import crypto from "node:crypto";
+import { existsSync } from "node:fs";
 import {
   db,
   createRoom,
@@ -154,6 +155,12 @@ const VERSION = "2.9.0";
 
 // Agents that should never trigger join notifications (viewers, sentinels, system)
 const SYSTEM_AGENT_NAMES = new Set(["Scout", "Pulse", "Archie", "system"]);
+
+// Google Workspace via gogcli
+const GOOGLE_BACKEND = (process.env.GOOGLE_BACKEND || "gog").toLowerCase();
+const GOG_BIN = process.env.GOG_BIN || "gog";
+const GOG_ACCOUNT = process.env.GOG_ACCOUNT;
+const GOG_CLIENT = process.env.GOG_CLIENT;
 
 // Track active SSE connections
 let activeConnections = 0;
@@ -325,6 +332,68 @@ if (SECRET) {
 function checkRateLimit(key: string, max: number, windowMs: number, name?: string): boolean {
   if (name && (CREATORS.has(name) || isExemptFromRateLimit(name))) return true;
   return checkRateLimitPersistent(key, max, windowMs);
+}
+
+function buildGogArgs(args: string[], json: boolean = false): string[] {
+  const base: string[] = [];
+  if (GOG_ACCOUNT) base.push(`--account=${GOG_ACCOUNT}`);
+  if (GOG_CLIENT) base.push(`--client=${GOG_CLIENT}`);
+  if (json) base.push("--json");
+  base.push("--no-input");
+  return [...base, ...args];
+}
+
+function runGog(args: string[], json: boolean = false): { ok: boolean; stdout: string; stderr: string } {
+  const allowed = new Set([
+    "docs create",
+    "slides create",
+    "sheets create",
+    "sheets update",
+    "drive upload",
+  ]);
+  const key = `${args[0] || ""} ${args[1] || ""}`.trim();
+  if (!allowed.has(key)) {
+    return { ok: false, stdout: "", stderr: `gogcli_command_not_allowed:${key || "unknown"}` };
+  }
+  const cmd = [GOG_BIN, ...buildGogArgs(args, json)];
+  try {
+    const result = Bun.spawnSync({
+      cmd,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const stdout = new TextDecoder().decode(result.stdout);
+    const stderr = new TextDecoder().decode(result.stderr);
+    if (result.exitCode !== 0) {
+      return { ok: false, stdout, stderr };
+    }
+    return { ok: true, stdout, stderr };
+  } catch (e: any) {
+    return { ok: false, stdout: "", stderr: e?.message || "gogcli_failed" };
+  }
+}
+
+function parseJsonOutput(stdout: string): any | null {
+  try {
+    return JSON.parse(stdout);
+  } catch {
+    return null;
+  }
+}
+
+function extractId(payload: any, keys: string[]): string | null {
+  if (!payload || typeof payload !== "object") return null;
+  for (const key of keys) {
+    const value = payload[key];
+    if (typeof value === "string" && value.length > 0) return value;
+  }
+  return null;
+}
+
+function buildDocUrl(kind: "doc" | "slides" | "sheets", id: string): string {
+  if (kind === "slides") return `https://docs.google.com/presentation/d/${id}/edit`;
+  if (kind === "sheets") return `https://docs.google.com/spreadsheets/d/${id}/edit`;
+  return `https://docs.google.com/document/d/${id}/edit`;
 }
 
 // ── Duplicate message dedup ────────────────────────────────────────────────────
@@ -3117,6 +3186,146 @@ app.all("/mcp", async (c) => {
       const result = shareFile(room, name, filename, content, "text/plain", description || "");
       if (result.ok) trackAgentActivity(name, "file_share");
       return { content: [{ type: "text", text: JSON.stringify(result) }] };
+    }
+  );
+
+  // Tool: google.create_doc
+  server.tool(
+    "google.create_doc",
+    "Create a Google Doc using gogcli. Returns document ID and URL.",
+    {
+      title: z.string().describe("Document title"),
+      markdown_content: z.string().optional().describe("Optional markdown content (gogcli may not apply content)"),
+      parent_id: z.string().optional().describe("Optional Drive folder ID"),
+    },
+    async ({ title, markdown_content, parent_id }) => {
+      if (GOOGLE_BACKEND !== "gog") {
+        return { content: [{ type: "text", text: JSON.stringify({ error: "google_backend_not_supported", backend: GOOGLE_BACKEND }) }], isError: true };
+      }
+      const args = ["docs", "create", title];
+      if (parent_id) args.push(`--parent=${parent_id}`);
+      const result = runGog(args, true);
+      if (!result.ok) {
+        return { content: [{ type: "text", text: JSON.stringify({ error: "gogcli_failed", detail: result.stderr.trim() }) }], isError: true };
+      }
+      const payload = parseJsonOutput(result.stdout);
+      const id = extractId(payload, ["id", "documentId", "fileId"]);
+      const response: any = {
+        ok: true,
+        id,
+        url: id ? buildDocUrl("doc", id) : null,
+      };
+      if (markdown_content) {
+        response.warning = "gogcli docs create does not apply markdown_content. Use Drive upload or manual edit.";
+      }
+      return { content: [{ type: "text", text: JSON.stringify(response) }] };
+    }
+  );
+
+  // Tool: google.create_slides
+  server.tool(
+    "google.create_slides",
+    "Create a Google Slides deck using gogcli. Returns presentation ID and URL.",
+    {
+      title: z.string().describe("Slides title"),
+      outline: z.string().optional().describe("Optional outline text (not applied by gogcli)"),
+      parent_id: z.string().optional().describe("Optional Drive folder ID"),
+    },
+    async ({ title, outline, parent_id }) => {
+      if (GOOGLE_BACKEND !== "gog") {
+        return { content: [{ type: "text", text: JSON.stringify({ error: "google_backend_not_supported", backend: GOOGLE_BACKEND }) }], isError: true };
+      }
+      const args = ["slides", "create", title];
+      if (parent_id) args.push(`--parent=${parent_id}`);
+      const result = runGog(args, true);
+      if (!result.ok) {
+        return { content: [{ type: "text", text: JSON.stringify({ error: "gogcli_failed", detail: result.stderr.trim() }) }], isError: true };
+      }
+      const payload = parseJsonOutput(result.stdout);
+      const id = extractId(payload, ["id", "presentationId", "fileId"]);
+      const response: any = {
+        ok: true,
+        id,
+        url: id ? buildDocUrl("slides", id) : null,
+      };
+      if (outline) {
+        response.warning = "gogcli slides create does not apply outline. Populate slides manually or via a follow-up tool.";
+      }
+      return { content: [{ type: "text", text: JSON.stringify(response) }] };
+    }
+  );
+
+  // Tool: google.create_sheet
+  server.tool(
+    "google.create_sheet",
+    "Create a Google Sheet using gogcli. Optionally populates data.",
+    {
+      title: z.string().describe("Sheet title"),
+      data: z.array(z.array(z.union([z.string(), z.number(), z.boolean()]))).optional().describe("2D array of values"),
+      range: z.string().optional().describe("Optional A1 range (default: Sheet1!A1)"),
+      parent_id: z.string().optional().describe("Optional Drive folder ID"),
+    },
+    async ({ title, data, range, parent_id }) => {
+      if (GOOGLE_BACKEND !== "gog") {
+        return { content: [{ type: "text", text: JSON.stringify({ error: "google_backend_not_supported", backend: GOOGLE_BACKEND }) }], isError: true };
+      }
+      const args = ["sheets", "create", title];
+      if (parent_id) args.push(`--parent=${parent_id}`);
+      const result = runGog(args, true);
+      if (!result.ok) {
+        return { content: [{ type: "text", text: JSON.stringify({ error: "gogcli_failed", detail: result.stderr.trim() }) }], isError: true };
+      }
+      const payload = parseJsonOutput(result.stdout);
+      const id = extractId(payload, ["id", "spreadsheetId", "fileId"]);
+      const response: any = {
+        ok: true,
+        id,
+        url: id ? buildDocUrl("sheets", id) : null,
+      };
+      if (id && data && data.length > 0) {
+        const updateArgs = ["sheets", "update", id, range || "Sheet1!A1", `--values-json=${JSON.stringify(data)}`, "--input=USER_ENTERED"];
+        const updateResult = runGog(updateArgs, true);
+        if (!updateResult.ok) {
+          response.warning = "Sheet created but failed to populate data.";
+          response.populate_error = updateResult.stderr.trim();
+        } else {
+          response.populated = true;
+        }
+      }
+      return { content: [{ type: "text", text: JSON.stringify(response) }] };
+    }
+  );
+
+  // Tool: google.upload_to_drive
+  server.tool(
+    "google.upload_to_drive",
+    "Upload a local file to Google Drive using gogcli.",
+    {
+      file_path: z.string().describe("Local file path"),
+      name: z.string().optional().describe("Optional filename override"),
+      parent_id: z.string().optional().describe("Optional Drive folder ID"),
+    },
+    async ({ file_path, name: overrideName, parent_id }) => {
+      if (GOOGLE_BACKEND !== "gog") {
+        return { content: [{ type: "text", text: JSON.stringify({ error: "google_backend_not_supported", backend: GOOGLE_BACKEND }) }], isError: true };
+      }
+      if (!existsSync(file_path)) {
+        return { content: [{ type: "text", text: JSON.stringify({ error: "file_not_found" }) }], isError: true };
+      }
+      const args = ["drive", "upload", file_path];
+      if (overrideName) args.push(`--name=${overrideName}`);
+      if (parent_id) args.push(`--parent=${parent_id}`);
+      const result = runGog(args, true);
+      if (!result.ok) {
+        return { content: [{ type: "text", text: JSON.stringify({ error: "gogcli_failed", detail: result.stderr.trim() }) }], isError: true };
+      }
+      const payload = parseJsonOutput(result.stdout);
+      const id = extractId(payload, ["id", "fileId"]);
+      const response: any = {
+        ok: true,
+        id,
+      };
+      return { content: [{ type: "text", text: JSON.stringify(response) }] };
     }
   );
 
