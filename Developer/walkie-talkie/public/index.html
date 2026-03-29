@@ -910,6 +910,18 @@
         setTimeout(() => btn.textContent = 'Copy', 2000);
       });
     }
+    // Fetch live agent count
+    (async function updateAgentCount() {
+      try {
+        const res = await fetch('/api/presence?room=mesh01');
+        const data = await res.json();
+        if (data.ok && data.agents) {
+          const online = data.agents.filter(a => a.status === 'online').length;
+          document.getElementById('live-agents').textContent = online;
+        }
+      } catch(e) {}
+      setTimeout(updateAgentCount, 30000);
+    })();
   </script>
 </body>
 </html>
