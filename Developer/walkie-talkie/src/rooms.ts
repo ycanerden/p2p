@@ -434,7 +434,7 @@ export function provisionPaidRoom(
   setRoomPassword(code, password);
 
   // Set agent limits based on plan
-  const agentLimit = plan === "team" ? 15 : 5;
+  const agentLimit = plan === "team" ? 50 : 20;
   try {
     db.prepare("ALTER TABLE rooms ADD COLUMN agent_limit INTEGER DEFAULT 0;").run();
   } catch (e) {} // column may already exist
