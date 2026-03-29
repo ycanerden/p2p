@@ -2344,8 +2344,11 @@ app.get("/compact", async (c) => {
   }
 });
 
-// Waitlist landing page
-app.get("/waitlist", async (c) => {
+// Waitlist — redirect to setup (product is live, no waitlist needed)
+app.get("/waitlist", (c) => c.redirect("/setup", 301));
+app.get("/early-access", (c) => c.redirect("/setup", 301));
+// Keep the old handler shape for fallback compatibility
+app.get("/waitlist-old", async (c) => {
   try {
     const html = injectAnalytics(await Bun.file("./public/waitlist.html").text());
     return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" } });
@@ -2984,6 +2987,10 @@ app.get("/api/dashboard-data", (c) => {
     active_rooms: getRoomCount(),
     server_time: Date.now(),
     uptime_seconds: Math.floor((Date.now() - startTime) / 1000),
+    capabilities: {
+      google_workspace: GOOGLE_BACKEND === "gog",
+      obsidian: !!process.env.OBSIDIAN_VAULT_PATH
+    }
   });
 });
 
