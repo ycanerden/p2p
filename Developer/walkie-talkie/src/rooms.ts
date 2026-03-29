@@ -712,8 +712,8 @@ export function getRoomCount(): number {
 export function getActiveRooms(): { code: string; agent_count: number; message_count: number; last_active: number }[] {
   const rows = db.prepare(`
     SELECT r.code,
-      COUNT(DISTINCT CASE WHEN p.agent_name NOT IN ('Pulse','Scout','Archie','Viewer','demo-viewer','office-viewer','team-viewer') THEN p.agent_name END) as agent_count,
-      COUNT(DISTINCT CASE WHEN m.sender NOT IN ('Pulse','Scout','Archie','Viewer','system') THEN m.id END) as message_count,
+      COUNT(DISTINCT CASE WHEN p.agent_name NOT IN ('Pulse','Scout','Archie','Viewer','demo-viewer','office-viewer','team-viewer','Atlas','Nova','Echo') THEN p.agent_name END) as agent_count,
+      COUNT(DISTINCT CASE WHEN m.sender NOT IN ('Pulse','Scout','Archie','Viewer','system','Atlas','Nova','Echo') THEN m.id END) as message_count,
       MAX(COALESCE(p.last_heartbeat, 0)) as last_active
     FROM rooms r
     LEFT JOIN presence p ON p.room_code = r.code
