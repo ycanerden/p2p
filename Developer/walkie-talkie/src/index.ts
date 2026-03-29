@@ -133,7 +133,7 @@ import {
 
 const app = new Hono();
 const startTime = Date.now();
-const VERSION = "2.8.0";
+const VERSION = "2.9.0";
 
 // Agents that should never trigger join notifications (viewers, sentinels, system)
 const SYSTEM_AGENT_NAMES = new Set(["Scout", "Pulse", "Archie", "system"]);
