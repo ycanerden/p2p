@@ -238,7 +238,7 @@ app.use("*", async (c, next) => {
   const cookie = c.req.header("cookie") || "";
   const match = cookie.match(new RegExp(`mesh_admin_${room}=([^;]+)`));
   if (match) {
-    const val = decodeURIComponent(match[1]);
+    const val = decodeURIComponent(match[1] || "");
     if (verifyAdmin(room, val) || isValidPasswordSession(room, val)) { await next(); return; }
   }
   // Check query param token
@@ -662,7 +662,7 @@ app.post("/api/decisions/:id", async (c) => {
     // Post resolution to room
     const emoji = { approved: "✅", rejected: "❌", hold: "⏸️" }[status];
     const resolutionMsg = `${emoji} DECISION RESOLVED:\n${decision.description}\n**${status.toUpperCase()}** by @${name}${text ? `: ${text}` : ""}`;
-    appendMessage(room, name, resolutionMsg, null, "RESOLUTION");
+    appendMessage(room, name, resolutionMsg, undefined, "RESOLUTION");
 
     return c.json({ ok: true, decision: getDecision(id) });
   } catch (e) {
@@ -899,7 +899,7 @@ app.post("/api/heartbeat", async (c) => {
     const existing = getRoomPresence(room).find(a => a.agent_name === name);
     const wasOffline = !existing || existing.last_heartbeat < Date.now() - 300_000;
     if (wasOffline) {
-      appendMessage(room, "system", `→ ${name} joined`, null, "SYSTEM");
+      appendMessage(room, "system", `→ ${name} joined`, undefined, "SYSTEM");
     }
   }
 
@@ -2677,6 +2677,67 @@ app.get("/tasks/room/:roomCode", (c) => {
   const tasks = getRoomTasks(roomCode);
 
   return c.json({ room: roomCode, tasks, count: tasks.length });
+});
+
+// ── Project Rooms ─────────────────────────────────────────────────────────────
+app.post("/api/projects", async (c) => {
+  const body = await c.req.json();
+  const { title, brief, deadline, deliverables } = body;
+  if (!title || !brief) return c.json({ error: "title and brief are required" }, 400);
+  const code = createProjectRoom({
+    title,
+    brief,
+    deadline: deadline ? new Date(deadline).getTime() : undefined,
+    deliverables: deliverables || [],
+  });
+  appendMessage(code, "system", `📋 PROJECT: ${title}\n\n${brief}${deadline ? `\n\n⏰ Deadline: ${new Date(deadline).toLocaleDateString()}` : ""}`, undefined, "SYSTEM");
+  const project = getProjectRoom(code);
+  return c.json({ ok: true, room_code: code, project }, 201);
+});
+
+app.get("/api/projects/:code", (c) => {
+  const code = c.req.param("code");
+  const project = getProjectRoom(code);
+  if (!project) return c.json({ error: "project not found" }, 404);
+  return c.json({ ok: true, project });
+});
+
+app.post("/api/projects/:code/deliverables", async (c) => {
+  const code = c.req.param("code");
+  const { title, description, assigned_to } = await c.req.json();
+  if (!title) return c.json({ error: "title is required" }, 400);
+  const deliverable = addDeliverable(code, { title, description, assigned_to });
+  return c.json({ ok: true, deliverable }, 201);
+});
+
+app.put("/api/projects/deliverables/:id", async (c) => {
+  const id = c.req.param("id");
+  const patch = await c.req.json();
+  const deliverable = updateDeliverable(id, patch);
+  if (!deliverable) return c.json({ error: "deliverable not found" }, 404);
+  return c.json({ ok: true, deliverable });
+});
+
+app.delete("/api/projects/deliverables/:id", (c) => {
+  const id = c.req.param("id");
+  const ok = deleteDeliverable(id);
+  if (!ok) return c.json({ error: "deliverable not found" }, 404);
+  return c.json({ ok: true });
+});
+
+app.get("/api/projects/:code/deliverables", (c) => {
+  const code = c.req.param("code");
+  const deliverables = getDeliverables(code);
+  return c.json({ ok: true, deliverables });
+});
+
+app.get("/new-project", async (c) => {
+  try {
+    const html = injectAnalytics(await Bun.file("./public/new-project.html").text());
+    return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" } });
+  } catch {
+    return c.redirect("/");
+  }
 });
 
 // ── Master Dashboard Data ─────────────────────────────────────────────────────
