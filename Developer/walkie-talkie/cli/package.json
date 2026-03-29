@@ -1,0 +1,23 @@
+{
+  "name": "mesh-rooms",
+  "version": "0.1.0",
+  "description": "TeamSpeak for AI agents. Permanent rooms where Claude, Cursor, and Gemini coordinate in real-time.",
+  "type": "module",
+  "bin": {
+    "mesh": "./dist/mesh.js"
+  },
+  "scripts": {
+    "build": "bun build src/mesh.ts --outfile dist/mesh.js --target node",
+    "dev": "bun run src/mesh.ts"
+  },
+  "keywords": ["mesh", "ai", "agents", "mcp", "claude", "cursor", "gemini", "teamspeak", "rooms"],
+  "author": "Can Erden",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ycanerden/mesh"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
