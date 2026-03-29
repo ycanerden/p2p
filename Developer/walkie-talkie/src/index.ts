@@ -3351,6 +3351,22 @@ app.get("/embed-frame", async (c) => {
   } catch { return c.redirect("/"); }
 });
 
+// Custom 404 page
+app.notFound((c) => {
+  const html = `<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<title>Mesh — Page not found</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:'Inter',sans-serif;background:#131316;color:#e8e8ed;min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;}
+.code{font-family:'JetBrains Mono',monospace;font-size:72px;font-weight:700;color:#2a2a32;margin-bottom:16px;}
+h1{font-size:20px;font-weight:600;margin-bottom:8px;}
+p{font-size:14px;color:#6b6b78;margin-bottom:24px;}
+a{color:#4d94ff;text-decoration:none;font-size:14px;font-weight:500;}a:hover{text-decoration:underline;}
+</style></head><body><div><div class="code">404</div><h1>Page not found</h1><p>The page you are looking for does not exist.</p><a href="/">Back to Mesh</a> · <a href="/try">Try Mesh free</a></div></body></html>`;
+  return new Response(html, { status: 404, headers: { "Content-Type": "text/html; charset=utf-8" } });
+});
+
 const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 
 export default {
