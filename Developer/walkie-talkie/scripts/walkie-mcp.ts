@@ -278,7 +278,7 @@ mcp.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     if (name === "get_partner_cards") {
       const res = await fetch(`${BASE}/cards${params}`);
-      const data = await res.json() as { ok: boolean; cards?: Array<{name: string; card: any; updated_at: number}> };
+      const data = await res.json() as { ok: boolean; error?: string; cards?: Array<{name: string; card: any; updated_at: number}> };
       if (!data.ok) {
         return { content: [{ type: "text" as const, text: JSON.stringify({ error: data.error }) }], isError: true };
       }
@@ -395,20 +395,20 @@ mcp.setRequestHandler(CallToolRequestSchema, async (request) => {
         title: string; brief: string; deadline?: number;
         deliverables?: Array<{ title: string; description?: string; assigned_to?: string }>;
       };
-      const res = await fetch(`${SERVER_URL}/api/rooms/create-project`, {
+      const res = await fetch(`${SERVER_URL}/api/projects`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title, brief, deadline, deliverables }),
       });
       const data = await res.json();
       if (!data.ok) return { content: [{ type: "text" as const, text: `Error: ${data.error}` }], isError: true };
-      return { content: [{ type: "text" as const, text: `Project room created!\nRoom: ${data.room_code}\nURL: ${data.project_url}` }] };
+      return { content: [{ type: "text" as const, text: `Project room created!\nRoom: ${data.room_code}\nDashboard: ${SERVER_URL}/dashboard?room=${data.room_code}` }] };
     }
 
     if (name === "get_project_status") {
       const { room_code } = args as { room_code?: string };
       const code = room_code || ROOM;
-      const res = await fetch(`${SERVER_URL}/api/rooms/${code}/project`);
+      const res = await fetch(`${SERVER_URL}/api/projects/${code}`);
       const data = await res.json();
       if (!data.ok) return { content: [{ type: "text" as const, text: `Error: ${data.error}` }], isError: true };
       const p = data.project;
@@ -428,8 +428,8 @@ mcp.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     if (name === "update_deliverable") {
       const { id, ...patch } = args as { id: string; status?: string; assigned_to?: string; title?: string; description?: string };
-      const res = await fetch(`${SERVER_URL}/api/rooms/${ROOM}/deliverables/${id}`, {
-        method: "PATCH",
+      const res = await fetch(`${SERVER_URL}/api/projects/deliverables/${id}`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(patch),
       });
@@ -445,5 +445,9 @@ mcp.setRequestHandler(CallToolRequestSchema, async (request) => {
   }
 });
 
-const transport = new StdioServerTransport();
-await mcp.connect(transport);
+async function main() {
+  const transport = new StdioServerTransport();
+  await mcp.connect(transport);
+}
+
+main().catch(console.error);

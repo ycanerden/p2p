@@ -660,7 +660,8 @@ app.post("/api/decisions/:id", async (c) => {
     resolveDecision(id, status, text || "", name);
 
     // Post resolution to room
-    const emoji = { approved: "✅", rejected: "❌", hold: "⏸️" }[status];
+    const emojiMap: Record<string, string> = { approved: "✅", rejected: "❌", hold: "⏸️" };
+    const emoji = emojiMap[status] || "ℹ️";
     const resolutionMsg = `${emoji} DECISION RESOLVED:\n${decision.description}\n**${status.toUpperCase()}** by @${name}${text ? `: ${text}` : ""}`;
     appendMessage(room, name, resolutionMsg, undefined, "RESOLUTION");
 
@@ -1152,7 +1153,8 @@ app.post("/api/webhook/telegram/:code", async (c) => {
       const decision = getDecision(decisionId);
       if (decision && decision.status === "pending") {
         resolveDecision(decisionId, status, `Via Telegram by ${from}`, from);
-        const emoji = { approved: "✅", rejected: "❌", hold: "⏸️" }[status];
+        const emojiMap: Record<string, string> = { approved: "✅", rejected: "❌", hold: "⏸️" };
+        const emoji = emojiMap[status] || "ℹ️";
         const roomMsg = `${emoji} DECISION ${status.toUpperCase()} by ${from} (via Telegram):\n${decision.description}`;
         appendMessage(code, `${from} (Telegram)`, roomMsg, undefined, "RESOLUTION");
         await sendTelegramMessage(code, `${emoji} Got it — decision <b>${tgEscape(status)}</b>.\n${tgEscape(decision.description)}`);
@@ -2269,8 +2271,9 @@ app.get("/api/briefing", (c) => {
   for (const m of recent) {
     if (!m.from || m.from === "demo-viewer" || m.from === "office-viewer") continue;
     if (!byAgent[m.from]) byAgent[m.from] = { count: 0, last: "", ts: 0 };
-    byAgent[m.from].count++;
-    if (m.ts > byAgent[m.from].ts) { byAgent[m.from].ts = m.ts; byAgent[m.from].last = m.content.slice(0, 120); }
+    const agent = byAgent[m.from]!;
+    agent.count++;
+    if (m.ts > agent.ts) { agent.ts = m.ts; agent.last = m.content.slice(0, 120); }
   }
 
   const tasks = getRoomTasks(room);
@@ -2342,86 +2345,6 @@ app.get("/rooms/new", (c) => {
   });
   response.headers.set("x-admin-token", admin_token);
   return response;
-});
-
-// ── Project Rooms ─────────────────────────────────────────────────────────────
-
-// POST /api/rooms/create-project — create a project room with brief + deliverables
-app.post("/api/rooms/create-project", async (c) => {
-  const ip = c.req.header("x-forwarded-for") ?? "unknown";
-  if (!checkRateLimit(`room_create:${ip}`, 10, 60 * 60 * 1000)) {
-    return c.json({ error: "rate_limit_exceeded" }, 429);
-  }
-  const body = await c.req.json().catch(() => null);
-  if (!body?.title || !body?.brief) {
-    return c.json({ error: "title and brief are required" }, 400);
-  }
-  const code = createProjectRoom({
-    title: body.title,
-    brief: body.brief,
-    deadline: body.deadline ? Number(body.deadline) : undefined,
-    deliverables: Array.isArray(body.deliverables) ? body.deliverables : [],
-  });
-  const rawOrigin = new URL(c.req.url).origin;
-  const proto = c.req.header("x-forwarded-proto") || new URL(c.req.url).protocol.replace(":","");
-  const baseUrl = rawOrigin.replace(/^https?/, proto);
-  return c.json({
-    ok: true,
-    room_code: code,
-    project_url: `${baseUrl}/dashboard?room=${code}`,
-  });
-});
-
-// GET /api/rooms/:code/project — fetch project brief + deliverables
-app.get("/api/rooms/:code/project", (c) => {
-  const code = c.req.param("code");
-  const project = getProjectRoom(code);
-  if (!project) return c.json({ error: "room not found" }, 404);
-  if (project.mode !== "project") return c.json({ error: "not a project room" }, 400);
-  return c.json({ ok: true, project });
-});
-
-// POST /api/rooms/:code/deliverables — add a deliverable
-app.post("/api/rooms/:code/deliverables", async (c) => {
-  const code = c.req.param("code");
-  const body = await c.req.json().catch(() => null);
-  if (!body?.title) return c.json({ error: "title is required" }, 400);
-  const deliverable = addDeliverable(code, {
-    title: body.title,
-    description: body.description,
-    assigned_to: body.assigned_to,
-  });
-  return c.json({ ok: true, deliverable });
-});
-
-// GET /api/rooms/:code/deliverables — list deliverables
-app.get("/api/rooms/:code/deliverables", (c) => {
-  const code = c.req.param("code");
-  const deliverables = getDeliverables(code);
-  return c.json({ ok: true, deliverables });
-});
-
-// PATCH /api/rooms/:code/deliverables/:id — update a deliverable
-app.patch("/api/rooms/:code/deliverables/:id", async (c) => {
-  const id = c.req.param("id");
-  const body = await c.req.json().catch(() => null);
-  if (!body) return c.json({ error: "body required" }, 400);
-  const deliverable = updateDeliverable(id, {
-    title: body.title,
-    description: body.description,
-    status: body.status,
-    assigned_to: body.assigned_to,
-  });
-  if (!deliverable) return c.json({ error: "deliverable not found" }, 404);
-  return c.json({ ok: true, deliverable });
-});
-
-// DELETE /api/rooms/:code/deliverables/:id — remove a deliverable
-app.delete("/api/rooms/:code/deliverables/:id", (c) => {
-  const id = c.req.param("id");
-  const ok = deleteDeliverable(id);
-  if (!ok) return c.json({ error: "deliverable not found" }, 404);
-  return c.json({ ok: true });
 });
 
 // ── One-click demo room ──────────────────────────────────────────────────────
@@ -2616,7 +2539,7 @@ app.post("/groups/create", async (c) => {
   const { group_name, description, topic, icon, color } = await c.req.json();
   const creator = c.req.query("creator") || "unknown";
 
-  const roomCode = createRoom();
+  const { code: roomCode } = createRoom();
   const group = createRoomGroup(
     roomCode,
     group_name,
@@ -2838,7 +2761,7 @@ app.all("/mcp", async (c) => {
         }).passthrough(),
         skills: z.array(z.string()).optional(),
         availability: z.string().optional(),
-        capabilities: z.record(z.any()).optional(),
+        capabilities: z.record(z.string(), z.any()).optional(),
       }).passthrough().describe("Your Agent Card metadata")
     },
     async ({ card }) => {
@@ -2936,10 +2859,10 @@ app.all("/mcp", async (c) => {
       for (const m of recent) {
         if (!m.from || m.from === "demo-viewer" || m.from === "office-viewer") continue;
         if (!byAgent[m.from]) byAgent[m.from] = { count: 0, last: "" };
-        byAgent[m.from].count++;
-        byAgent[m.from].last = (m.content || "").slice(0, 100);
-      }
-      const tasks = getRoomTasks(room);
+        const agent = byAgent[m.from]!;
+        agent.count++;
+        agent.last = (m.content || "").slice(0, 100);
+      }      const tasks = getRoomTasks(room);
       const inProgress = tasks.filter((t: any) => t.status === "in_progress");
       const pending = tasks.filter((t: any) => t.status === "pending");
       const lines = [
@@ -3268,7 +3191,10 @@ app.all("/mcp", async (c) => {
         `Recommendation: ${recommendation}`,
       ].join("\n");
       const result = appendMessage(room, name, lines, undefined, "TASK");
-      return { content: [{ type: "text", text: JSON.stringify({ ok: true, message_id: result.id }) }] };
+      const resPayload: any = { ok: result.ok };
+      if (result.ok) resPayload.message_id = result.id;
+      else resPayload.error = result.error;
+      return { content: [{ type: "text", text: JSON.stringify(resPayload) }] };
     }
   );
 
