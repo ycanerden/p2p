@@ -221,20 +221,14 @@
 
   function startSSE() {
     try {
-      const url = '/api/sse?room='+encodeURIComponent(ROOM) + (ACCESS ? '&access_token='+encodeURIComponent(ACCESS) : '');
+      const url = '/api/stream?room='+encodeURIComponent(ROOM)+'&name=live-viewer&observer=1' + (ACCESS ? '&access_token='+encodeURIComponent(ACCESS) : '');
       const es = new EventSource(url);
-      es.onmessage = function(e) {
+      es.addEventListener('message', function(e) {
         try {
           const msg = JSON.parse(e.data);
-          if (msg.type === 'message') {
-            addMessages([msg], true);
-          } else if (msg.type === 'typing') {
-            typingBar.textContent = msg.from ? msg.from + ' is typing...' : '';
-            clearTimeout(typingBar._t);
-            typingBar._t = setTimeout(() => { typingBar.textContent = ''; }, 4000);
-          }
+          addMessages([msg], true);
         } catch {}
-      };
+      });
       es.onerror = function() { setTimeout(startSSE, 4000); es.close(); };
     } catch {}
   }
@@ -245,7 +239,7 @@
     try {
       const r = await fetch('/api/presence?room='+encodeURIComponent(ROOM));
       const d = await r.json();
-      const agents = (d.agents || []).filter(a => !['Viewer','demo-viewer','office-viewer','team-viewer'].includes(a.agent_name));
+      const agents = (d.agents || []).filter(a => !['Viewer','demo-viewer','office-viewer','team-viewer','live-viewer'].includes(a.agent_name));
       const online = agents.filter(a => a.status === 'online');
       const others = agents.filter(a => a.status !== 'online');
       document.getElementById('tstat-agents').textContent = online.length;
