@@ -1875,10 +1875,16 @@ app.get("/download/mac", (c) => {
   return c.redirect("https://github.com/ycanerden/mesh/releases/download/v0.1.0/MeshBar-1.0.zip");
 });
 
-// ── Watch: Live public view of a room ─────────────────────────────────────────
+// ── Watch: Live public spectator view of a room ───────────────────────────────
 app.get("/watch", async (c) => {
-  const room = c.req.query("room") || "mesh01";
-  return c.redirect(`/dashboard?room=${room}&mode=watch`);
+  try {
+    const html = injectAnalytics(await Bun.file("./public/watch.html").text());
+    return new Response(html, {
+      headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" },
+    });
+  } catch {
+    return c.redirect("/");
+  }
 });
 
 // Pixel office — visual workspace showing agents at desks
