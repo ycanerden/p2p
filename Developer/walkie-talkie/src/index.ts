@@ -138,6 +138,14 @@ import {
   getPendingDecisions,
   resolveDecision,
 } from "./room-manager.js";
+import {
+  appendDecision,
+  appendShip,
+  upsertAgentContext,
+  appendDailyLog,
+  getAgentContext,
+  obsidianEnabled,
+} from "./obsidian-memory.js";
 
 const app = new Hono();
 const startTime = Date.now();
@@ -1477,6 +1485,59 @@ app.post("/api/productivity/log", async (c) => {
   if (!validActivities.includes(activity)) return c.json({ error: "invalid activity type", valid: validActivities }, 400);
   trackAgentActivity(name, activity, value || 1);
   return c.json({ ok: true, logged: activity, value: value || 1 });
+});
+
+// ── Obsidian Memory (S1) ─────────────────────────────────────────────────────
+app.post("/api/memory/write", async (c) => {
+  if (!obsidianEnabled()) return c.json({ ok: false, error: "obsidian_disabled" }, 400);
+
+  const room = c.req.query("room");
+  const name = c.req.query("name");
+  if (!room || !name) return c.json({ error: "missing room or name" }, 400);
+
+  const body = await c.req.json().catch(() => ({}));
+  const type = (body.type || "").toString();
+
+  if (type === "decision") {
+    const summary = (body.summary || "").toString();
+    const rationale = (body.rationale || "").toString();
+    const tags = Array.isArray(body.tags) ? body.tags.map((t: any) => String(t)) : [];
+    const result = await appendDecision(room, name, summary, rationale, tags);
+    return c.json(result, result.ok ? 200 : 400);
+  }
+
+  if (type === "ship") {
+    const title = (body.title || "").toString();
+    const filesChanged = Array.isArray(body.files_changed) ? body.files_changed.map((f: any) => String(f)) : [];
+    const notes = body.notes ? String(body.notes) : undefined;
+    const result = await appendShip(room, name, title, filesChanged, notes);
+    return c.json(result, result.ok ? 200 : 400);
+  }
+
+  if (type === "context") {
+    const agentName = (body.agent || name).toString();
+    const context = (body.content || "").toString();
+    const result = await upsertAgentContext(agentName, room, context);
+    return c.json(result, result.ok ? 200 : 400);
+  }
+
+  if (type === "log") {
+    const entry = (body.entry || body.content || "").toString();
+    const result = await appendDailyLog(room, entry, name);
+    return c.json(result, result.ok ? 200 : 400);
+  }
+
+  return c.json({ ok: false, error: "invalid_type", valid: ["decision", "ship", "context", "log"] }, 400);
+});
+
+app.get("/api/memory/context", async (c) => {
+  if (!obsidianEnabled()) return c.json({ ok: false, error: "obsidian_disabled" }, 400);
+
+  const agent = c.req.query("agent");
+  if (!agent) return c.json({ ok: false, error: "missing_agent" }, 400);
+
+  const result = await getAgentContext(agent);
+  return c.json(result, result.ok ? 200 : 400);
 });
 
 app.get("/api/stream", async (c) => {
@@ -2844,6 +2905,63 @@ app.all("/mcp", async (c) => {
           },
         ],
       };
+    }
+  );
+
+  // Tool: memory.write_entry
+  server.tool(
+    "memory.write_entry",
+    "Write a structured memory entry to the Obsidian vault (if enabled).",
+    {
+      type: z.enum(["decision", "ship", "context", "log"]).describe("Entry type"),
+      summary: z.string().optional().describe("Decision summary"),
+      rationale: z.string().optional().describe("Decision rationale"),
+      tags: z.array(z.string()).optional().describe("Decision tags"),
+      title: z.string().optional().describe("Ship title"),
+      files_changed: z.array(z.string()).optional().describe("Files changed"),
+      notes: z.string().optional().describe("Ship notes"),
+      agent: z.string().optional().describe("Agent name (for context)"),
+      content: z.string().optional().describe("Context content"),
+      entry: z.string().optional().describe("Log entry"),
+    },
+    async ({ type, summary, rationale, tags, title, files_changed, notes, agent, content, entry }) => {
+      if (!obsidianEnabled()) {
+        return { content: [{ type: "text", text: JSON.stringify({ ok: false, error: "obsidian_disabled" }) }], isError: true };
+      }
+
+      if (type === "decision") {
+        const result = await appendDecision(room, name, summary || "", rationale || "", tags || []);
+        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+      }
+
+      if (type === "ship") {
+        const result = await appendShip(room, name, title || "", files_changed || [], notes);
+        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+      }
+
+      if (type === "context") {
+        const result = await upsertAgentContext(agent || name, room, content || "");
+        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+      }
+
+      const result = await appendDailyLog(room, entry || content || "", name);
+      return { content: [{ type: "text", text: JSON.stringify(result) }] };
+    }
+  );
+
+  // Tool: memory.get_context
+  server.tool(
+    "memory.get_context",
+    "Read an agent context entry from the Obsidian vault (if enabled).",
+    {
+      agent: z.string().optional().describe("Agent name (defaults to self)"),
+    },
+    async ({ agent }) => {
+      if (!obsidianEnabled()) {
+        return { content: [{ type: "text", text: JSON.stringify({ ok: false, error: "obsidian_disabled" }) }], isError: true };
+      }
+      const result = await getAgentContext(agent || name);
+      return { content: [{ type: "text", text: JSON.stringify(result) }] };
     }
   );
 
