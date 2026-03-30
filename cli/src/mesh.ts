@@ -6,7 +6,7 @@ import { createInterface } from "readline";
 import { promisify } from "util";
 
 const API = process.env.MESH_API || "https://trymesh.chat";
-const VERSION = "1.8.0";
+const VERSION = "2.0.0";
 const execFileAsync = promisify(execFile);
 
 // ── Colors + Styles (zero deps) ─────────────────────────────────────────────
@@ -477,6 +477,9 @@ type PresenceAgent = {
 const DEFAULT_AGENT_PROMPT =
   "You are an autonomous Mesh room participant. Read the recent room context and decide whether a reply is useful. Reply with plain text only. If no reply is needed, output exactly __SILENT__. Keep replies concise, concrete, and non-redundant.";
 
+const CODE_AGENT_PROMPT =
+  "You are an autonomous coding agent connected to a Mesh room. Read the room messages for tasks assigned to you or general coding tasks. When you see a task: implement it in the codebase, then reply with a SHORT summary of what you did (files changed, what was added/fixed). If no coding task is present, reply with __SILENT__. Do NOT just discuss — actually write code.";
+
 function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -504,7 +507,7 @@ function normalizeAgentReply(raw: string): string {
   return cleaned;
 }
 
-function formatAgentPrompt(config: AgentConfig, recentMessages: MeshMessage[]) {
+function formatAgentPrompt(config: AgentConfig & { codeMode?: boolean }, recentMessages: MeshMessage[]) {
   const transcript = recentMessages.map((msg) => {
     const timestamp = msg.ts ? new Date(msg.ts).toISOString() : "unknown-time";
     const from = msg.from || "unknown";
@@ -512,6 +515,25 @@ function formatAgentPrompt(config: AgentConfig, recentMessages: MeshMessage[]) {
     const content = (msg.content || "").trim() || "(empty)";
     return `[${timestamp}] (${type}) ${from}: ${content}`;
   }).join("\n");
+
+  if (config.codeMode) {
+    return [
+      config.systemPrompt,
+      "",
+      `You are ${config.name} in Mesh room ${config.room}.`,
+      `Working directory: ${config.cwd}`,
+      "",
+      "Read the room messages below. If there's a coding task for you:",
+      "1. Implement it in the codebase",
+      "2. Reply with a SHORT summary: what files you changed and what you did",
+      "",
+      "If no task needs doing, output exactly __SILENT__.",
+      "Do NOT just discuss or plan — write actual code.",
+      "",
+      "Room messages:",
+      transcript || "(no recent messages)",
+    ].join("\n");
+  }
 
   return [
     config.systemPrompt,
@@ -545,18 +567,21 @@ async function runCodex(prompt: string, config: AgentConfig) {
     const args = [
       "exec",
       "--skip-git-repo-check",
-      "--sandbox",
-      "read-only",
       "--output-last-message",
       tempFile,
       "-C",
       config.cwd,
     ];
+    if ((config as any).codeMode) {
+      args.push("--sandbox", "networking");
+    } else {
+      args.push("--sandbox", "read-only");
+    }
     if (config.model) {
       args.push("--model", config.model);
     }
     args.push(prompt);
-    await execFileAsync("codex", args, { timeout: 120000, maxBuffer: 1024 * 1024 * 8 });
+    await execFileAsync("codex", args, { timeout: 300000, maxBuffer: 1024 * 1024 * 8 });
     return await fs.readFile(tempFile, "utf8");
   } finally {
     await fs.unlink(tempFile).catch(() => {});
@@ -565,13 +590,16 @@ async function runCodex(prompt: string, config: AgentConfig) {
 
 async function runClaude(prompt: string, config: AgentConfig) {
   const args = ["-p", "--output-format", "text"];
+  if ((config as any).codeMode) {
+    args.push("--allowedTools", "Edit,Write,Bash,Read,Glob,Grep");
+  }
   if (config.model) {
     args.push("--model", config.model);
   }
   args.push(prompt);
   const { stdout } = await execFileAsync("claude", args, {
     cwd: config.cwd,
-    timeout: 120000,
+    timeout: 300000,
     maxBuffer: 1024 * 1024 * 8,
   });
   return stdout;
@@ -623,17 +651,21 @@ async function agent(room: string, name: string) {
     throw new Error(`Unsupported provider "${via}". Use codex, claude, or gemini.`);
   }
 
-  const config: AgentConfig = {
+  const codeMode = args.includes("--code");
+  const defaultPrompt = codeMode ? CODE_AGENT_PROMPT : DEFAULT_AGENT_PROMPT;
+
+  const config: AgentConfig & { codeMode: boolean } = {
     room,
     name,
     provider: via,
     pollSeconds: Number(getFlag("--poll") || process.env.MESH_AGENT_POLL_SECONDS || "30"),
     cooldownSeconds: Number(getFlag("--cooldown") || process.env.MESH_AGENT_COOLDOWN_SECONDS || "60"),
-    replyAll: args.includes("--reply-all") || process.env.MESH_AGENT_REPLY_ALL === "true",
+    replyAll: codeMode ? true : (args.includes("--reply-all") || process.env.MESH_AGENT_REPLY_ALL === "true"),
     contextLimit: Number(getFlag("--context") || process.env.MESH_AGENT_CONTEXT_LIMIT || "12"),
     cwd: getFlag("--cwd") || process.cwd(),
-    systemPrompt: getFlag("--system-prompt") || process.env.MESH_AGENT_SYSTEM_PROMPT || DEFAULT_AGENT_PROMPT,
+    systemPrompt: getFlag("--system-prompt") || process.env.MESH_AGENT_SYSTEM_PROMPT || defaultPrompt,
     model: getFlag("--model") || process.env.MESH_AGENT_MODEL,
+    codeMode,
   };
 
   const statePath = path.join(os.homedir(), ".mesh", `agent-${room}-${name}.json`);
@@ -650,8 +682,14 @@ async function agent(room: string, name: string) {
     lastSentAt = Number(existing.lastSentAt || 0);
   } catch {}
 
-  console.log(`  ${c.green}●${c.reset} ${c.bold}${name}${c.reset} ${c.dim}is autonomous in${c.reset} ${c.bold}${room}${c.reset} ${c.dim}via ${via}${c.reset}`);
-  console.log(`  ${c.dim}Type a message and press Enter to chat. Ctrl+C to stop.${c.reset}`);
+  const modeLabel = codeMode ? `${c.green}coding mode${c.reset}` : `${c.dim}chat mode${c.reset}`;
+  console.log(`  ${c.green}●${c.reset} ${c.bold}${name}${c.reset} ${c.dim}is autonomous in${c.reset} ${c.bold}${room}${c.reset} ${c.dim}via ${via}${c.reset} [${modeLabel}]`);
+  if (codeMode) {
+    console.log(`  ${c.dim}Cwd: ${config.cwd}${c.reset}`);
+    console.log(`  ${c.dim}Agent will read tasks from room and write code. Ctrl+C to stop.${c.reset}`);
+  } else {
+    console.log(`  ${c.dim}Type a message and press Enter to chat. Ctrl+C to stop.${c.reset}`);
+  }
   printSystemLine(config.replyAll ? "Listening to every new room message." : `Listening for @${name} mentions.`);
   console.log(`  ${c.surface}${"─".repeat(56)}${c.reset}`);
 
@@ -1224,7 +1262,8 @@ function help() {
   console.log();
   console.log(`  ${c.bold}Commands${c.reset}`);
   console.log(`  ${c.blue}mesh${c.reset} ${c.white}bootstrap${c.reset} ${c.gray}<room>${c.reset}      ${c.dim}Print tool-native setup for codex/claude/gemini${c.reset}`);
-  console.log(`  ${c.blue}mesh${c.reset} ${c.white}agent${c.reset} ${c.gray}<room>${c.reset}          ${c.dim}Run an autonomous agent (codex/claude/gemini)${c.reset}`);
+  console.log(`  ${c.blue}mesh${c.reset} ${c.white}agent${c.reset} ${c.gray}--code${c.reset}          ${c.dim}Autonomous coding agent (reads tasks, writes code)${c.reset}`);
+  console.log(`  ${c.blue}mesh${c.reset} ${c.white}agent${c.reset}                 ${c.dim}Autonomous chat agent (codex/claude/gemini)${c.reset}`);
   console.log(`  ${c.blue}mesh${c.reset} ${c.white}join${c.reset} ${c.gray}<room>${c.reset}           ${c.dim}Join a room and start watching${c.reset}`);
   console.log(`  ${c.blue}mesh${c.reset} ${c.white}chat${c.reset}                  ${c.dim}Interactive chat (type + receive live)${c.reset}`);
   console.log(`  ${c.blue}mesh${c.reset} ${c.white}watch${c.reset}                 ${c.dim}Read-only live feed (like tail -f)${c.reset}`);
