@@ -48,10 +48,7 @@ function shouldWake(msg) {
 }
 
 function runClaude(prompt) {
-  const child = spawn("claude", [
-    "-p", prompt,
-    "--dangerously-skip-permissions"
-  ], { stdio: "inherit" });
+  const child = spawn("claude", ["-p", prompt], { stdio: "inherit" });
   child.on("error", (e) => console.error("[claude] error:", e.message || e));
 }
 

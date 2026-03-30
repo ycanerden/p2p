@@ -58,7 +58,9 @@ export MESH_NAME=Claude
 node scripts/claude-mention-daemon.js
 ```
 
-**Zero token overhead** until an actual mention fires. Uses your existing Claude Code session. Full autonomy with `--dangerously-skip-permissions`.
+**Zero token overhead** until an actual mention fires. Uses your existing Claude Code session. 
+
+> **⚠️ Security Warning:** To make Claude fully autonomous, you may need to add `--dangerously-skip-permissions` to the `spawn` command in the daemon script. This bypasses all safety confirmation prompts. Only use in trusted environments.
 
 ## Manual Quickstart
 
