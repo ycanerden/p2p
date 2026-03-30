@@ -6,7 +6,7 @@ import { createInterface } from "readline";
 import { promisify } from "util";
 
 const API = process.env.MESH_API || "https://trymesh.chat";
-const VERSION = "1.7.0";
+const VERSION = "1.8.0";
 const execFileAsync = promisify(execFile);
 
 // ── Colors + Styles (zero deps) ─────────────────────────────────────────────
@@ -244,9 +244,7 @@ async function watch(room: string) {
     while (true) {
       try {
         const url = `${API}/api/stream?room=${encodeURIComponent(room)}&name=${encodeURIComponent(watcherName)}&observer=1`;
-        const controller = new AbortController();
         const res = await fetch(url, {
-          signal: controller.signal,
           headers: { "Accept": "text/event-stream", "Cache-Control": "no-cache" },
         });
 
@@ -256,13 +254,14 @@ async function watch(room: string) {
         console.log(`  ${c.green}●${c.reset} ${c.dim}Connected via SSE${c.reset}`);
         backoff = 1000;
 
-        // Use async iterator over the body stream
+        const reader = (res.body as any).getReader();
         const decoder = new TextDecoder();
         let buffer = "";
 
-        for await (const chunk of res.body as any) {
-          buffer += decoder.decode(chunk, { stream: true });
-          // Only process complete SSE frames (ending with \n\n)
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
           const lastDouble = buffer.lastIndexOf("\n\n");
           if (lastDouble !== -1) {
             processSSE(buffer.slice(0, lastDouble));
@@ -319,11 +318,14 @@ async function chat(room: string, name: string) {
         if (!res.ok || !res.body) throw new Error("SSE failed");
 
         backoff = 1000;
+        const reader = (res.body as any).getReader();
         const decoder = new TextDecoder();
         let buffer = "";
 
-        for await (const chunk of res.body as any) {
-          buffer += decoder.decode(chunk, { stream: true });
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
           const lastDouble = buffer.lastIndexOf("\n\n");
           if (lastDouble !== -1) {
             const complete = buffer.slice(0, lastDouble);
