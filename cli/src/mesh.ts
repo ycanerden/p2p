@@ -6,7 +6,7 @@ import { createInterface } from "readline";
 import { promisify } from "util";
 
 const API = process.env.MESH_API || "https://trymesh.chat";
-const VERSION = "1.4.0";
+const VERSION = "1.5.0";
 const execFileAsync = promisify(execFile);
 
 // ── Colors + Styles (zero deps) ─────────────────────────────────────────────
@@ -1099,24 +1099,60 @@ async function interactive() {
   await api(`/api/heartbeat?room=${room}&name=${encodeURIComponent(safeName)}`, { method: "POST" }).catch(() => {});
   spinner.stop(`${c.cyan}${safeName}${c.reset} is in ${c.bold}${room}${c.reset}`);
 
-  // ── Step 4: Show copy-paste config ──────────────────────────────────────
+  // ── Step 4: Auto-configure AI tool ──────────────────────────────────────
   console.log();
 
   if (tool !== "watch") {
     const mcpUrl = `${API}/mcp?room=${room}&name=${encodeURIComponent(safeName)}`;
     const configLabel = tool === "claude" ? "Claude Code" : tool === "codex" ? "Codex" : "Gemini CLI";
-
-    console.log(box(
-      `${c.bold}Paste this into your ${configLabel} MCP settings:${c.reset}\n\n${c.cyan}{\n  "mcpServers": {\n    "mesh": {\n      "url": "${mcpUrl}"\n    }\n  }\n}${c.reset}`,
-      `Step 1 — Connect ${configLabel}`
-    ));
+    let autoConfigured = false;
 
     if (tool === "claude") {
-      console.log(`  ${c.dim}File: ~/.claude/settings.json (global) or .claude/settings.json (project)${c.reset}`);
+      // Auto-write to ~/.claude/settings.json
+      const claudeSettingsPath = path.join(os.homedir(), ".claude", "settings.json");
+      try {
+        let settings: any = {};
+        try { settings = JSON.parse(readFileSync(claudeSettingsPath, "utf8")); } catch {}
+        if (!settings.mcpServers) settings.mcpServers = {};
+        settings.mcpServers.mesh = { url: mcpUrl };
+        mkdirSync(path.dirname(claudeSettingsPath), { recursive: true });
+        writeFileSync(claudeSettingsPath, JSON.stringify(settings, null, 2));
+        console.log(`  ${c.green}*${c.reset} ${c.bold}Auto-configured Claude Code${c.reset}`);
+        console.log(`  ${c.dim}Wrote mesh MCP to ~/.claude/settings.json${c.reset}`);
+        autoConfigured = true;
+      } catch (e: any) {
+        console.log(`  ${c.yellow}*${c.reset} ${c.dim}Could not auto-configure: ${e.message}${c.reset}`);
+      }
+    }
+
+    if (tool === "codex") {
+      // Auto-write to ~/.codex/config.json
+      const codexConfigPath = path.join(os.homedir(), ".codex", "config.json");
+      try {
+        let settings: any = {};
+        try { settings = JSON.parse(readFileSync(codexConfigPath, "utf8")); } catch {}
+        if (!settings.mcpServers) settings.mcpServers = {};
+        settings.mcpServers.mesh = { url: mcpUrl };
+        mkdirSync(path.dirname(codexConfigPath), { recursive: true });
+        writeFileSync(codexConfigPath, JSON.stringify(settings, null, 2));
+        console.log(`  ${c.green}*${c.reset} ${c.bold}Auto-configured Codex${c.reset}`);
+        console.log(`  ${c.dim}Wrote mesh MCP to ~/.codex/config.json${c.reset}`);
+        autoConfigured = true;
+      } catch (e: any) {
+        console.log(`  ${c.yellow}*${c.reset} ${c.dim}Could not auto-configure: ${e.message}${c.reset}`);
+      }
+    }
+
+    if (!autoConfigured) {
+      // Fallback: show copy-paste config
+      console.log(box(
+        `${c.bold}Add this to your ${configLabel} MCP settings:${c.reset}\n\n${c.cyan}{\n  "mcpServers": {\n    "mesh": {\n      "url": "${mcpUrl}"\n    }\n  }\n}${c.reset}`,
+        `Connect ${configLabel}`
+      ));
     }
 
     console.log();
-    console.log(`  ${c.bold}${c.green}Step 2${c.reset} ${c.dim}— Restart ${configLabel} to pick up the config${c.reset}`);
+    console.log(`  ${c.bold}${c.green}>>>${c.reset} ${c.bold}Restart ${configLabel} to connect your agent${c.reset}`);
   }
 
   // ── Step 5: Watch + Invite ──────────────────────────────────────────────
