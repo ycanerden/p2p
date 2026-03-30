@@ -6,7 +6,7 @@ import { createInterface } from "readline";
 import { promisify } from "util";
 
 const API = process.env.MESH_API || "https://trymesh.chat";
-const VERSION = "1.3.0";
+const VERSION = "1.4.0";
 const execFileAsync = promisify(execFile);
 
 // ── Colors + Styles (zero deps) ─────────────────────────────────────────────
@@ -1044,61 +1044,123 @@ async function interactive() {
   console.log(`  ${c.dim}v${VERSION} — TeamSpeak for AI agents${c.reset}`);
   console.log();
 
-  // Step 1: Create or join?
+  // ── Step 1: Create or Join ──────────────────────────────────────────────
   const action = await choose("What do you want to do?", [
     "Create a new room",
     "Join an existing room",
   ]);
 
   let room: string;
+  let token: string | undefined;
 
   if (action === 0) {
-    // Create room
     const spinner = new Spinner("Creating room...").start();
     const res = await fetch(`${API}/rooms/new`);
     if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
     const data = await res.json();
     room = data.room || data.code;
+    token = res.headers.get("x-admin-token") || data.admin_token;
     spinner.stop(`Room ${c.bold}${room}${c.reset} created`);
   } else {
-    // Join room
     room = await ask("Room code:");
     if (!room) { console.error(`  ${c.red}*${c.reset} Room code is required.`); process.exit(1); }
   }
 
-  // Step 2: Agent name
-  const name = await ask("Your agent name:", os.hostname().split(".")[0]);
+  console.log();
 
-  // Step 3: Which AI tool?
-  const toolIdx = await choose("Which AI tool are you using?", [
+  // ── Step 2: Your name ───────────────────────────────────────────────────
+  const name = await ask(
+    `${c.bold}Name your agent${c.reset} ${c.dim}(this is how you'll appear in the room):${c.reset}`,
+    os.hostname().split(".")[0]
+  );
+  const safeName = name.replace(/\s+/g, "-").toLowerCase();
+
+  // ── Step 3: Which AI tool ───────────────────────────────────────────────
+  console.log();
+  const toolIdx = await choose("Which AI tool do you use?", [
     `${c.blue}Claude Code${c.reset}`,
     `${c.green}Codex${c.reset}`,
     `${c.yellow}Gemini CLI${c.reset}`,
-    `${c.dim}None — just watch${c.reset}`,
+    `${c.dim}None — just watching${c.reset}`,
   ]);
   const tools = ["claude", "codex", "gemini", "watch"] as const;
   const tool = tools[toolIdx];
 
+  // Save config
+  const config = loadConfig();
+  config.defaultRoom = room;
+  config.defaultName = safeName;
+  if (!config.rooms) config.rooms = {};
+  config.rooms[room] = { adminToken: token || undefined, createdAt: new Date().toISOString() };
+  saveConfig(config);
+
+  // Join / heartbeat
+  const spinner = new Spinner("Connecting...").start();
+  await api(`/api/heartbeat?room=${room}&name=${encodeURIComponent(safeName)}`, { method: "POST" }).catch(() => {});
+  spinner.stop(`${c.cyan}${safeName}${c.reset} is in ${c.bold}${room}${c.reset}`);
+
+  // ── Step 4: Show copy-paste config ──────────────────────────────────────
   console.log();
 
-  if (tool === "watch") {
-    // Just join and watch
-    const spinner = new Spinner("Connecting...").start();
-    await api(`/api/join?room=${room}&name=${encodeURIComponent(name)}`, { method: "POST" });
-    spinner.stop(`${c.cyan}${name}${c.reset} is in ${c.bold}${room}${c.reset}`);
-    console.log();
+  if (tool !== "watch") {
+    const mcpUrl = `${API}/mcp?room=${room}&name=${encodeURIComponent(safeName)}`;
+    const configLabel = tool === "claude" ? "Claude Code" : tool === "codex" ? "Codex" : "Gemini CLI";
+
     console.log(box(
-      `${c.dim}Share with your team:${c.reset}\n${c.white}npx mesh-rooms join ${room}${c.reset}`,
-      "Invite"
+      `${c.bold}Paste this into your ${configLabel} MCP settings:${c.reset}\n\n${c.cyan}{\n  "mcpServers": {\n    "mesh": {\n      "url": "${mcpUrl}"\n    }\n  }\n}${c.reset}`,
+      `Step 1 — Connect ${configLabel}`
     ));
+
+    if (tool === "claude") {
+      console.log(`  ${c.dim}File: ~/.claude/settings.json (global) or .claude/settings.json (project)${c.reset}`);
+    }
+
     console.log();
-    await watch(room);
-  } else {
-    // Tool-native bootstrap mode
-    const spinner = new Spinner("Connecting...").start();
-    await api(`/api/heartbeat?room=${room}&name=${encodeURIComponent(name)}`, { method: "POST" });
-    spinner.stop(`${c.cyan}${name}${c.reset} is live in ${c.bold}${room}${c.reset} via ${c.blue}${tool}${c.reset}`);
-    await bootstrap(room, name, tool);
+    console.log(`  ${c.bold}${c.green}Step 2${c.reset} ${c.dim}— Restart ${configLabel} to pick up the config${c.reset}`);
+  }
+
+  // ── Step 5: Watch + Invite ──────────────────────────────────────────────
+  console.log();
+  console.log(box(
+    [
+      `${c.bold}Watch the room:${c.reset}`,
+      `${c.white}npx mesh-rooms watch${c.reset}`,
+      ``,
+      `${c.bold}Chat in the room:${c.reset}`,
+      `${c.white}npx mesh-rooms chat${c.reset}`,
+      ``,
+      `${c.bold}Invite a friend:${c.reset}`,
+      `${c.white}npx mesh-rooms join ${room}${c.reset}`,
+      ``,
+      `${c.bold}Web:${c.reset}`,
+      `${c.blue}${API}/office?room=${room}${c.reset}`,
+    ].join("\n"),
+    "What's next"
+  ));
+
+  if (token) {
+    console.log(`  ${c.yellow}*${c.reset} ${c.dim}Admin token:${c.reset} ${c.gray}${token}${c.reset}`);
+  }
+
+  console.log();
+  console.log(`  ${c.dim}Config saved — all commands now default to ${c.reset}${c.bold}${room}${c.reset}${c.dim} as ${c.reset}${c.bold}${safeName}${c.reset}`);
+  console.log();
+  console.log(`  ${c.surface}${"─".repeat(50)}${c.reset}`);
+
+  // ── Step 6: Prompt what to do ───────────────────────────────────────────
+  if (process.stdin.isTTY) {
+    const next = await choose("What now?", [
+      `${c.green}Watch the room live${c.reset}`,
+      `${c.blue}Chat in the room${c.reset}`,
+      `${c.dim}Done${c.reset}`,
+    ]);
+
+    console.log();
+    if (next === 0) {
+      await watch(room);
+    } else if (next === 1) {
+      await chat(room, safeName);
+    }
   }
 }
 
