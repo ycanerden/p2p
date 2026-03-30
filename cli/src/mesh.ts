@@ -6,7 +6,7 @@ import { createInterface } from "readline";
 import { promisify } from "util";
 
 const API = process.env.MESH_API || "https://trymesh.chat";
-const VERSION = "1.0.0";
+const VERSION = "1.1.0";
 const execFileAsync = promisify(execFile);
 
 // ── Colors + Styles (zero deps) ─────────────────────────────────────────────
@@ -722,38 +722,90 @@ async function init() {
     console.log(`  ${art}   ${info}`);
   }
 
-  console.log();
-  console.log(box(
-    `${c.cyan}{\n  "mcpServers": {\n    "mesh": {\n      "url": "${API}/mcp?room=${room}&name=YOUR_AGENT_NAME"\n    }\n  }\n}${c.reset}`,
-    "MCP Config — paste into settings.json"
-  ));
-
-  console.log();
-  console.log(`  ${c.bold}${c.green}Step 2${c.reset} ${c.dim}— Restart your AI tool to pick up the config${c.reset}`);
-  console.log();
-  console.log(`  ${c.bold}${c.green}Step 3${c.reset} ${c.dim}— Watch your agents talk:${c.reset}`);
-  console.log(`         ${c.blue}mesh watch ${room}${c.reset}`);
-  console.log();
-  console.log(`  ${c.surface}${"─".repeat(50)}${c.reset}`);
-  console.log(`  ${c.dim}Other ways to use your room:${c.reset}`);
-  console.log(`  ${c.dim}Chat:${c.reset}   ${c.blue}mesh send ${room} "hello team"${c.reset}`);
-  console.log(`  ${c.dim}Status:${c.reset} ${c.blue}mesh status ${room}${c.reset}`);
-  console.log(`  ${c.dim}Web:${c.reset}    ${c.blue}${API}/try?room=${room}${c.reset}`);
-
-  if (token) {
-    console.log();
-    console.log(`  ${c.yellow}*${c.reset} ${c.dim}Admin token (save this):${c.reset}`);
-    console.log(`  ${c.gray}${token}${c.reset}`);
-  }
-
-  // Save to persistent config
+  // Save to persistent config first
   const config = loadConfig();
   config.defaultRoom = room;
   if (!config.rooms) config.rooms = {};
   config.rooms[room] = { adminToken: token || undefined, createdAt: new Date().toISOString() };
   saveConfig(config);
-  console.log(`  ${c.dim}Saved to ~/.config/mesh/config.json${c.reset}`);
 
+  // ── Step 1: MCP Config ──────────────────────────────────────────────────
+  console.log();
+  console.log(box(
+    `${c.cyan}{\n  "mcpServers": {\n    "mesh": {\n      "url": "${API}/mcp?room=${room}&name=YOUR_AGENT_NAME"\n    }\n  }\n}${c.reset}`,
+    "Step 1 — Paste into your AI tool's settings.json"
+  ));
+
+  console.log();
+  console.log(`  ${c.bold}${c.green}Step 2${c.reset} ${c.dim}— Restart your AI tool to pick up the config${c.reset}`);
+
+  // ── Invite box ──────────────────────────────────────────────────────────
+  console.log();
+  console.log(box(
+    [
+      `${c.bold}Share with teammates:${c.reset}`,
+      ``,
+      `${c.white}npx mesh-rooms join ${room}${c.reset}          ${c.dim}CLI${c.reset}`,
+      `${c.white}${API}/try?room=${room}${c.reset}   ${c.dim}Web${c.reset}`,
+      `${c.white}${API}/office?room=${room}${c.reset}   ${c.dim}Live office view${c.reset}`,
+    ].join("\n"),
+    "Invite"
+  ));
+
+  if (token) {
+    console.log();
+    console.log(`  ${c.yellow}*${c.reset} ${c.dim}Admin token:${c.reset} ${c.gray}${token}${c.reset}`);
+  }
+
+  console.log(`  ${c.dim}Room saved to config — all commands now default to ${c.reset}${c.bold}${room}${c.reset}`);
+
+  // ── Prompt to watch ─────────────────────────────────────────────────────
+  console.log();
+  console.log(`  ${c.surface}${"─".repeat(50)}${c.reset}`);
+
+  if (process.stdin.isTTY) {
+    const action = await choose("What next?", [
+      `${c.green}Watch the room live${c.reset}`,
+      `${c.blue}Open web dashboard${c.reset}`,
+      `${c.dim}Done for now${c.reset}`,
+    ]);
+
+    if (action === 0) {
+      console.log();
+      await watch(room);
+    } else if (action === 1) {
+      const url = `${API}/office?room=${room}`;
+      console.log(`  ${c.blue}*${c.reset} Opening ${url}`);
+      const { exec } = await import("child_process");
+      const cmd = process.platform === "darwin" ? "open" : process.platform === "win32" ? "start" : "xdg-open";
+      exec(`${cmd} ${url}`);
+    }
+  } else {
+    console.log(`  ${c.dim}Watch:${c.reset}  ${c.blue}mesh watch${c.reset}`);
+    console.log(`  ${c.dim}Chat:${c.reset}   ${c.blue}mesh send "hello team"${c.reset}`);
+    console.log();
+  }
+}
+
+async function invite(room: string) {
+  console.log();
+  console.log(box(
+    [
+      `${c.bold}${c.white}${room}${c.reset}`,
+      ``,
+      `${c.bold}For teammates (CLI):${c.reset}`,
+      `${c.white}npx mesh-rooms join ${room}${c.reset}`,
+      ``,
+      `${c.bold}For AI agents (MCP config):${c.reset}`,
+      `${c.cyan}{\n  "mcpServers": {\n    "mesh": {\n      "url": "${API}/mcp?room=${room}&name=AGENT_NAME"\n    }\n  }\n}${c.reset}`,
+      ``,
+      `${c.bold}Web links:${c.reset}`,
+      `${c.blue}${API}/try?room=${room}${c.reset}       ${c.dim}Try it${c.reset}`,
+      `${c.blue}${API}/office?room=${room}${c.reset}    ${c.dim}Live office${c.reset}`,
+      `${c.blue}${API}/dashboard?room=${room}${c.reset} ${c.dim}Dashboard${c.reset}`,
+    ].join("\n"),
+    "Invite to Mesh"
+  ));
   console.log();
 }
 
@@ -942,7 +994,9 @@ function help() {
   console.log(`  ${c.blue}mesh${c.reset} ${c.white}send${c.reset} ${c.gray}<room> "msg"${c.reset}     ${c.dim}Send a message${c.reset}`);
   console.log(`  ${c.blue}mesh${c.reset} ${c.white}status${c.reset} ${c.gray}<room>${c.reset}         ${c.dim}Room info + online agents${c.reset}`);
   console.log(`  ${c.blue}mesh${c.reset} ${c.white}init${c.reset}                  ${c.dim}Create a new room${c.reset}`);
-  console.log(`  ${c.blue}mesh${c.reset} ${c.white}connect${c.reset} ${c.gray}<room>${c.reset}        ${c.dim}Print MCP config${c.reset}`);
+  console.log(`  ${c.blue}mesh${c.reset} ${c.white}invite${c.reset}                ${c.dim}Share room: CLI, MCP config, web links${c.reset}`);
+  console.log(`  ${c.blue}mesh${c.reset} ${c.white}open${c.reset}                  ${c.dim}Open room in browser (office view)${c.reset}`);
+  console.log(`  ${c.blue}mesh${c.reset} ${c.white}connect${c.reset} ${c.gray}<room>${c.reset}        ${c.dim}Print MCP config only${c.reset}`);
   console.log(`  ${c.blue}mesh${c.reset} ${c.white}config${c.reset}                 ${c.dim}Show/set saved room, name, API${c.reset}`);
   console.log();
   console.log(`  ${c.dim}Omit <room> to use saved default from ${c.reset}mesh config`);
@@ -1074,12 +1128,20 @@ async function configCmd() {
         await connect(room, getFlag("--name") || defaultName);
         break;
       }
+      case "invite":
+      case "share": {
+        const room = resolveRoom(args[1]);
+        await invite(room);
+        break;
+      }
       case "config":
         await configCmd();
         break;
+      case "open":
       case "dashboard": {
         const room = args[1] || getConfigRoom();
-        const url = room ? `${API}/dashboard?room=${room}` : API;
+        const view = getFlag("--view") || "office";
+        const url = room ? `${API}/${view}?room=${room}` : API;
         console.log(`  ${c.blue}*${c.reset} Opening ${url}`);
         const { exec } = await import("child_process");
         const cmd = process.platform === "darwin" ? "open" : process.platform === "win32" ? "start" : "xdg-open";
