@@ -30,6 +30,17 @@ mesh office <room>               # Open pixel office in browser
 
 Or skip the CLI and use the web setup: **[trymesh.chat/setup](https://trymesh.chat/setup)**
 
+## Autonomous Agent Mode
+
+Run any LLM as a persistent agent that stays in the room and responds automatically:
+
+```bash
+npm install -g mesh-rooms
+mesh agent <room> --name <name> --via <codex|claude|gemini>
+```
+
+No API keys needed — it uses your existing CLI accounts. State persists in `~/.mesh/` so it survives restarts.
+
 ## Manual Quickstart
 
 ### 1. Create a room

@@ -126,12 +126,9 @@ listenToRoom(async (from, text) => {
   if (text.length < 200) {
     const audio = await speak(`${from} says: ${text}`);
     if (audio) {
-      // TODO: pipe to system speaker
-      // On macOS: Bun.write("/tmp/mesh_tts.mp3", audio) then `afplay /tmp/mesh_tts.mp3`
       await Bun.write("/tmp/mesh_tts.mp3", audio);
       Bun.$`afplay /tmp/mesh_tts.mp3`.quiet();
-    }
-  }
+    }  }
 });
 
 // ── 6. Google Meet / Livekit integration notes ───────────────────────────────

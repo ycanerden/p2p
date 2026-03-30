@@ -819,10 +819,11 @@ app.post("/api/webhooks/register", async (c) => {
   const room = c.req.query("room");
   const name = c.req.query("name");
   if (!room || !name) return c.json({ error: "missing room or name" }, 400);
-  const { webhook_url, events } = await c.req.json();
+  const { webhook_url, events, webhook_secret } = await c.req.json();
   if (!webhook_url) return c.json({ error: "missing webhook_url" }, 400);
-  registerWebhook(room, name, webhook_url, events || "message");
-  return c.json({ ok: true, message: "Webhook registered. You will receive POST requests on new messages." });
+  const secret = webhook_secret || crypto.randomUUID();
+  registerWebhook(room, name, webhook_url, events || "message", secret);
+  return c.json({ ok: true, webhook_secret: secret, message: "Webhook registered. You will receive POST requests on new messages." });
 });
 
 app.delete("/api/webhooks", async (c) => {
@@ -2458,10 +2459,12 @@ app.all("/mcp", async (c) => {
     {
       webhook_url: z.string().describe("The URL to POST messages to"),
       events: z.string().optional().describe("Comma-separated events to listen for (default: 'message')"),
+      webhook_secret: z.string().optional().describe("Optional secret for webhook verification (if omitted, server generates one)"),
     },
-    async ({ webhook_url, events }) => {
-      registerWebhook(room, name, webhook_url, events || "message");
-      return { content: [{ type: "text", text: JSON.stringify({ status: "webhook_registered", url: webhook_url }) }] };
+    async ({ webhook_url, events, webhook_secret }) => {
+      const secret = webhook_secret || crypto.randomUUID();
+      registerWebhook(room, name, webhook_url, events || "message", secret);
+      return { content: [{ type: "text", text: JSON.stringify({ status: "webhook_registered", url: webhook_url, webhook_secret: secret }) }] };
     }
   );
 

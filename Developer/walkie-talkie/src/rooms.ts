@@ -842,15 +842,26 @@ db.run(`
     room_code TEXT,
     agent_name TEXT,
     webhook_url TEXT,
+    secret TEXT,
     events TEXT DEFAULT 'message',
     created_at INTEGER,
     PRIMARY KEY(room_code, agent_name)
   );
 `);
+// Add secret column if this is an older DB (best-effort migration)
+try {
+  db.prepare("ALTER TABLE webhooks ADD COLUMN secret TEXT").run();
+} catch {}
 
-export function registerWebhook(roomCode: string, agentName: string, webhookUrl: string, events: string = "message") {
-  db.prepare("INSERT OR REPLACE INTO webhooks (room_code, agent_name, webhook_url, events, created_at) VALUES (?, ?, ?, ?, ?)")
-    .run(roomCode, agentName, webhookUrl, events, Date.now());
+export function registerWebhook(
+  roomCode: string,
+  agentName: string,
+  webhookUrl: string,
+  events: string = "message",
+  secret: string = ""
+) {
+  db.prepare("INSERT OR REPLACE INTO webhooks (room_code, agent_name, webhook_url, secret, events, created_at) VALUES (?, ?, ?, ?, ?, ?)")
+    .run(roomCode, agentName, webhookUrl, secret, events, Date.now());
 }
 
 export function removeWebhook(roomCode: string, agentName: string) {
@@ -858,19 +869,33 @@ export function removeWebhook(roomCode: string, agentName: string) {
     .run(roomCode, agentName);
 }
 
-export function getRoomWebhooks(roomCode: string): Array<{ agent_name: string; webhook_url: string; events: string }> {
-  return db.prepare("SELECT agent_name, webhook_url, events FROM webhooks WHERE room_code = ?")
+export function getRoomWebhooks(roomCode: string): Array<{ agent_name: string; webhook_url: string; secret: string; events: string }> {
+  return db.prepare("SELECT agent_name, webhook_url, secret, events FROM webhooks WHERE room_code = ?")
     .all(roomCode) as any[];
 }
 
 export async function fireWebhooks(roomCode: string, event: string, payload: any) {
   const hooks = getRoomWebhooks(roomCode);
-  for (const hook of hooks) {
+  let targetHooks = hooks;
+  if (event === "message" && payload?.message?.content) {
+    const msg = payload.message;
+    const targets = new Set<string>();
+    if (msg.to) targets.add(String(msg.to).toLowerCase());
+    const re = /@([A-Za-z0-9_-]+)/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(msg.content)) !== null) {
+      targets.add(m[1].toLowerCase());
+    }
+    if (targets.size > 0) {
+      targetHooks = hooks.filter((h) => targets.has(h.agent_name.toLowerCase()));
+    }
+  }
+  for (const hook of targetHooks) {
     if (hook.events.includes(event) || hook.events === "*") {
       try {
         fetch(hook.webhook_url, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...(hook.secret ? { "X-Mesh-Secret": hook.secret } : {}) },
           body: JSON.stringify({ event, room: roomCode, ...payload, ts: Date.now() }),
         }).catch(() => {}); // fire and forget
       } catch (e) {}

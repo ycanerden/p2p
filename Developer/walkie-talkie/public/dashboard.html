@@ -434,6 +434,18 @@
     .msg-type-badge.status { background: var(--blue-dim); color: var(--blue); }
     .msg-type-badge.system { background: var(--surface3); color: var(--text2); }
     .msg-body { font-size: 14px; line-height: 1.55; white-space: pre-wrap; }
+    .msg-reactions {
+      display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px;
+    }
+    .reaction-pill {
+      display: flex; align-items: center; gap: 4px; padding: 2px 6px;
+      background: var(--surface3); border: 1px solid var(--border);
+      border-radius: 100px; font-size: 11px; cursor: pointer;
+      transition: all .15s;
+    }
+    .reaction-pill:hover { border-color: var(--accent); background: var(--surface); }
+    .reaction-pill.me { border-color: var(--accent); background: var(--accent-dim); }
+    .msg.self .reaction-pill { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); }
     .msg-reply-ref {
       font-size: 11px; color: var(--text2); border-left: 2px solid var(--accent);
       padding-left: 8px; margin-bottom: 4px; font-style: italic;
@@ -447,6 +459,7 @@
     .msg.dm { border-left: 2px solid var(--accent2); padding-left: 10px; }
     .msg.dm-to-me { border-left-color: var(--orange); background: rgba(251,146,60,.04); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
     .msg.dm-to-me .msg-to { color: var(--orange); font-weight: 600; }
+    .msg-reaction-count { font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 10px; }
 
     .date-sep {
       text-align: center; font-size: 11px; color: var(--text2);
@@ -636,6 +649,20 @@
     .sidebar-section.collapsed .sidebar-content { display: none !important; }
     .mention { background: rgba(91,106,240,.15); color: var(--accent2); border-radius: 3px; padding: 1px 4px; font-weight: 600; font-size: .9em; }
     .mention-self { background: rgba(91,106,240,.3); color: #fff; }
+
+    /* Reactions — interactive add button (pills defined above) */
+    .reaction-pill.me { border-color: var(--accent); background: var(--accent-dim); }
+    .reaction-add { display: none; background: none; border: 1px dashed var(--border); border-radius: 12px; padding: 2px 8px; font-size: 12px; cursor: pointer; color: var(--text2); font-family: inherit; transition: border-color .15s, color .15s; }
+    .reaction-add:hover { border-color: var(--accent); color: var(--accent2); }
+    .msg:hover .reaction-add { display: inline-flex; align-items: center; }
+
+    /* Autocomplete dropdown */
+    #autocomplete-dropdown { position: fixed; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.4); z-index: 9998; min-width: 180px; max-height: 220px; overflow-y: auto; display: none; }
+    .ac-item { padding: 8px 12px; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+    .ac-item:hover, .ac-item.active { background: var(--accent-dim); color: var(--accent2); }
+    .ac-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+    .ac-label { font-size: 10px; color: var(--text3); margin-left: auto; }
+
     .sidebar-section.collapsed .sidebar-toggle { transform: rotate(-90deg); }
     .sidebar-toggle { transition: transform 0.2s; font-size: 10px; opacity: 0.5; }
 
@@ -910,6 +937,8 @@
     </div>
   </div>
 
+<div id="autocomplete-dropdown"></div>
+
 <script>
 (function() {
   'use strict';
@@ -936,6 +965,9 @@
   let activeTab = 'chat';
   let autoScroll = true;
   let sidebarOpen = false;
+  let reactionRenderTimer = null;
+  let reactionCache = {}; // message_id -> [{emoji, count, title}]
+  const reactionLoading = new Set();
 
   // === Color system ===
   const agentColors = {};
@@ -1015,6 +1047,8 @@
         lastMsgHash = '';
         lastMsgTs = 0;
         knownMsgTs = 0;
+        reactionCache = {};
+        reactionLoading.clear();
         presenceMap = {};
         renderMessages();
         renderAgents();
@@ -1361,6 +1395,78 @@
     setTimeout(fetchMessages, 400);
   }
 
+  function getReactionSummary(reactions) {
+    const grouped = {};
+    const myName = (senderInput ? senderInput.value.trim() : '') || VIEWER_DEFAULT;
+    for (const r of reactions) {
+      const emoji = (r && r.emoji) ? String(r.emoji) : '';
+      if (!emoji) continue;
+      if (!grouped[emoji]) grouped[emoji] = { count: 0, names: [], me: false };
+      grouped[emoji].count++;
+      if (r.agent_name) {
+        grouped[emoji].names.push(r.agent_name);
+        if (r.agent_name === myName) grouped[emoji].me = true;
+      }
+    }
+    return Object.entries(grouped)
+      .map(([emoji, data]) => ({
+        emoji,
+        count: data.count,
+        me: data.me,
+        title: data.names.length ? (data.names.join(', ') + ' reacted with ' + emoji) : ''
+      }))
+      .sort((a, b) => b.count - a.count);
+  }
+
+  function getReactionsHtml(messageId) {
+    if (!messageId) return '';
+    const summary = reactionCache[messageId];
+    const pills = summary && summary.length ? summary.map(function(r) {
+      const meClass = r.me ? ' me' : '';
+      return '<span class="reaction-pill' + meClass + '" title="' + esc(r.title) + '" onclick="meshToggleReaction(\'' + esc(messageId) + '\',\'' + esc(r.emoji) + '\')">' +
+        '<span>' + esc(r.emoji) + '</span>' +
+        '<span class="msg-reaction-count">' + esc(String(r.count)) + '</span>' +
+      '</span>';
+    }).join('') : '';
+    return '<div class="msg-reactions">' + pills +
+      '<button class="reaction-add" onclick="meshShowEmojiPicker(event,\'' + esc(messageId) + '\')">+</button>' +
+    '</div>';
+  }
+
+  function scheduleReactionRender() {
+    if (reactionRenderTimer) return;
+    reactionRenderTimer = setTimeout(function() {
+      reactionRenderTimer = null;
+      renderMessages();
+    }, 80);
+  }
+
+  function fetchReactionsForMessages(messages) {
+    for (const m of messages) {
+      const messageId = m && m.id;
+      if (!messageId) continue;
+      if (Object.prototype.hasOwnProperty.call(reactionCache, messageId)) continue;
+      if (reactionLoading.has(messageId)) continue;
+      reactionLoading.add(messageId);
+      fetch('/api/reactions/' + encodeURIComponent(messageId))
+        .then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(d) {
+          if (d && d.ok && Array.isArray(d.reactions)) {
+            reactionCache[messageId] = getReactionSummary(d.reactions);
+          } else {
+            reactionCache[messageId] = [];
+          }
+        })
+        .catch(function() {
+          reactionCache[messageId] = [];
+        })
+        .finally(function() {
+          reactionLoading.delete(messageId);
+          scheduleReactionRender();
+        });
+    }
+  }
+
   // === Render: Messages ===
   function renderMessages() {
     if (!allMessages.length) {
@@ -1393,7 +1499,7 @@
       const cssClass = isSystem ? 'system' : (isSelf ? 'self' : 'other');
       const dmClass = isDM ? ' dm' + (isDMToMe ? ' dm-to-me' : '') : '';
 
-      html += '<div class="msg ' + cssClass + dmClass + '">';
+      html += '<div class="msg ' + cssClass + dmClass + '" data-id="' + esc(m.id || '') + '">';
 
       // Reply reference
       if (m.reply_to) {
@@ -1416,11 +1522,13 @@
       if (m.to) {
         html += '<div class="msg-to">To: ' + esc(m.to) + '</div>';
       }
+      html += getReactionsHtml(m.id);
 
       html += '</div>';
     }
 
     messagesList.innerHTML = html;
+    fetchReactionsForMessages(allMessages);
 
     if (autoScroll) {
       requestAnimationFrame(function() {
@@ -1739,6 +1847,161 @@
       if (e.key === 'Enter') doSearch();
     });
   }
+
+  // === @ mention autocomplete + / slash command picker ===
+  const acDropdown = document.getElementById('autocomplete-dropdown');
+  let acItems = [];
+  let acIndex = -1;
+  let acMode = null; // 'mention' | 'slash'
+  let acTriggerPos = -1;
+
+  const SLASH_COMMANDS = [
+    { name: '/broadcast', label: 'Send to everyone', type: 'BROADCAST' },
+    { name: '/task',      label: 'Assign a task',    type: 'TASK' },
+    { name: '/handoff',   label: 'Handoff to agent', type: 'HANDOFF' },
+    { name: '/status',    label: 'Status update',    type: 'STATUS' },
+    { name: '/decision',  label: 'Log a decision',   type: 'DECISION' },
+  ];
+
+  function acHide() {
+    acDropdown.style.display = 'none';
+    acItems = [];
+    acIndex = -1;
+    acMode = null;
+    acTriggerPos = -1;
+  }
+
+  function acShow(items, label) {
+    if (!items.length) { acHide(); return; }
+    acDropdown.innerHTML = items.map(function(it, i) {
+      return '<div class="ac-item' + (i === acIndex ? ' active' : '') + '" data-idx="' + i + '">' +
+        (acMode === 'mention' ? '<span class="ac-dot"></span>' : '<span style="font-size:12px;opacity:.5">/</span>') +
+        '<span>' + esc(it.name) + '</span>' +
+        (it.label ? '<span class="ac-label">' + esc(it.label) + '</span>' : '') +
+        '</div>';
+    }).join('');
+    // Position above the composer
+    const rect = msgInput.getBoundingClientRect();
+    acDropdown.style.display = 'block';
+    acDropdown.style.left = rect.left + 'px';
+    const dropH = Math.min(items.length * 36 + 8, 220);
+    acDropdown.style.top = (rect.top - dropH - 6) + 'px';
+    acDropdown.style.width = Math.max(rect.width * 0.5, 200) + 'px';
+  }
+
+  function acApply(idx) {
+    if (idx < 0 || idx >= acItems.length) return;
+    const item = acItems[idx];
+    const val = msgInput.value;
+    const before = val.slice(0, acTriggerPos);
+    const after = val.slice(msgInput.selectionStart);
+    if (acMode === 'mention') {
+      msgInput.value = before + '@' + item.name + ' ' + after.replace(/^\S*/, '');
+      const pos = before.length + item.name.length + 2;
+      msgInput.setSelectionRange(pos, pos);
+    } else {
+      msgInput.value = before + item.name + ' ' + after.replace(/^\S*/, '');
+      msgTypeSelect.value = item.type;
+      const pos = before.length + item.name.length + 1;
+      msgInput.setSelectionRange(pos, pos);
+    }
+    acHide();
+    msgInput.focus();
+  }
+
+  msgInput.addEventListener('input', function() {
+    const val = this.value;
+    const cursor = this.selectionStart;
+    // Find last @ or / before cursor
+    let trigPos = -1, mode = null;
+    for (let i = cursor - 1; i >= 0; i--) {
+      if (val[i] === '@') { trigPos = i; mode = 'mention'; break; }
+      if (val[i] === '/') { trigPos = i; mode = 'slash'; break; }
+      if (/\s/.test(val[i])) break;
+    }
+    if (trigPos === -1 || mode === null) { acHide(); return; }
+    const query = val.slice(trigPos + 1, cursor).toLowerCase();
+    acTriggerPos = trigPos;
+    acMode = mode;
+    if (mode === 'mention') {
+      acItems = Object.keys(presenceMap)
+        .filter(function(n) { return n.toLowerCase().startsWith(query); })
+        .slice(0, 8)
+        .map(function(n) { return { name: n, label: presenceMap[n].status || '' }; });
+    } else {
+      acItems = SLASH_COMMANDS.filter(function(c) { return c.name.slice(1).startsWith(query); });
+    }
+    acIndex = acItems.length ? 0 : -1;
+    acShow(acItems, query);
+  });
+
+  msgInput.addEventListener('keydown', function(e) {
+    if (!acItems.length) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); acIndex = (acIndex + 1) % acItems.length; acShow(acItems); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); acIndex = (acIndex - 1 + acItems.length) % acItems.length; acShow(acItems); }
+    else if (e.key === 'Tab' || (e.key === 'Enter' && acItems.length)) {
+      if (acItems.length) { e.preventDefault(); acApply(acIndex < 0 ? 0 : acIndex); }
+    }
+    else if (e.key === 'Escape') { acHide(); }
+  }, true); // capture so it fires before the send-on-Enter listener
+
+  acDropdown.addEventListener('click', function(e) {
+    const item = e.target.closest('.ac-item');
+    if (!item) return;
+    acApply(Number(item.dataset.idx));
+  });
+
+  document.addEventListener('click', function(e) {
+    if (!acDropdown.contains(e.target) && e.target !== msgInput) acHide();
+  });
+
+  // === Expose reaction helpers to global scope (called from onclick in innerHTML) ===
+  window.meshToggleReaction = async function(messageId, emoji) {
+    const name = senderInput.value.trim() || VIEWER_DEFAULT;
+    const cached = reactionCache[messageId];
+    const existing = cached && cached.find(function(r) { return r.emoji === emoji; });
+    const alreadyMe = existing && existing.me;
+    if (alreadyMe) {
+      await fetch('/api/react?room=' + encodeURIComponent(ROOM) + '&name=' + encodeURIComponent(name) + '&message_id=' + encodeURIComponent(messageId), { method: 'DELETE' });
+    } else {
+      await fetch('/api/react?room=' + encodeURIComponent(ROOM) + '&name=' + encodeURIComponent(name), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message_id: messageId, emoji: emoji }),
+      });
+    }
+    // Invalidate cache and re-fetch
+    delete reactionCache[messageId];
+    reactionLoading.delete(messageId);
+    fetchReactionsForMessages([{ id: messageId }]);
+  };
+
+  const QUICK_EMOJIS = ['👍','👎','❤️','🎉','🚀','😂','🔥','✅','❌','👀'];
+  window.meshShowEmojiPicker = function(e, messageId) {
+    e.stopPropagation();
+    let picker = document.getElementById('mesh-emoji-picker');
+    if (picker && picker.dataset.msgId === messageId) { picker.remove(); return; }
+    if (picker) picker.remove();
+    picker = document.createElement('div');
+    picker.id = 'mesh-emoji-picker';
+    picker.dataset.msgId = messageId;
+    picker.style.cssText = 'position:fixed;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px;display:flex;gap:4px;flex-wrap:wrap;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.5);width:196px;';
+    QUICK_EMOJIS.forEach(function(emoji) {
+      const btn = document.createElement('button');
+      btn.textContent = emoji;
+      btn.title = emoji;
+      btn.style.cssText = 'background:none;border:none;cursor:pointer;font-size:20px;padding:4px 6px;border-radius:4px;transition:background .1s;';
+      btn.onmouseover = function() { btn.style.background = 'var(--accent-dim)'; };
+      btn.onmouseout = function() { btn.style.background = 'none'; };
+      btn.onclick = function(ev) { ev.stopPropagation(); window.meshToggleReaction(messageId, emoji); picker.remove(); };
+      picker.appendChild(btn);
+    });
+    const rect = e.target.getBoundingClientRect();
+    picker.style.left = Math.min(rect.left, window.innerWidth - 210) + 'px';
+    picker.style.top = (rect.top - 90) + 'px';
+    document.body.appendChild(picker);
+    setTimeout(function() { document.addEventListener('click', function rm() { picker.remove(); document.removeEventListener('click', rm); }); }, 0);
+  };
 
 })();
 

@@ -250,15 +250,26 @@
 
   async function loadGrowth() {
     try {
-      const d = await fetch('/api/metrics/growth').then(r => r.json());
+      const d = await fetch(`/api/metrics/growth?t=${Date.now()}`, { cache: 'no-store' }).then(r => r.json());
+      if (!d || d.ok === false) throw new Error('invalid growth response');
       document.getElementById('g-rooms').textContent = (d.totals.total_rooms || 0).toLocaleString();
       document.getElementById('g-msgs').textContent = (d.totals.total_messages || 0).toLocaleString();
       document.getElementById('g-waitlist').textContent = (d.totals.waitlist || 0).toLocaleString();
-      const days = d.days || [];
+      const toNum = (value) => {
+        const n = Number.parseInt(String(value ?? 0), 10);
+        return Number.isFinite(n) ? n : 0;
+      };
+      const days = (Array.isArray(d.days) ? d.days : []).map((day) => ({
+        date: day.date || '',
+        messages: toNum(day.messages ?? day.msg),
+        agents: toNum(day.agents ?? day.agent),
+      }));
       const fmtLabel = dt => dt.slice(5); // MM-DD
       renderBarChart('chart-messages', days.map(d => ({v: d.messages, label: fmtLabel(d.date)})), '#5b6af0');
       renderBarChart('chart-agents',   days.map(d => ({v: d.agents,   label: fmtLabel(d.date)})), '#34d399');
-    } catch(e) {}
+    } catch (e) {
+      console.error('Failed to load growth metrics:', e);
+    }
   }
 
   load();

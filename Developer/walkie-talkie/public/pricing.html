@@ -227,5 +227,58 @@
   <p>mesh v2.3.0 — MIT License</p>
 </footer>
 
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const room = params.get('room'); // If user comes from a room context
+  
+  const proBtn = document.getElementById('pro-btn');
+  const teamBtn = document.getElementById('team-btn');
+
+  // These will be replaced by renderHtml if STRIPE env vars are set
+  proBtn.href = '/waitlist?plan=pro' + (room ? `&room=${room}` : '');
+  teamBtn.href = '/waitlist?plan=team' + (room ? `&room=${room}` : '');
+
+  async function checkout(plan) {
+    const btn = document.getElementById(plan + '-btn');
+    btn.textContent = 'Redirecting...';
+    btn.style.opacity = '0.7';
+
+    try {
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan, room })
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || err.error || 'Failed to create session');
+      }
+
+      const { checkout_url } = await res.json();
+      if (checkout_url) {
+        window.location.href = checkout_url;
+      } else {
+        throw new Error('No checkout URL returned');
+      }
+    } catch(e) {
+      console.error(e);
+      alert('Stripe Checkout is not configured yet. Joining waitlist.');
+      // Fallback to waitlist if checkout fails
+      window.location.href = '/waitlist?plan=' + plan + (room ? `&room=${room}` : '');
+    }
+  }
+
+  proBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    checkout('pro');
+  });
+
+  teamBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    checkout('team');
+  });
+</script>
+
 </body>
 </html>
