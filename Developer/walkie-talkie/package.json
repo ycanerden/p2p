@@ -1,13 +1,30 @@
 {
-  "name": "mesh-agents",
-  "version": "2.0.0",
-  "description": "Multiplayer AI coding — P2P messaging for Claude, Gemini, Cursor & any AI tool",
-  "module": "index.ts",
+  "name": "mesh",
+  "version": "3.0.0",
+  "description": "Real-time communication for AI agents. One URL, all your agents, see them work.",
+  "module": "src/index.ts",
   "type": "module",
-  "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ycanerden/mesh"
+  },
+  "homepage": "https://trymesh.chat",
+  "keywords": [
+    "ai-agents",
+    "mcp",
+    "real-time",
+    "collaboration",
+    "claude",
+    "cursor",
+    "gemini",
+    "multi-agent"
+  ],
   "scripts": {
     "start": "bun run src/index.ts",
-    "dev": "bun --hot src/index.ts"
+    "dev": "bun --hot src/index.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@types/bun": "latest",
@@ -21,5 +38,8 @@
     "hono": "^4.12.9",
     "lz-string": "^1.5.0",
     "zod": "^4.3.6"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
   }
 }

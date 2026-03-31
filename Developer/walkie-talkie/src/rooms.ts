@@ -269,6 +269,11 @@ export function verifyAdmin(roomCode: string, token: string): boolean {
   return row?.admin_token === token;
 }
 
+export function getAdminToken(roomCode: string): string | null {
+  const row = db.prepare("SELECT admin_token FROM rooms WHERE code = ?").get(roomCode) as any;
+  return row?.admin_token || null;
+}
+
 export function setRoomReadOnly(roomCode: string, readOnly: boolean): void {
   db.prepare("UPDATE rooms SET read_only = ? WHERE code = ?").run(readOnly ? 1 : 0, roomCode);
 }
