@@ -1489,6 +1489,12 @@ export function getPinnedMessages(roomCode: string): Array<{ message_id: string;
     .all(roomCode) as any[];
 }
 
+export function getThread(roomCode: string, messageId: string): any[] {
+  return db.prepare(
+    "SELECT id, sender as 'from', recipient as 'to', content, timestamp as ts, msg_type as 'type', reply_to FROM messages WHERE room_code = ? AND reply_to = ? ORDER BY timestamp ASC"
+  ).all(roomCode, messageId) as any[];
+}
+
 // ── File Sharing ─────────────────────────────────────────────────────────────
 db.run(`
   CREATE TABLE IF NOT EXISTS shared_files (
