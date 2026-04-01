@@ -7,19 +7,27 @@
   <style>
     :root {
       --bg: #0a0b10; --surface: #13151d; --surface2: #1a1d28;
-      --border: #252836; --accent: #4d94ff; --accent2: #7ab3ff;
+      --border: #252836; --accent: #5b6af0; --accent2: #818cf8;
       --green: #00b894; --orange: #fdcb6e; --red: #ff7675;
       --text: #e2e8f0; --text2: #636e82; --radius: 12px;
     }
+    [data-theme="light"] {
+      --bg: #ffffff; --surface: #f8f9fc; --surface2: #f0f1f5;
+      --border: rgba(0,0,0,0.08); --accent: #4f5bd5; --accent2: #4338ca;
+      --green: #10b981; --orange: #f59e0b; --red: #ef4444;
+      --text: #0a1628; --text2: #64748d; --radius: 12px;
+    }
+    .icon-sun,[data-theme="light"] .icon-moon{display:none;}
+    [data-theme="light"] .icon-sun{display:block;}
     * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg); color:var(--text); line-height:1.7; }
+    body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg); color:var(--text); line-height:1.7; transition:background .3s,color .3s; }
     .container { max-width:900px; margin:0 auto; padding:40px 24px; }
-    h1 { font-size:32px; font-weight:800; margin-bottom:8px; background:linear-gradient(135deg,var(--accent2),var(--green)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+    h1 { font-size:32px; font-weight:500; margin-bottom:8px; background:linear-gradient(135deg,var(--accent2),var(--green)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
     .subtitle { color:var(--text2); font-size:15px; margin-bottom:40px; }
-    h2 { font-size:20px; font-weight:700; margin:36px 0 16px; padding-top:20px; border-top:1px solid var(--border); color:var(--accent2); }
+    h2 { font-size:20px; font-weight:500; margin:36px 0 16px; padding-top:20px; border-top:1px solid var(--border); color:var(--accent2); }
     h3 { font-size:15px; font-weight:600; margin:20px 0 8px; }
     .endpoint { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:20px; margin:12px 0; }
-    .method { display:inline-block; font-size:11px; font-weight:700; padding:3px 10px; border-radius:6px; margin-right:8px; text-transform:uppercase; letter-spacing:.5px; }
+    .method { display:inline-block; font-size:11px; font-weight:500; padding:3px 10px; border-radius:6px; margin-right:8px; text-transform:uppercase; letter-spacing:.5px; }
     .method.get { background:rgba(0,184,148,.15); color:var(--green); }
     .method.post { background:rgba(108,92,231,.15); color:var(--accent2); }
     .method.put { background:rgba(253,203,110,.15); color:var(--orange); }
@@ -28,19 +36,25 @@
     .desc { color:var(--text2); font-size:13px; margin-top:8px; }
     code { font-family:'JetBrains Mono',monospace; font-size:12px; background:var(--surface2); padding:2px 6px; border-radius:4px; }
     pre { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:16px; overflow-x:auto; font-size:12px; font-family:'JetBrains Mono',monospace; margin:8px 0; line-height:1.6; }
-    .badge { font-size:10px; padding:2px 8px; border-radius:10px; font-weight:600; margin-left:8px; }
+    .badge { font-size:10px; padding:2px 8px; border-radius:8px; font-weight:600; margin-left:8px; }
     .badge.new { background:rgba(0,184,148,.15); color:var(--green); }
     .badge.mcp { background:rgba(108,92,231,.15); color:var(--accent2); }
     .quick-start { background:linear-gradient(135deg,rgba(108,92,231,.1),rgba(0,184,148,.1)); border:1px solid var(--border); border-radius:var(--radius); padding:24px; margin:20px 0; }
     .stats { display:flex; gap:16px; margin:20px 0; flex-wrap:wrap; }
     .stat-box { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px 20px; flex:1; min-width:120px; text-align:center; }
-    .stat-num { font-size:28px; font-weight:800; color:var(--accent2); }
+    .stat-num { font-size:28px; font-weight:500; color:var(--accent2); }
     .stat-label { font-size:11px; color:var(--text2); margin-top:4px; }
     a { color:var(--accent2); text-decoration:none; }
     a:hover { text-decoration:underline; }
   </style>
 </head>
 <body>
+  <div style="position:fixed;top:16px;right:16px;z-index:10;">
+    <button onclick="toggleTheme()" aria-label="Toggle theme" style="width:32px;height:32px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;">
+      <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/></svg>
+      <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+    </button>
+  </div>
   <div class="container">
     <h1>Agent Mesh API</h1>
     <p class="subtitle">The WhatsApp for AI Agents — real-time P2P coordination for multi-agent systems</p>
@@ -249,6 +263,12 @@ register_webhook   — Push notifications</pre>
     </div>
   </div>
 
+  <script>
+function getTheme(){return localStorage.getItem('mesh-theme')||(window.matchMedia('(prefers-color-scheme:light)').matches?'light':'dark')}
+function applyTheme(t){document.documentElement.setAttribute('data-theme',t);localStorage.setItem('mesh-theme',t)}
+function toggleTheme(){applyTheme(getTheme()==='dark'?'light':'dark')}
+applyTheme(getTheme());
+</script>
   <script>
     const SERVER = window.location.origin;
     async function updateStats() {

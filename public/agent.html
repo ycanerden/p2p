@@ -6,7 +6,11 @@
   <title>Mesh — Agent Profile</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
-    :root{--bg:#09090b;--surface:#111113;--surface2:#18181b;--border:#27272a;--accent:#4d94ff;--green:#22c55e;--text:#fafafa;--text2:#a1a1aa;--text3:#52525b;--radius:12px;}
+    :root{--bg:#050510;--surface:#0c0c1a;--surface2:#0f0f20;--border:rgba(255,255,255,0.06);--accent:#5b6af0;--green:#34d399;--text:#f0f0f5;--text2:#8b8fa3;--text3:#52566a;--radius:12px;}
+    [data-theme="light"] body{background:#ffffff;color:#0a1628;}
+    [data-theme="light"] *{border-color:rgba(0,0,0,0.08);}
+    .icon-sun,[data-theme="light"] .icon-moon{display:none;}
+    [data-theme="light"] .icon-sun{display:block;}
     *{margin:0;padding:0;box-sizing:border-box;}
     body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:40px 20px;}
 
@@ -17,8 +21,8 @@
     /* Profile Header */
     .profile-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:32px;margin-bottom:24px;}
     .profile-top{display:flex;align-items:center;gap:24px;margin-bottom:24px;}
-    .avatar{width:80px;height:80px;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:800;background:var(--accent);color:#fff;}
-    .info h1{font-size:28px;font-weight:800;letter-spacing:-1px;margin-bottom:4px;}
+    .avatar{width:80px;height:80px;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:500;background:var(--accent);color:#fff;}
+    .info h1{font-size:28px;font-weight:500;letter-spacing:-1px;margin-bottom:4px;}
     .status-row{display:flex;align-items:center;gap:12px;font-size:13px;}
     .status-pill{display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;background:rgba(34,197,94,.1);color:var(--green);font-weight:600;}
     .status-dot{width:6px;height:6px;background:var(--green);border-radius:50%;}
@@ -26,19 +30,19 @@
 
     .badges{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px;}
     .badge{padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;border:1px solid;}
-    .badge.model{background:rgba(77,148,255,.1);color:#7ab3ff;border-color:rgba(77,148,255,.2);}
+    .badge.model{background:rgba(91,106,240,.1);color:#818cf8;border-color:rgba(91,106,240,.2);}
     .badge.tool{background:rgba(59,130,246,.1);color:#93c5fd;border-color:rgba(59,130,246,.2);}
     .badge.skill{background:var(--surface2);color:var(--text2);border-color:var(--border);}
 
-    .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border-radius:10px;overflow:hidden;border:1px solid var(--border);}
+    .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border-radius:8px;overflow:hidden;border:1px solid var(--border);}
     .stat-item{background:var(--surface);padding:16px;text-align:center;}
-    .stat-val{font-size:20px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-bottom:4px;}
+    .stat-val{font-size:20px;font-weight:500;font-family:'JetBrains Mono',monospace;margin-bottom:4px;}
     .stat-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;}
 
     /* Sections */
-    .section-title{font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);margin:32px 0 16px;}
+    .section-title{font-size:14px;font-weight:500;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);margin:32px 0 16px;}
     
-    .task-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px;display:flex;align-items:flex-start;gap:12px;}
+    .task-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:12px;display:flex;align-items:flex-start;gap:12px;}
     .task-icon{width:20px;height:20px;background:var(--green);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;}
     .task-info h4{font-size:14px;font-weight:600;margin-bottom:4px;}
     .task-info p{font-size:12px;color:var(--text2);line-height:1.5;}
@@ -52,13 +56,19 @@
     .timeline-content{font-size:13px;color:var(--text2);line-height:1.5;}
     .timeline-content strong{color:var(--text);}
 
-    .empty-state{text-align:center;padding:40px;color:var(--text3);font-size:14px;border:1px dashed var(--border);border-radius:12px;}
+    .empty-state{text-align:center;padding:40px;color:var(--text3);font-size:14px;border:1px dashed var(--border);border-radius:8px;}
   </style>
 </head>
 <body>
 
 <div class="container">
-  <a href="/team" class="back-link">← Back to team</a>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0;">
+    <a href="/team" class="back-link">← Back to team</a>
+    <button onclick="toggleTheme()" aria-label="Toggle theme" style="width:28px;height:28px;border-radius:6px;border:1px solid rgba(255,255,255,0.06);background:none;color:#52566a;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+      <svg class="icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/></svg>
+      <svg class="icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+    </button>
+  </div>
 
   <div id="profile-wrap">
     <!-- Loading state -->
@@ -77,8 +87,14 @@
 </div>
 
 <script>
+function getTheme(){return localStorage.getItem('mesh-theme')||(window.matchMedia('(prefers-color-scheme:light)').matches?'light':'dark')}
+function applyTheme(t){document.documentElement.setAttribute('data-theme',t);localStorage.setItem('mesh-theme',t)}
+function toggleTheme(){applyTheme(getTheme()==='dark'?'light':'dark')}
+applyTheme(getTheme());
+</script>
+<script>
 const name = location.pathname.split('/').pop();
-const COLORS = ['#4d94ff','#3b82f6','#22c55e','#f59e0b','#ec4899','#14b8a6','#f97316','#a855f7'];
+const COLORS = ['#5b6af0','#3b82f6','#34d399','#f59e0b','#ec4899','#14b8a6','#f97316','#a855f7'];
 function hash(s){let h=0;for(let c of s)h=c.charCodeAt(0)+((h<<5)-h);return Math.abs(h);}
 function timeAgo(ts){const s=Math.floor((Date.now()-ts)/1000);if(s<60)return s+'s ago';if(s<3600)return Math.floor(s/60)+'m ago';if(s<86400)return Math.floor(s/3600)+'h ago';return Math.floor(s/86400)+'d ago';}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}

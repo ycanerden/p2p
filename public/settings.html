@@ -7,13 +7,16 @@
   <title>Room Settings — Mesh</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
-    :root{--bg:#09090b;--surface:#111113;--surface2:#19191d;--border:#2e2e35;--accent:#4d94ff;--green:#34d399;--red:#f87171;--orange:#fb923c;--text:#e4e4e7;--text2:#8b8b96;--text3:#55555e;--radius:10px;}
+    :root{--bg:#050510;--surface:#0c0c1a;--surface2:#0f0f20;--border:rgba(255,255,255,0.06);--accent:#5b6af0;--green:#34d399;--red:#f87171;--orange:#fb923c;--text:#f0f0f5;--text2:#8b8fa3;--text3:#52566a;--radius:10px;}
+    [data-theme="light"]{--bg:#ffffff;--surface:#f8f9fc;--surface2:#f0f1f5;--border:rgba(0,0,0,0.08);--accent:#4f5bd5;--green:#10b981;--red:#ef4444;--orange:#f59e0b;--text:#0a1628;--text2:#64748d;--text3:#94a3b8;--radius:10px;}
+    .icon-sun,[data-theme="light"] .icon-moon{display:none;}
+    [data-theme="light"] .icon-sun{display:block;}
     *{box-sizing:border-box;margin:0;padding:0;}
-    body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+    body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;transition:background .3s,color .3s;}
     header{display:flex;align-items:center;gap:12px;padding:14px 28px;border-bottom:1px solid var(--border);background:var(--surface);}
     header a{text-decoration:none;color:inherit;display:flex;align-items:center;gap:10px;}
-    .logo{width:30px;height:30px;border-radius:7px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;}
-    header h1{font-size:15px;font-weight:700;}
+    .logo{width:30px;height:30px;border-radius:7px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:500;font-size:13px;}
+    header h1{font-size:15px;font-weight:500;}
     .sep{color:var(--text3);}
     .room-badge{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--accent);background:rgba(91,106,240,.1);padding:3px 10px;border-radius:5px;border:1px solid rgba(91,106,240,.2);}
     .back{margin-left:auto;font-size:12px;color:var(--text3);text-decoration:none;}
@@ -22,7 +25,7 @@
     main{max-width:640px;margin:0 auto;padding:40px 24px;}
     .section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:20px;overflow:hidden;}
     .section-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
-    .section-title{font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;}
+    .section-title{font-size:13px;font-weight:500;display:flex;align-items:center;gap:8px;}
     .section-desc{font-size:12px;color:var(--text3);margin-top:2px;}
     .section-body{padding:20px;}
 
@@ -49,7 +52,7 @@
     .toggle-sub{font-size:11px;color:var(--text3);margin-top:2px;}
     .toggle{position:relative;width:42px;height:24px;flex-shrink:0;}
     .toggle input{opacity:0;width:0;height:0;}
-    .slider{position:absolute;inset:0;background:var(--surface2);border:1px solid var(--border);border-radius:12px;cursor:pointer;transition:.2s;}
+    .slider{position:absolute;inset:0;background:var(--surface2);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:.2s;}
     .slider:before{content:'';position:absolute;width:16px;height:16px;left:3px;top:3px;background:var(--text3);border-radius:50%;transition:.2s;}
     input:checked+.slider{background:var(--accent);border-color:var(--accent);}
     input:checked+.slider:before{transform:translateX(18px);background:#fff;}
@@ -64,7 +67,7 @@
 
     .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
     .stat{background:var(--surface2);border-radius:8px;padding:12px 14px;}
-    .stat-val{font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace;}
+    .stat-val{font-size:22px;font-weight:500;font-family:'JetBrains Mono',monospace;}
     .stat-lbl{font-size:11px;color:var(--text3);margin-top:2px;}
   </style>
 </head>
@@ -76,6 +79,10 @@
   <span class="room-badge" id="room-badge">—</span>
   <span class="sep">/</span>
   <span style="font-size:13px;color:var(--text2);">Settings</span>
+  <button onclick="toggleTheme()" aria-label="Toggle theme" style="width:32px;height:32px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text3);cursor:pointer;display:flex;align-items:center;justify-content:center;margin-left:8px;">
+    <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/></svg>
+    <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+  </button>
   <a href="#" id="back-link" class="back">← Dashboard</a>
 </header>
 
@@ -170,7 +177,7 @@
         <label>Chat ID <span style="font-weight:400;color:var(--text3)">(numeric ID of the chat to send to)</span></label>
         <input type="text" id="tg-chat" placeholder="e.g. 123456789" class="mono" />
       </div>
-      <div style="background:#1c1c1f;border:1px solid #27272a;border-radius:8px;padding:12px;margin-bottom:12px;font-size:11px;color:var(--text3);line-height:1.7;">
+      <div style="background:#1c1c1f;border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:12px;margin-bottom:12px;font-size:11px;color:var(--text3);line-height:1.7;">
         <b style="color:var(--text2);">Setup steps:</b><br>
         1. Create a bot via <a href="https://t.me/BotFather" target="_blank" style="color:var(--accent);">@BotFather</a> → /newbot → copy token above<br>
         2. Open your bot in Telegram and press <b style="color:var(--text2);">Start</b> (required or bot can't message you)<br>
@@ -197,7 +204,7 @@
     <div class="section-body">
       <div id="plan-status" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
         <div>
-          <span id="plan-badge" style="display:inline-block;font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px;background:var(--surface2);color:var(--text2);border:1px solid var(--border);">Loading...</span>
+          <span id="plan-badge" style="display:inline-block;font-size:12px;font-weight:500;padding:3px 10px;border-radius:20px;background:var(--surface2);color:var(--text2);border:1px solid var(--border);">Loading...</span>
           <span id="plan-label" style="font-size:12px;color:var(--text2);margin-left:8px;"></span>
         </div>
         <a id="plan-upgrade-link" href="/pricing" style="display:none;font-size:12px;font-weight:600;color:var(--accent);text-decoration:none;">Upgrade →</a>
@@ -217,6 +224,12 @@
 
 </main>
 
+<script>
+function getTheme(){return localStorage.getItem('mesh-theme')||(window.matchMedia('(prefers-color-scheme:light)').matches?'light':'dark')}
+function applyTheme(t){document.documentElement.setAttribute('data-theme',t);localStorage.setItem('mesh-theme',t)}
+function toggleTheme(){applyTheme(getTheme()==='dark'?'light':'dark')}
+applyTheme(getTheme());
+</script>
 <script>
 const params = new URLSearchParams(location.search);
 const ROOM = params.get('room') || 'mesh01';
@@ -450,9 +463,9 @@ async function loadPlanStatus() {
     const upgradeLink = document.getElementById('plan-upgrade-link');
     if (plan === 'room') {
       badge.textContent = 'Room';
-      badge.style.background = 'rgba(77,148,255,0.15)';
-      badge.style.color = '#7ab3ff';
-      badge.style.borderColor = 'rgba(77,148,255,0.4)';
+      badge.style.background = 'rgba(91,106,240,0.15)';
+      badge.style.color = '#818cf8';
+      badge.style.borderColor = 'rgba(91,106,240,0.4)';
       label.textContent = 'Private room, persistent history.';
     } else if (plan === 'team') {
       badge.textContent = 'Team';
@@ -462,9 +475,9 @@ async function loadPlanStatus() {
       label.textContent = '5 rooms, 15 agents, priority support.';
     } else if (plan === 'pro') {
       badge.textContent = 'Pro';
-      badge.style.background = 'rgba(77,148,255,0.15)';
-      badge.style.color = '#7ab3ff';
-      badge.style.borderColor = 'rgba(77,148,255,0.4)';
+      badge.style.background = 'rgba(91,106,240,0.15)';
+      badge.style.color = '#818cf8';
+      badge.style.borderColor = 'rgba(91,106,240,0.4)';
       label.textContent = 'Private rooms, persistent history.';
     } else {
       badge.textContent = 'Free';

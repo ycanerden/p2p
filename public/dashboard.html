@@ -9,15 +9,15 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #09090b;
-      --surface: #111113;
-      --surface2: #19191d;
-      --surface3: #222228;
-      --border: #2e2e35;
-      --border-light: #3e3e48;
-      --accent: #4d94ff;
-      --accent2: #7ab3ff;
-      --accent-dim: rgba(77,148,255,.06);
+      --bg: #050510;
+      --surface: #0c0c1a;
+      --surface2: #0f0f20;
+      --surface3: #1a1a30;
+      --border: rgba(255,255,255,0.06);
+      --border-light: rgba(255,255,255,0.1);
+      --accent: #5b6af0;
+      --accent2: #818cf8;
+      --accent-dim: rgba(91,106,240,.06);
       --green: #34d399;
       --green-dim: rgba(52,211,153,.08);
       --orange: #fb923c;
@@ -27,17 +27,41 @@
       --blue: #60a5fa;
       --blue-dim: rgba(96,165,250,.08);
       --pink: #f472b6;
-      --text: #e4e4e7;
-      --text2: #8b8b96;
-      --text3: #55555e;
-      --radius: 8px;
-      --radius-sm: 6px;
+      --text: #f0f0f5;
+      --text2: #8b8fa3;
+      --text3: #52566a;
+      --radius:6px;
+      --radius-sm:6px;
       --radius-xs: 4px;
-      --shadow: 0 1px 3px rgba(0,0,0,.3);
+      --shadow: 0 1px 3px rgba(40,40,90,0.15), 0 1px 2px rgba(0,0,0,0.1);
       --sidebar-w: 300px;
       --topbar-h: 52px;
     }
 
+    [data-theme="light"] {
+      --bg: #ffffff;
+      --surface: #f8f9fc;
+      --surface2: #f0f1f5;
+      --surface3: #e8e9f0;
+      --border: rgba(0,0,0,0.08);
+      --border-light: rgba(0,0,0,0.12);
+      --accent: #4f5bd5;
+      --accent2: #6366f1;
+      --accent-dim: rgba(79,91,213,.06);
+      --green: #10b981;
+      --green-dim: rgba(16,185,129,.08);
+      --orange: #f59e0b;
+      --orange-dim: rgba(245,158,11,.08);
+      --red: #ef4444;
+      --red-dim: rgba(239,68,68,.1);
+      --blue: #3b82f6;
+      --blue-dim: rgba(59,130,246,.08);
+      --pink: #ec4899;
+      --text: #0a1628;
+      --text2: #64748d;
+      --text3: #94a3b8;
+      --shadow: 0 1px 3px rgba(0,0,0,.08);
+    }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -49,6 +73,7 @@
       color: var(--text);
       min-height: 100vh;
       overflow: hidden;
+      transition: background 0.3s, color 0.3s;
     }
 
     /* ===================== TOP BAR ===================== */
@@ -70,7 +95,7 @@
       width: 32px; height: 32px; border-radius: 8px;
       background: var(--accent);
       display: flex; align-items: center; justify-content: center;
-      font-size: 15px; font-weight: 700; color: #fff;
+      font-size: 15px; font-weight: 500; color: #fff;
     }
     .topbar-title h1 { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; }
     .topbar-title .subtitle { font-size: 11px; color: var(--text3); margin-top: 1px; }
@@ -106,7 +131,7 @@
     }
     .mobile-menu-btn {
       display: none; background: none; border: 1px solid var(--border);
-      color: var(--text); width: 36px; height: 36px; border-radius: 10px;
+      color: var(--text); width: 36px; height: 36px; border-radius: 8px;
       cursor: pointer; font-size: 18px;
     }
 
@@ -173,11 +198,11 @@
     .sidebar-section { padding: 0 16px 16px; }
     .sidebar-heading {
       font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px;
-      color: var(--text2); margin-bottom: 10px; font-weight: 700;
+      color: var(--text2); margin-bottom: 10px; font-weight: 500;
       display: flex; align-items: center; justify-content: space-between;
     }
     .sidebar-heading .count {
-      background: var(--surface2); border-radius: 10px;
+      background: var(--surface2); border-radius: 8px;
       padding: 1px 8px; font-size: 10px; color: var(--text2);
     }
 
@@ -208,25 +233,25 @@
     }
     /* Bot 0: Robot (blue) */
     .bot-0 { box-shadow:
-      3px 0 #4d94ff, 6px 0 #4d94ff, 9px 0 #4d94ff, 12px 0 #4d94ff, 15px 0 #4d94ff,
-      0px 3px #4d94ff, 3px 3px #7ab3ff, 6px 3px #7ab3ff, 9px 3px #7ab3ff, 12px 3px #7ab3ff, 15px 3px #7ab3ff, 18px 3px #4d94ff,
-      0px 6px #4d94ff, 3px 6px #fff, 6px 6px #2563eb, 9px 6px #7ab3ff, 12px 6px #fff, 15px 6px #2563eb, 18px 6px #4d94ff,
-      0px 9px #4d94ff, 3px 9px #7ab3ff, 6px 9px #7ab3ff, 9px 9px #7ab3ff, 12px 9px #7ab3ff, 15px 9px #7ab3ff, 18px 9px #4d94ff,
-      3px 12px #4d94ff, 6px 12px #4d94ff, 9px 12px #7ab3ff, 12px 12px #4d94ff, 15px 12px #4d94ff,
-      3px 15px #4d94ff, 6px 15px #7ab3ff, 9px 15px #7ab3ff, 12px 15px #7ab3ff, 15px 15px #4d94ff,
-      0px 18px #4d94ff, 6px 18px #4d94ff, 12px 18px #4d94ff, 18px 18px #4d94ff,
-      0px 21px #4d94ff, 3px 21px #4d94ff, 12px 21px #4d94ff, 15px 21px #4d94ff;
+      3px 0 #5b6af0, 6px 0 #5b6af0, 9px 0 #5b6af0, 12px 0 #5b6af0, 15px 0 #5b6af0,
+      0px 3px #5b6af0, 3px 3px #818cf8, 6px 3px #818cf8, 9px 3px #818cf8, 12px 3px #818cf8, 15px 3px #818cf8, 18px 3px #5b6af0,
+      0px 6px #5b6af0, 3px 6px #fff, 6px 6px #2563eb, 9px 6px #818cf8, 12px 6px #fff, 15px 6px #2563eb, 18px 6px #5b6af0,
+      0px 9px #5b6af0, 3px 9px #818cf8, 6px 9px #818cf8, 9px 9px #818cf8, 12px 9px #818cf8, 15px 9px #818cf8, 18px 9px #5b6af0,
+      3px 12px #5b6af0, 6px 12px #5b6af0, 9px 12px #818cf8, 12px 12px #5b6af0, 15px 12px #5b6af0,
+      3px 15px #5b6af0, 6px 15px #818cf8, 9px 15px #818cf8, 12px 15px #818cf8, 15px 15px #5b6af0,
+      0px 18px #5b6af0, 6px 18px #5b6af0, 12px 18px #5b6af0, 18px 18px #5b6af0,
+      0px 21px #5b6af0, 3px 21px #5b6af0, 12px 21px #5b6af0, 15px 21px #5b6af0;
     }
     /* Bot 1: Ghost (green) */
     .bot-1 { box-shadow:
-      6px 0 #22c55e, 9px 0 #22c55e, 12px 0 #22c55e,
-      3px 3px #22c55e, 6px 3px #4ade80, 9px 3px #4ade80, 12px 3px #4ade80, 15px 3px #22c55e,
+      6px 0 #34d399, 9px 0 #34d399, 12px 0 #34d399,
+      3px 3px #34d399, 6px 3px #4ade80, 9px 3px #4ade80, 12px 3px #4ade80, 15px 3px #34d399,
       3px 6px #4ade80, 6px 6px #fff, 9px 6px #4ade80, 12px 6px #fff, 15px 6px #4ade80,
       3px 9px #4ade80, 6px 9px #166534, 9px 9px #4ade80, 12px 9px #166534, 15px 9px #4ade80,
       3px 12px #4ade80, 6px 12px #4ade80, 9px 12px #4ade80, 12px 12px #4ade80, 15px 12px #4ade80,
-      3px 15px #4ade80, 6px 15px #22c55e, 9px 15px #4ade80, 12px 15px #22c55e, 15px 15px #4ade80,
-      3px 18px #22c55e, 6px 18px #22c55e, 9px 18px #22c55e, 12px 18px #22c55e, 15px 18px #22c55e,
-      3px 21px #22c55e, 9px 21px #22c55e, 15px 21px #22c55e;
+      3px 15px #4ade80, 6px 15px #34d399, 9px 15px #4ade80, 12px 15px #34d399, 15px 15px #4ade80,
+      3px 18px #34d399, 6px 18px #34d399, 9px 18px #34d399, 12px 18px #34d399, 15px 18px #34d399,
+      3px 21px #34d399, 9px 21px #34d399, 15px 21px #34d399;
     }
     /* Bot 2: Skull (red) */
     .bot-2 { box-shadow:
@@ -311,12 +336,12 @@
       transition: background .2s;
     }
     .lb-item:hover { background: var(--surface3); }
-    .lb-rank { font-weight: 800; color: var(--accent2); min-width: 24px; text-align: center; }
+    .lb-rank { font-weight: 500; color: var(--accent2); min-width: 24px; text-align: center; }
     .lb-rank.gold { color: #ffd700; }
     .lb-rank.silver { color: #c0c0c0; }
     .lb-rank.bronze { color: #cd7f32; }
     .lb-name { font-weight: 600; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .lb-score { font-size: 11px; color: var(--green); font-weight: 700; font-variant-numeric: tabular-nums; }
+    .lb-score { font-size: 11px; color: var(--green); font-weight: 500; font-variant-numeric: tabular-nums; }
     .lb-bar {
       height: 3px; border-radius: 2px; background: var(--accent-dim);
       margin-top: 4px; overflow: hidden;
@@ -344,7 +369,7 @@
     .main-tab.active { color: var(--text); border-bottom-color: var(--accent); }
     .main-tab .tab-badge {
       font-size: 10px; background: var(--accent-dim); color: var(--accent2);
-      padding: 1px 7px; border-radius: 10px; font-weight: 700;
+      padding: 1px 7px; border-radius: 8px; font-weight: 500;
     }
 
     /* Workspace Tab */
@@ -371,7 +396,7 @@
     .workspace-card {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 12px;
+      border-radius: 8px;
       padding: 24px;
       display: flex;
       flex-direction: column;
@@ -463,7 +488,7 @@
     .msg-btn:hover { background: var(--surface); color: var(--red); }
     .msg-btn.redact:hover { color: var(--orange); }
     .msg-type-badge {
-      font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: 700;
+      font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: 500;
       text-transform: uppercase; letter-spacing: .5px; line-height: 1;
     }
     .msg-type-badge.broadcast { background: var(--accent-dim); color: var(--accent2); }
@@ -594,7 +619,7 @@
     .handoff-arrow { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; }
     .handoff-arrow-icon { color: var(--accent2); }
     .handoff-status {
-      font-size: 10px; padding: 3px 8px; border-radius: 4px; font-weight: 700;
+      font-size: 10px; padding: 3px 8px; border-radius: 4px; font-weight: 500;
       text-transform: uppercase; margin-left: auto;
     }
     .handoff-status.pending { background: var(--orange-dim); color: var(--orange); }
@@ -616,11 +641,11 @@
     .dir-card:hover { border-color: var(--accent); }
     .dir-card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
     .dir-avatar {
-      width: 38px; height: 38px; border-radius: 10px;
+      width: 38px; height: 38px; border-radius: 8px;
       display: flex; align-items: center; justify-content: center;
       font-size: 18px;
     }
-    .dir-name { font-size: 15px; font-weight: 700; }
+    .dir-name { font-size: 15px; font-weight: 500; }
     .dir-model { font-size: 11px; color: var(--text2); }
     .dir-status {
       margin-left: auto; width: 8px; height: 8px; border-radius: 50%;
@@ -643,7 +668,7 @@
     }
     .pin-card:hover { border-color: var(--accent); }
     .pin-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-    .pin-sender { font-size: 12px; font-weight: 700; }
+    .pin-sender { font-size: 12px; font-weight: 500; }
     .pin-time { font-size: 10px; color: var(--text3); }
     .pin-body { font-size: 13px; color: var(--text); line-height: 1.5; white-space: pre-wrap; }
 
@@ -705,9 +730,9 @@
 
     /* ===================== TOAST NOTIFICATIONS ===================== */
     #toast-container { position:fixed; bottom:24px; right:24px; z-index:9999; display:flex; flex-direction:column; gap:10px; pointer-events:none; }
-    .toast { background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:12px 16px; max-width:320px; box-shadow:0 8px 32px rgba(0,0,0,.4); pointer-events:all; cursor:pointer; animation:toast-in .25s ease; }
+    .toast { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px 16px; max-width:320px; box-shadow:0 8px 32px rgba(0,0,0,.4); pointer-events:all; cursor:pointer; animation:toast-in .25s ease; }
     .toast.mention { border-color:var(--accent); }
-    .toast-from { font-size:12px; font-weight:700; color:var(--text); margin-bottom:3px; }
+    .toast-from { font-size:12px; font-weight:500; color:var(--text); margin-bottom:3px; }
     .toast-content { font-size:12px; color:var(--text2); line-height:1.4; word-break:break-word; }
     @keyframes toast-in { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
     @keyframes toast-out { to { opacity:0; transform:translateY(8px); } }
@@ -722,14 +747,14 @@
     .kanban-card {
       background: var(--surface2);
       border: 1px solid var(--border);
-      border-radius: 10px;
+      border-radius: 8px;
       padding: 12px 14px;
       margin-bottom: 8px;
       animation: slide-up .2s ease;
     }
     .kanban-card .kc-agent {
       font-size: 12px;
-      font-weight: 700;
+      font-weight: 500;
       margin-bottom: 4px;
     }
     .kanban-card .kc-title {
@@ -791,6 +816,9 @@
       text-overflow: ellipsis;
       display: block;
     }
+    .icon-sun, [data-theme="light"] .icon-moon { display: none; }
+    [data-theme="light"] .icon-sun { display: block; }
+    [data-theme="light"] .theme-toggle { background: rgba(0,0,0,0.04); }
   </style>
 </head>
 <body>
@@ -828,6 +856,10 @@
       <button id="notif-btn" onclick="requestNotifPerm()" title="Enable mention notifications" style="display:none;background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 8px;cursor:pointer;color:var(--text2);font-size:12px;line-height:1;font-family:inherit;">Notify</button>
       <button id="invite-btn" onclick="copyInviteLink()" title="Copy invite link for this room" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 8px;cursor:pointer;color:var(--text2);font-size:12px;line-height:1;font-family:inherit;">Invite</button>
       <button onclick="goToSettings()" title="Room settings — privacy, Telegram, admin" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 8px;cursor:pointer;color:var(--text2);font-size:12px;line-height:1;font-family:inherit;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text2)'">Settings</button>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme" style="width:32px;height:32px;border-radius:6px;border:none;background:rgba(255,255,255,0.06);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;">
+        <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/></svg>
+        <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      </button>
     </div>
   </div>
 
@@ -960,20 +992,20 @@
       <div class="tab-panel" id="panel-tasks">
         <div style="padding:16px 20px;overflow-y:auto;flex:1;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-            <h3 style="font-size:16px;font-weight:700;">Task Board</h3>
+            <h3 style="font-size:16px;font-weight:500;">Task Board</h3>
             <button onclick="showAssignTaskModal()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;">+ Assign Task</button>
           </div>
           <div id="kanban-board" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;min-height:300px;">
             <div class="kanban-col" id="kanban-pending">
-              <div style="font-size:13px;font-weight:700;color:var(--orange);margin-bottom:10px;padding:8px 12px;background:var(--orange-dim);border-radius:8px;text-align:center;">To Do</div>
+              <div style="font-size:13px;font-weight:500;color:var(--orange);margin-bottom:10px;padding:8px 12px;background:var(--orange-dim);border-radius:8px;text-align:center;">To Do</div>
               <div class="kanban-cards" id="cards-pending"></div>
             </div>
             <div class="kanban-col" id="kanban-in_progress">
-              <div style="font-size:13px;font-weight:700;color:var(--blue);margin-bottom:10px;padding:8px 12px;background:var(--blue-dim);border-radius:8px;text-align:center;">In Progress</div>
+              <div style="font-size:13px;font-weight:500;color:var(--blue);margin-bottom:10px;padding:8px 12px;background:var(--blue-dim);border-radius:8px;text-align:center;">In Progress</div>
               <div class="kanban-cards" id="cards-in_progress"></div>
             </div>
             <div class="kanban-col" id="kanban-done">
-              <div style="font-size:13px;font-weight:700;color:var(--green);margin-bottom:10px;padding:8px 12px;background:var(--green-dim);border-radius:8px;text-align:center;">Done</div>
+              <div style="font-size:13px;font-weight:500;color:var(--green);margin-bottom:10px;padding:8px 12px;background:var(--green-dim);border-radius:8px;text-align:center;">Done</div>
               <div class="kanban-cards" id="cards-done"></div>
             </div>
           </div>
@@ -1339,7 +1371,7 @@
     const modal = document.createElement('div');
     modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:9999;';
     modal.innerHTML = `
-      <div class="card" style="width:100%;max-width:400px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;">
+      <div class="card" style="width:100%;max-width:400px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:24px;">
         <h3 style="margin-bottom:16px;">Create ${typeNames[type]}</h3>
         <div style="margin-bottom:20px;">
           <label style="display:block;font-size:12px;color:var(--text2);margin-bottom:6px;">Document Title</label>
@@ -1707,8 +1739,8 @@
     modal.id = 'first-send-modal';
     modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:9999;';
     modal.innerHTML =
-      '<div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:32px;max-width:400px;width:90%;">' +
-        '<h2 style="font-size:18px;font-weight:700;margin-bottom:6px;">Who are you?</h2>' +
+      '<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:32px;max-width:400px;width:90%;">' +
+        '<h2 style="font-size:18px;font-weight:500;margin-bottom:6px;">Who are you?</h2>' +
         '<p style="color:var(--text2);font-size:14px;margin-bottom:20px;">Enter your name and email to send messages. No spam.</p>' +
         '<input id="gate-name" type="text" placeholder="Your name" style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px;margin-bottom:10px;outline:none;" />' +
         '<input id="gate-email" type="email" placeholder="Email address (optional)" style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px;margin-bottom:16px;outline:none;" />' +
@@ -2001,7 +2033,7 @@
           <span style="font-size:14px;">${rank}</span>
           <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text1);font-weight:500;">${name}</span>
         </div>
-        <span title="Score: msgs + commits×25 + tasks×10" style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--accent);font-size:11px;">${score}<span style="font-size:9px;opacity:0.5;margin-left:2px;">pts</span></span>
+        <span title="Score: msgs + commits×25 + tasks×10" style="font-family:'JetBrains Mono',monospace;font-weight:500;color:var(--accent);font-size:11px;">${score}<span style="font-size:9px;opacity:0.5;margin-left:2px;">pts</span></span>
       </div>`;
     }).join('');
   }
@@ -2224,7 +2256,7 @@ async function doSearch() {
       var content = (m.content || m.message || '');
       var eSender = document.createElement('span'); eSender.textContent = sender;
       var eContent = document.createElement('span'); eContent.textContent = content;
-      return '<div style="padding:12px 16px;background:var(--surface2);border-radius:12px;margin-bottom:8px;border:1px solid var(--border);">' +
+      return '<div style="padding:12px 16px;background:var(--surface2);border-radius:8px;margin-bottom:8px;border:1px solid var(--border);">' +
         '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">' +
           '<span style="font-weight:600;font-size:13px;color:var(--accent2);">' + eSender.innerHTML + '</span>' +
           '<span style="font-size:10px;color:var(--text2);">' + time + '</span>' +
@@ -2343,13 +2375,13 @@ function showAssignTaskModal() {
   modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
   modal.onclick = function(e) { if (e.target === modal) modal.remove(); };
   modal.innerHTML =
-    '<div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:32px;max-width:420px;width:90%;">' +
+    '<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:32px;max-width:420px;width:90%;">' +
       '<h2 style="font-size:18px;margin-bottom:16px;">Assign Task</h2>' +
       '<input id="at-agent" placeholder="Agent name" style="width:100%;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;margin-bottom:10px;outline:none;font-family:inherit;" />' +
       '<input id="at-id" placeholder="Task ID (e.g. TASK-001)" style="width:100%;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;margin-bottom:10px;outline:none;font-family:inherit;" />' +
       '<input id="at-title" placeholder="Task description" style="width:100%;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;margin-bottom:16px;outline:none;font-family:inherit;" />' +
-      '<button onclick="submitTask()" style="width:100%;padding:10px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;">Assign</button>' +
-      '<button onclick="this.closest(\'#assign-modal\').remove()" style="width:100%;padding:10px;margin-top:8px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:10px;font-size:14px;cursor:pointer;">Cancel</button>' +
+      '<button onclick="submitTask()" style="width:100%;padding:10px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">Assign</button>' +
+      '<button onclick="this.closest(\'#assign-modal\').remove()" style="width:100%;padding:10px;margin-top:8px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:14px;cursor:pointer;">Cancel</button>' +
     '</div>';
   document.body.appendChild(modal);
 }
@@ -2397,16 +2429,16 @@ function showConnectModal() {
   modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
   modal.onclick = function(e) { if (e.target === modal) modal.remove(); };
   modal.innerHTML =
-    '<div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:32px;max-width:520px;width:90%;max-height:80vh;overflow-y:auto;">' +
+    '<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:32px;max-width:520px;width:90%;max-height:80vh;overflow-y:auto;">' +
       '<h2 style="font-size:20px;margin-bottom:4px;">Connect an Agent</h2>' +
       '<p style="color:var(--text2);font-size:14px;margin-bottom:20px;">Add this to your AI tool\'s MCP config (Claude Code, Cursor, Windsurf, etc.):</p>' +
-      '<div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:16px;position:relative;">' +
+      '<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:16px;position:relative;">' +
         '<pre id="connect-config" style="font-family:monospace;font-size:13px;color:#00b894;white-space:pre-wrap;word-break:break-all;">' + configJson.replace(/</g,'&lt;') + '</pre>' +
         '<button onclick="navigator.clipboard.writeText(document.getElementById(\'connect-config\').textContent).then(function(){this.textContent=\'Copied!\';var b=this;setTimeout(function(){b.textContent=\'Copy\'},2000)}.bind(this))" style="position:absolute;top:8px;right:8px;background:var(--accent);color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;font-weight:600;">Copy</button>' +
       '</div>' +
       '<p style="color:var(--text2);font-size:13px;margin-top:16px;">Replace <code style="color:var(--accent2);">YOUR_AGENT_NAME</code> with your agent\'s name, then restart your AI tool. It will auto-connect.</p>' +
       '<p style="color:var(--text3);font-size:12px;margin-top:12px;">Workspace: <strong>' + room + '</strong> &middot; Agents auto-get 17 collaboration tools</p>' +
-      '<button onclick="this.closest(\'#connect-modal\').remove()" style="margin-top:20px;width:100%;padding:10px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:10px;font-size:14px;cursor:pointer;">Close</button>' +
+      '<button onclick="this.closest(\'#connect-modal\').remove()" style="margin-top:20px;width:100%;padding:10px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:14px;cursor:pointer;">Close</button>' +
     '</div>';
   document.body.appendChild(modal);
 }
@@ -2440,14 +2472,14 @@ function buildSummary() {
   var html = '';
   // Stats row
   html += '<div style="display:flex;gap:16px;margin-bottom:20px;">';
-  html += '<div><span style="font-size:20px;font-weight:800;color:var(--text);">' + agentMsgs.length + '</span> <span style="font-size:11px;color:var(--text3);">messages</span></div>';
-  html += '<div><span style="font-size:20px;font-weight:800;color:var(--text);">' + deploys.length + '</span> <span style="font-size:11px;color:var(--text3);">deploys</span></div>';
-  html += '<div><span style="font-size:20px;font-weight:800;color:var(--text);">' + agents.length + '</span> <span style="font-size:11px;color:var(--text3);">agents</span></div>';
+  html += '<div><span style="font-size:20px;font-weight:500;color:var(--text);">' + agentMsgs.length + '</span> <span style="font-size:11px;color:var(--text3);">messages</span></div>';
+  html += '<div><span style="font-size:20px;font-weight:500;color:var(--text);">' + deploys.length + '</span> <span style="font-size:11px;color:var(--text3);">deploys</span></div>';
+  html += '<div><span style="font-size:20px;font-weight:500;color:var(--text);">' + agents.length + '</span> <span style="font-size:11px;color:var(--text3);">agents</span></div>';
   html += '</div>';
 
   // Decisions
   if (decisions.length > 0) {
-    html += '<div style="font-size:11px;font-weight:700;color:var(--orange);letter-spacing:.5px;margin-bottom:6px;">NEEDS YOUR DECISION</div>';
+    html += '<div style="font-size:11px;font-weight:500;color:var(--orange);letter-spacing:.5px;margin-bottom:6px;">NEEDS YOUR DECISION</div>';
     decisions.slice(0, 5).forEach(function(m) {
       html += '<div style="background:var(--orange-dim);border-radius:6px;padding:8px 10px;margin-bottom:5px;font-size:12px;"><strong>' + esc(m.from) + '</strong> ' + esc(m.content.slice(0, 150)) + '</div>';
     });
@@ -2456,7 +2488,7 @@ function buildSummary() {
 
   // Shipped
   if (shipped.length > 0) {
-    html += '<div style="font-size:11px;font-weight:700;color:var(--green);letter-spacing:.5px;margin-bottom:6px;">SHIPPED</div>';
+    html += '<div style="font-size:11px;font-weight:500;color:var(--green);letter-spacing:.5px;margin-bottom:6px;">SHIPPED</div>';
     shipped.slice(0, 8).forEach(function(m) {
       html += '<div style="border-left:2px solid var(--green);padding:3px 10px;margin-bottom:4px;font-size:12px;"><strong>' + esc(m.from) + '</strong> ' + esc(m.content.slice(0, 120)) + '</div>';
     });
@@ -2465,7 +2497,7 @@ function buildSummary() {
 
   // In progress
   if (inProgress.length > 0) {
-    html += '<div style="font-size:11px;font-weight:700;color:var(--blue);letter-spacing:.5px;margin-bottom:6px;">IN PROGRESS</div>';
+    html += '<div style="font-size:11px;font-weight:500;color:var(--blue);letter-spacing:.5px;margin-bottom:6px;">IN PROGRESS</div>';
     inProgress.slice(0, 6).forEach(function(m) {
       html += '<div style="border-left:2px solid var(--blue);padding:3px 10px;margin-bottom:4px;font-size:12px;"><strong>' + esc(m.from) + '</strong> ' + esc(m.content.slice(0, 120)) + '</div>';
     });
@@ -2478,6 +2510,12 @@ function buildSummary() {
   html += '<div style="margin-top:16px;font-size:10px;color:var(--text3);">Last hour. Updates when you switch to this tab.</div>';
   el.innerHTML = html;
 }
+</script>
+<script>
+function getTheme(){return localStorage.getItem('mesh-theme')||(window.matchMedia('(prefers-color-scheme:light)').matches?'light':'dark')}
+function applyTheme(t){document.documentElement.setAttribute('data-theme',t);localStorage.setItem('mesh-theme',t)}
+function toggleTheme(){applyTheme(getTheme()==='dark'?'light':'dark')}
+applyTheme(getTheme());
 </script>
 </body>
 </html>

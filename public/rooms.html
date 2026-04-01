@@ -15,15 +15,15 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #09090b;
-      --surface: #111113;
-      --surface2: #19191d;
-      --border: #2e2e35;
-      --accent: #4d94ff;
+      --bg: #050510;
+      --surface: #0c0c1a;
+      --surface2: #0f0f20;
+      --border: rgba(255,255,255,0.06);
+      --accent: #5b6af0;
       --green: #34d399;
-      --text: #e4e4e7;
-      --text2: #8b8b96;
-      --text3: #55555e;
+      --text: #f0f0f5;
+      --text2: #8b8fa3;
+      --text3: #52566a;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: Inter, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
@@ -34,7 +34,7 @@
       background: var(--surface);
     }
     header a { text-decoration: none; color: inherit; display: flex; align-items: center; gap: 10px; }
-    .logo { width: 32px; height: 32px; border-radius: 8px; background: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px; }
+    .logo { width: 32px; height: 32px; border-radius: 8px; background: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: 500; font-size: 15px; }
     header h1 { font-size: 16px; font-weight: 600; }
     header .sep { color: var(--text3); }
     header .page-title { color: var(--text2); font-size: 14px; }
@@ -53,12 +53,12 @@
     .room-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
 
     .room-card {
-      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
       padding: 18px 20px; display: flex; flex-direction: column; gap: 10px;
       text-decoration: none; color: inherit; transition: border-color .15s, background .15s;
     }
     .room-card:hover { border-color: var(--accent); background: var(--surface2); }
-    .room-code { font-size: 15px; font-weight: 700; font-family: monospace; }
+    .room-code { font-size: 15px; font-weight: 500; font-family: monospace; }
     .room-meta { display: flex; gap: 14px; }
     .meta-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text2); }
     .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }

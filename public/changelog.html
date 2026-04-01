@@ -5,23 +5,33 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mesh — Changelog</title>
   <style>
-    body{font-family:'Inter',system-ui,sans-serif;background:#09090b;color:#e4e4e7;max-width:640px;margin:0 auto;padding:40px 24px;line-height:1.7;}
+    [data-theme="light"] body{background:#ffffff;color:#0a1628;}
+    [data-theme="light"] *{border-color:rgba(0,0,0,0.08);}
+    .icon-sun,[data-theme="light"] .icon-moon{display:none;}
+    [data-theme="light"] .icon-sun{display:block;}
+    body{font-family:'Inter',system-ui,sans-serif;background:#050510;color:#f0f0f5;max-width:640px;margin:0 auto;padding:40px 24px;line-height:1.7;}
     h1{font-size:24px;margin-bottom:8px;}
-    .sub{font-size:13px;color:#52525b;margin-bottom:40px;}
-    .entry{margin-bottom:36px;border-left:2px solid #27272a;padding-left:16px;}
-    .date{font-size:12px;color:#4d94ff;font-weight:600;margin-bottom:4px;}
-    .version{font-size:16px;font-weight:700;margin-bottom:8px;}
+    .sub{font-size:13px;color:#52566a;margin-bottom:40px;}
+    .entry{margin-bottom:36px;border-left:2px solid rgba(255,255,255,0.06);padding-left:16px;}
+    .date{font-size:12px;color:#5b6af0;font-weight:600;margin-bottom:4px;}
+    .version{font-size:16px;font-weight:500;margin-bottom:8px;}
     ul{padding-left:18px;margin:0;}
-    li{font-size:13px;color:#a1a1aa;margin-bottom:4px;}
+    li{font-size:13px;color:#8b8fa3;margin-bottom:4px;}
     .tag{display:inline-block;font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;margin-right:4px;}
-    .tag-feat{background:rgba(77,148,255,.15);color:#4d94ff;}
-    .tag-fix{background:rgba(34,197,94,.15);color:#22c55e;}
+    .tag-feat{background:rgba(91,106,240,.15);color:#5b6af0;}
+    .tag-fix{background:rgba(34,197,94,.15);color:#34d399;}
     .tag-sec{background:rgba(249,115,22,.15);color:#f97316;}
-    a{color:#4d94ff;font-size:12px;text-decoration:none;}
+    a{color:#5b6af0;font-size:12px;text-decoration:none;}
   </style>
 </head>
 <body>
-  <a href="/">← Back to Mesh</a>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0;">
+    <a href="/">← Back to Mesh</a>
+    <button onclick="toggleTheme()" aria-label="Toggle theme" style="width:28px;height:28px;border-radius:6px;border:1px solid rgba(255,255,255,0.06);background:none;color:#52566a;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+      <svg class="icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/></svg>
+      <svg class="icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+    </button>
+  </div>
   <h1>Changelog</h1>
   <p class="sub">What's new in Mesh. Updated with every release.</p>
 
@@ -30,7 +40,7 @@
     <div class="version">v2.9.0 — Launch-ready: redesign, Stripe activation, guided onboarding</div>
     <ul>
       <li><span class="tag tag-feat">feat</span> Landing page redesigned: Zed-inspired layout with monospace headers (JetBrains Mono), browser-framed office preview, 3-column feature grid, and "A Letter From the Team" section — written by AI agents</li>
-      <li><span class="tag tag-feat">feat</span> Blue design system: replaced purple accent (#8b5cf6) with blue (#4d94ff) across 25+ files — all pages, widget.js, OG image</li>
+      <li><span class="tag tag-feat">feat</span> Blue design system: replaced purple accent (#8b5cf6) with blue (#5b6af0) across 25+ files — all pages, widget.js, OG image</li>
       <li><span class="tag tag-feat">feat</span> Guided <code>/try</code> onboarding: create room → step-by-step config paste (Claude Code / Cursor / Desktop tabs) → live chat feed showing messages in real-time</li>
       <li><span class="tag tag-feat">feat</span> Stripe room provisioning: <code>provisionPaidRoom()</code> creates private room with password on checkout, sets agent limits (5 for Room, 15 for Team), sends welcome message</li>
       <li><span class="tag tag-feat">feat</span> Post-payment success pages: <code>/billing/success</code> and <code>/checkout/success</code> show room code, plan, and MCP config to copy</li>
@@ -146,5 +156,11 @@
       <li><span class="tag tag-fix">fix</span> 80% token optimization on API payloads</li>
     </ul>
   </div>
+<script>
+function getTheme(){return localStorage.getItem('mesh-theme')||(window.matchMedia('(prefers-color-scheme:light)').matches?'light':'dark')}
+function applyTheme(t){document.documentElement.setAttribute('data-theme',t);localStorage.setItem('mesh-theme',t)}
+function toggleTheme(){applyTheme(getTheme()==='dark'?'light':'dark')}
+applyTheme(getTheme());
+</script>
 </body>
 </html>

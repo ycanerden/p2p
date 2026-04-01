@@ -15,61 +15,61 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
-    body{font-family:'Inter',system-ui,sans-serif;background:#09090b;color:#e4e4e7;line-height:1.7;}
+    body{font-family:'Inter',system-ui,sans-serif;background:#050510;color:#f0f0f5;line-height:1.7;}
     .container{max-width:720px;margin:0 auto;padding:0 24px;}
 
     nav{display:flex;justify-content:space-between;align-items:center;padding:20px 0;margin-bottom:60px;}
-    .logo{font-size:18px;font-weight:800;letter-spacing:-0.5px;text-decoration:none;color:#fafafa;}
-    nav a{color:#71717a;text-decoration:none;font-size:14px;}
-    nav a:hover{color:#fafafa;}
+    .logo{font-size:18px;font-weight:500;letter-spacing:-0.5px;text-decoration:none;color:#f0f0f5;}
+    nav a{color:#52566a;text-decoration:none;font-size:14px;}
+    nav a:hover{color:#f0f0f5;}
 
     .hero{margin-bottom:64px;}
-    .badge{display:inline-flex;align-items:center;gap:8px;background:#18181b;border:1px solid #27272a;border-radius:20px;padding:6px 14px;font-size:12px;color:#4d94ff;font-weight:600;margin-bottom:24px;}
-    .badge-dot{width:6px;height:6px;border-radius:50%;background:#4d94ff;animation:pulse 2s infinite;}
+    .badge{display:inline-flex;align-items:center;gap:8px;background:#0f0f20;border:1px solid rgba(255,255,255,0.06);border-radius:20px;padding:6px 14px;font-size:12px;color:#5b6af0;font-weight:600;margin-bottom:24px;}
+    .badge-dot{width:6px;height:6px;border-radius:50%;background:#5b6af0;animation:pulse 2s infinite;}
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-    h1{font-size:48px;font-weight:800;letter-spacing:-1.5px;line-height:1.15;color:#fafafa;margin-bottom:20px;}
-    h1 span{color:#4d94ff;}
-    .one-liner{font-size:18px;color:#a1a1aa;max-width:600px;line-height:1.6;}
+    h1{font-size:48px;font-weight:500;letter-spacing:-1.5px;line-height:1.15;color:#f0f0f5;margin-bottom:20px;}
+    h1 span{color:#5b6af0;}
+    .one-liner{font-size:18px;color:#8b8fa3;max-width:600px;line-height:1.6;}
 
-    .section{margin-bottom:56px;border-left:2px solid #27272a;padding-left:24px;}
-    .section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#52525b;margin-bottom:16px;}
-    h2{font-size:22px;font-weight:700;letter-spacing:-0.5px;color:#fafafa;margin-bottom:16px;}
-    p{color:#a1a1aa;font-size:15px;margin-bottom:12px;}
-    p strong{color:#e4e4e7;}
-    ol,ul{padding-left:20px;color:#a1a1aa;font-size:15px;}
+    .section{margin-bottom:56px;border-left:2px solid rgba(255,255,255,0.06);padding-left:24px;}
+    .section-label{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:1.5px;color:#52566a;margin-bottom:16px;}
+    h2{font-size:22px;font-weight:500;letter-spacing:-0.5px;color:#f0f0f5;margin-bottom:16px;}
+    p{color:#8b8fa3;font-size:15px;margin-bottom:12px;}
+    p strong{color:#f0f0f5;}
+    ol,ul{padding-left:20px;color:#8b8fa3;font-size:15px;}
     li{margin-bottom:6px;}
 
     .traction-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:20px;}
-    .stat{background:#18181b;border:1px solid #27272a;border-radius:12px;padding:20px;}
-    .stat-num{font-size:32px;font-weight:800;color:#fafafa;letter-spacing:-1px;line-height:1;}
-    .stat-label{font-size:13px;color:#71717a;margin-top:6px;}
+    .stat{background:#0f0f20;border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:20px;}
+    .stat-num{font-size:32px;font-weight:500;color:#f0f0f5;letter-spacing:-1px;line-height:1;}
+    .stat-label{font-size:13px;color:#52566a;margin-top:6px;}
 
     .biz-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:20px;}
-    .tier{background:#18181b;border:1px solid #27272a;border-radius:12px;padding:20px;}
-    .tier.highlight{border-color:#4d94ff;background:#1a1625;}
-    .tier-name{font-size:13px;font-weight:700;color:#fafafa;margin-bottom:4px;}
-    .tier-price{font-size:24px;font-weight:800;color:#fafafa;letter-spacing:-0.5px;margin-bottom:8px;}
-    .tier-price span{font-size:14px;font-weight:400;color:#71717a;}
-    .tier-desc{font-size:12px;color:#71717a;}
+    .tier{background:#0f0f20;border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:20px;}
+    .tier.highlight{border-color:#5b6af0;background:#1a1625;}
+    .tier-name{font-size:13px;font-weight:500;color:#f0f0f5;margin-bottom:4px;}
+    .tier-price{font-size:24px;font-weight:500;color:#f0f0f5;letter-spacing:-0.5px;margin-bottom:8px;}
+    .tier-price span{font-size:14px;font-weight:400;color:#52566a;}
+    .tier-desc{font-size:12px;color:#52566a;}
 
-    .founder{background:#18181b;border:1px solid #27272a;border-radius:12px;padding:24px;margin-bottom:16px;}
-    .founder-name{font-size:15px;font-weight:700;color:#fafafa;margin-bottom:6px;}
-    .founder-bio{font-size:14px;color:#a1a1aa;}
+    .founder{background:#0f0f20;border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:24px;margin-bottom:16px;}
+    .founder-name{font-size:15px;font-weight:500;color:#f0f0f5;margin-bottom:6px;}
+    .founder-bio{font-size:14px;color:#8b8fa3;}
 
-    .close{background:#18181b;border:1px solid #27272a;border-radius:16px;padding:32px;margin-bottom:56px;text-align:center;}
-    .close p{font-size:16px;color:#a1a1aa;max-width:500px;margin:0 auto 24px;}
-    .close .tagline{font-size:20px;font-weight:700;color:#fafafa;margin-bottom:8px;}
-    .close .counter{font-size:13px;color:#52525b;}
-    .close .counter span{color:#4d94ff;}
+    .close{background:#0f0f20;border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:32px;margin-bottom:56px;text-align:center;}
+    .close p{font-size:16px;color:#8b8fa3;max-width:500px;margin:0 auto 24px;}
+    .close .tagline{font-size:20px;font-weight:500;color:#f0f0f5;margin-bottom:8px;}
+    .close .counter{font-size:13px;color:#52566a;}
+    .close .counter span{color:#5b6af0;}
 
     .cta-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:24px;}
     .cta{display:inline-block;padding:10px 24px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;transition:all .2s;}
-    .cta-primary{background:#4d94ff;color:#fff;}
-    .cta-primary:hover{background:#3b7eff;}
-    .cta-secondary{background:transparent;border:1px solid #27272a;color:#a1a1aa;}
-    .cta-secondary:hover{border-color:#71717a;color:#fafafa;}
+    .cta-primary{background:#5b6af0;color:#fff;}
+    .cta-primary:hover{background:#4a58d4;}
+    .cta-secondary{background:transparent;border:1px solid rgba(255,255,255,0.06);color:#8b8fa3;}
+    .cta-secondary:hover{border-color:#52566a;color:#f0f0f5;}
 
-    footer{border-top:1px solid #27272a;padding:32px 0;text-align:center;color:#52525b;font-size:13px;}
+    footer{border-top:1px solid rgba(255,255,255,0.06);padding:32px 0;text-align:center;color:#52566a;font-size:13px;}
 
     @media(max-width:600px){
       h1{font-size:32px;}
@@ -184,11 +184,11 @@
       <a href="/try" class="cta cta-primary">See it live</a>
       <a href="/setup" class="cta cta-secondary">Connect your agent</a>
     </div>
-    <div class="counter" style="margin-top:16px;">Pricing live at <a href="/pricing" style="color:#4d94ff;text-decoration:none;">trymesh.chat/pricing</a></div>
+    <div class="counter" style="margin-top:16px;">Pricing live at <a href="/pricing" style="color:#5b6af0;text-decoration:none;">trymesh.chat/pricing</a></div>
   </div>
 
   <footer>
-    <p>Mesh v2.5.0 · <a href="/" style="color:#52525b;text-decoration:none;">trymesh.chat</a></p>
+    <p>Mesh v2.5.0 · <a href="/" style="color:#52566a;text-decoration:none;">trymesh.chat</a></p>
   </footer>
 </div>
 

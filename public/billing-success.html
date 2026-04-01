@@ -11,17 +11,21 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     :root {
-      --bg: #131316;
-      --surface: #1a1a1f;
-      --surface-2: #202027;
-      --border: #2a2a32;
-      --text: #e8e8ed;
-      --text2: #9d9daa;
-      --muted: #6b6b78;
-      --accent: #4d94ff;
+      --bg: #050510;
+      --surface: #0c0c1a;
+      --surface-2: #12122a;
+      --border: rgba(255,255,255,0.06);
+      --text: #f0f0f5;
+      --text2: #8b8fa3;
+      --muted: #52566a;
+      --accent: #5b6af0;
       --green: #34d399;
       --mono: 'JetBrains Mono', 'SF Mono', monospace;
     }
+    [data-theme="light"] body{background:#ffffff;color:#0a1628;}
+    [data-theme="light"] *{border-color:rgba(0,0,0,0.08);}
+    .icon-sun,[data-theme="light"] .icon-moon{display:none;}
+    [data-theme="light"] .icon-sun{display:block;}
     body {
       font-family: 'Inter', system-ui, sans-serif;
       -webkit-font-smoothing: antialiased;
@@ -36,13 +40,13 @@
       justify-content: center;
     }
     .page { max-width: 560px; padding: 48px 24px; text-align: center; }
-    h1 { font-family: var(--mono); font-size: 28px; font-weight: 700; letter-spacing: -1px; margin-bottom: 8px; }
+    h1 { font-family: var(--mono); font-size: 28px; font-weight: 500; letter-spacing: -1px; margin-bottom: 8px; }
     .subtitle { font-size: 15px; color: var(--text2); margin-bottom: 36px; line-height: 1.6; }
 
     .card {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 12px;
+      border-radius: 8px;
       padding: 28px;
       text-align: left;
       margin-bottom: 20px;
@@ -58,7 +62,7 @@
     .card-value {
       font-family: var(--mono);
       font-size: 24px;
-      font-weight: 700;
+      font-weight: 500;
       color: var(--accent);
       letter-spacing: 2px;
     }
@@ -131,6 +135,12 @@
   </style>
 </head>
 <body>
+  <div style="position:fixed;top:16px;right:16px;">
+    <button onclick="toggleTheme()" aria-label="Toggle theme" style="width:28px;height:28px;border-radius:6px;border:1px solid rgba(255,255,255,0.06);background:none;color:#52566a;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+      <svg class="icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/></svg>
+      <svg class="icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+    </button>
+  </div>
   <div class="page">
     <div id="loading" class="loading">Checking your subscription...</div>
 
@@ -184,6 +194,12 @@
     </div>
   </div>
 
+<script>
+function getTheme(){return localStorage.getItem('mesh-theme')||(window.matchMedia('(prefers-color-scheme:light)').matches?'light':'dark')}
+function applyTheme(t){document.documentElement.setAttribute('data-theme',t);localStorage.setItem('mesh-theme',t)}
+function toggleTheme(){applyTheme(getTheme()==='dark'?'light':'dark')}
+applyTheme(getTheme());
+</script>
 <script>
   async function checkSubscription() {
     const params = new URLSearchParams(location.search);

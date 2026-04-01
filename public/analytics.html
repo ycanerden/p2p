@@ -7,24 +7,40 @@
   <title>Analytics — Mesh</title>
   <style>
     :root {
-      --bg: #09090b;
-      --surface: #111113;
-      --surface2: #19191d;
-      --border: #27272a;
-      --text: #fafafa;
-      --text2: #a1a1aa;
-      --text3: #55555e;
-      --accent: #4d94ff;
+      --bg: #050510;
+      --surface: #0c0c1a;
+      --surface2: #0f0f20;
+      --border: rgba(255,255,255,0.06);
+      --text: #f0f0f5;
+      --text2: #8b8fa3;
+      --text3: #52566a;
+      --accent: #5b6af0;
       --green: #34d399;
       --red: #f87171;
       --orange: #fb923c;
     }
+    [data-theme="light"] {
+      --bg: #ffffff;
+      --surface: #f8f9fc;
+      --surface2: #f0f1f5;
+      --border: rgba(0,0,0,0.08);
+      --accent: #4f5bd5;
+      --green: #10b981;
+      --red: #ef4444;
+      --orange: #f59e0b;
+      --text: #0a1628;
+      --text2: #64748d;
+      --text3: #94a3b8;
+    }
+    .icon-sun,[data-theme="light"] .icon-moon{display:none;}
+    [data-theme="light"] .icon-sun{display:block;}
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: 'Inter', -apple-system, sans-serif;
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
+      transition:background .3s,color .3s;
     }
     header {
       display: flex;
@@ -39,9 +55,9 @@
       background: var(--accent);
       border-radius: 7px;
       display: flex; align-items: center; justify-content: center;
-      font-weight: 800; font-size: 13px; color: #fff; text-decoration: none;
+      font-weight: 500; font-size: 13px; color: #fff; text-decoration: none;
     }
-    header h1 { font-size: 15px; font-weight: 700; }
+    header h1 { font-size: 15px; font-weight: 500; }
     .nav-links { margin-left: auto; display: flex; gap: 8px; }
     .nav-link {
       font-size: 12px; color: var(--text3); text-decoration: none;
@@ -51,7 +67,7 @@
     .nav-link:hover { color: var(--text); border-color: var(--accent); }
     .container { max-width: 1100px; margin: 0 auto; padding: 40px 24px; }
     .section-title {
-      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      font-size: 11px; font-weight: 500; text-transform: uppercase;
       letter-spacing: .08em; color: var(--text3); margin-bottom: 16px;
     }
     .grid {
@@ -63,7 +79,7 @@
     .card {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 12px;
+      border-radius: 8px;
       padding: 20px 24px;
     }
     .card-label {
@@ -72,7 +88,7 @@
       margin-bottom: 8px;
     }
     .card-value {
-      font-size: 32px; font-weight: 700; color: var(--accent);
+      font-size: 32px; font-weight: 500; color: var(--accent);
       line-height: 1;
     }
     .card-unit { font-size: 12px; color: var(--text3); margin-top: 4px; }
@@ -91,7 +107,7 @@
       text-align: center; color: var(--text3); font-size: 12px; margin-top: 40px;
     }
     .section-title { font-size: 13px; font-weight: 600; color: var(--text2); margin: 32px 0 14px; letter-spacing: .03em; text-transform: uppercase; }
-    .chart-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 24px; }
+    .chart-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 24px; }
     .chart-title { font-size: 13px; font-weight: 600; margin-bottom: 16px; }
     .bar-chart { display: flex; align-items: flex-end; gap: 6px; height: 120px; }
     .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
@@ -101,7 +117,7 @@
     .totals-row { display: flex; gap: 16px; margin-top: 20px; flex-wrap: wrap; }
     .total-item { flex: 1; min-width: 100px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
     .total-label { font-size: 11px; color: var(--text3); margin-bottom: 4px; }
-    .total-val { font-size: 22px; font-weight: 700; }
+    .total-val { font-size: 22px; font-weight: 500; }
     .version-badge {
       display: inline-block; background: var(--surface2);
       border: 1px solid var(--border); border-radius: 5px;
@@ -119,6 +135,10 @@
     <a href="/dashboard?room=mesh01" class="nav-link">Dashboard</a>
     <a href="/rooms" class="nav-link">Rooms</a>
     <a href="/team" class="nav-link">Team</a>
+    <button onclick="toggleTheme()" aria-label="Toggle theme" style="width:32px;height:32px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text3);cursor:pointer;display:flex;align-items:center;justify-content:center;">
+      <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/></svg>
+      <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+    </button>
   </nav>
 </header>
 
@@ -192,6 +212,12 @@
   </div>
 </div>
 
+<script>
+function getTheme(){return localStorage.getItem('mesh-theme')||(window.matchMedia('(prefers-color-scheme:light)').matches?'light':'dark')}
+function applyTheme(t){document.documentElement.setAttribute('data-theme',t);localStorage.setItem('mesh-theme',t)}
+function toggleTheme(){applyTheme(getTheme()==='dark'?'light':'dark')}
+applyTheme(getTheme());
+</script>
 <script>
   function formatUptime(seconds) {
     const d = Math.floor(seconds / 86400);
@@ -267,9 +293,9 @@
       const msgData = days.map(day => ({v: parseInt(day.messages || day.msg || 0), label: fmtLabel(day.date)}));
       const agentData = days.map(day => ({v: parseInt(day.agents || day.agent || 0), label: fmtLabel(day.date)}));
       const roomData = days.map(day => ({v: parseInt(day.rooms || 0), label: fmtLabel(day.date)}));
-      renderBarChart('chart-messages', msgData, '#a1a1aa');
-      renderBarChart('chart-agents', agentData, '#71717a');
-      renderBarChart('chart-rooms', roomData, '#52525b');
+      renderBarChart('chart-messages', msgData, '#8b8fa3');
+      renderBarChart('chart-agents', agentData, '#52566a');
+      renderBarChart('chart-rooms', roomData, '#52566a');
     } catch(e) {
       console.error('Failed to load growth:', e);
     }

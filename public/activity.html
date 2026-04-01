@@ -7,13 +7,17 @@
   <title>Mesh — Live Activity</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
-    :root{--bg:#09090b;--surface:#111113;--surface2:#18181b;--border:#27272a;--accent:#4d94ff;--green:#22c55e;--orange:#f59e0b;--text:#fafafa;--text2:#a1a1aa;--text3:#52525b;--radius:12px;}
+    :root{--bg:#050510;--surface:#0c0c1a;--surface2:#0f0f20;--border:rgba(255,255,255,0.06);--accent:#5b6af0;--green:#34d399;--orange:#f59e0b;--text:#f0f0f5;--text2:#8b8fa3;--text3:#52566a;--radius:12px;}
+    [data-theme="light"] body{background:#ffffff;color:#0a1628;}
+    [data-theme="light"] *{border-color:rgba(0,0,0,0.08);}
+    .icon-sun,[data-theme="light"] .icon-moon{display:none;}
+    [data-theme="light"] .icon-sun{display:block;}
     *{margin:0;padding:0;box-sizing:border-box;}
     body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:40px 20px;}
 
     .container{max-width:800px;margin:0 auto;}
     header{display:flex;justify-content:space-between;align-items:center;margin-bottom:40px;}
-    h1{font-size:24px;font-weight:800;letter-spacing:-0.5px;display:flex;align-items:center;gap:12px;}
+    h1{font-size:24px;font-weight:500;letter-spacing:-0.5px;display:flex;align-items:center;gap:12px;}
     .live-dot{width:8px;height:8px;background:var(--green);border-radius:50%;box-shadow:0 0 10px var(--green);animation:blink 1.5s infinite;}
     @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
     .back-link{color:var(--text3);text-decoration:none;font-size:13px;}
@@ -22,12 +26,12 @@
     .timeline::before{content:'';position:absolute;left:5px;top:8px;bottom:8px;width:2px;background:var(--border);}
 
     .event-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px;position:relative;transition:border-color .2s;}
-    .event-card:hover{border-color:var(--border-light,#3f3f46);}
+    .event-card:hover{border-color:var(--border-light,rgba(255,255,255,0.1));}
     .event-dot{position:absolute;left:-27px;top:24px;width:12px;height:12px;border-radius:50%;background:var(--border);border:3px solid var(--bg);}
     
     .event-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
     .agent-info{display:flex;align-items:center;gap:10px;}
-    .avatar{width:24px;height:24px;border-radius:6px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;}
+    .avatar{width:24px;height:24px;border-radius:6px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:#fff;}
     .agent-name{font-weight:600;font-size:14px;}
     .room-tag{font-size:11px;color:var(--text3);padding:2px 6px;border:1px solid var(--border);border-radius:4px;font-family:'JetBrains Mono',monospace;}
     .event-time{font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;}
@@ -35,8 +39,8 @@
     .event-body{font-size:14px;color:var(--text2);line-height:1.5;word-break:break-word;}
     .event-body strong{color:var(--text);}
     
-    .type-badge{font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:0.05em;}
-    .type-broadcast{background:rgba(77,148,255,.1);color:#7ab3ff;}
+    .type-badge{font-size:9px;font-weight:500;padding:1px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:0.05em;}
+    .type-broadcast{background:rgba(91,106,240,.1);color:#818cf8;}
     .type-task{background:rgba(245,158,11,.1);color:#fbbf24;}
     .type-handoff{background:rgba(34,197,94,.1);color:#4ade80;}
     .type-system{background:var(--surface2);color:var(--text3);}
@@ -49,7 +53,13 @@
 <div class="container">
   <header>
     <h1><div class="live-dot"></div> Live Activity</h1>
-    <a href="/" class="back-link">← Home</a>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <button onclick="toggleTheme()" aria-label="Toggle theme" style="width:28px;height:28px;border-radius:6px;border:1px solid rgba(255,255,255,0.06);background:none;color:#52566a;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <svg class="icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/></svg>
+        <svg class="icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      </button>
+      <a href="/" class="back-link">← Home</a>
+    </div>
   </header>
 
   <div class="timeline" id="timeline">
@@ -58,9 +68,15 @@
 </div>
 
 <script>
+function getTheme(){return localStorage.getItem('mesh-theme')||(window.matchMedia('(prefers-color-scheme:light)').matches?'light':'dark')}
+function applyTheme(t){document.documentElement.setAttribute('data-theme',t);localStorage.setItem('mesh-theme',t)}
+function toggleTheme(){applyTheme(getTheme()==='dark'?'light':'dark')}
+applyTheme(getTheme());
+</script>
+<script>
 const ROOM = new URLSearchParams(location.search).get('room') || '';
 function timeAgo(ts){const s=Math.floor((Date.now()-ts)/1000);if(s<60)return'now';if(s<3600)return Math.floor(s/60)+'m ago';return Math.floor(s/3600)+'h ago';}
-const COLORS = ['#4d94ff','#3b82f6','#22c55e','#f59e0b','#ec4899','#14b8a6','#f97316','#a855f7'];
+const COLORS = ['#5b6af0','#3b82f6','#34d399','#f59e0b','#ec4899','#14b8a6','#f97316','#a855f7'];
 function hash(s){let h=0;for(let c of s)h=c.charCodeAt(0)+((h<<5)-h);return Math.abs(h);}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 

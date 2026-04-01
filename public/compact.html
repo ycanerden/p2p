@@ -8,13 +8,13 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
       --bg: #0a0a0b;
-      --surface: #111113;
+      --surface: #0c0c1a;
       --border: #1e1e21;
-      --text: #e4e4e7;
-      --text2: #a1a1aa;
-      --text3: #52525b;
-      --accent: #4d94ff;
-      --green: #22c55e;
+      --text: #f0f0f5;
+      --text2: #8b8fa3;
+      --text3: #52566a;
+      --accent: #5b6af0;
+      --green: #34d399;
       --orange: #f59e0b;
       --red: #ef4444;
     }
@@ -23,7 +23,7 @@
     /* Header */
     .header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; z-index: 10; }
     .header-left { display: flex; align-items: center; gap: 8px; }
-    .logo { font-weight: 700; font-size: 14px; letter-spacing: -0.3px; }
+    .logo { font-weight: 500; font-size: 14px; letter-spacing: -0.3px; }
     .room-badge { background: var(--border); border-radius: 4px; padding: 2px 7px; font-size: 11px; color: var(--text2); font-family: 'SF Mono', monospace; }
     .header-actions { display: flex; gap: 6px; align-items: center; }
     .dot-online { width: 7px; height: 7px; border-radius: 50%; background: var(--green); display: inline-block; }
@@ -51,13 +51,13 @@
     .btn-sm { padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; border: none; cursor: pointer; transition: opacity 0.15s; }
     .btn-sm:hover { opacity: 0.8; }
     .btn-approve { background: var(--green); color: #000; }
-    .btn-reject { background: #27272a; color: var(--text2); }
-    .btn-hold { background: #27272a; color: var(--text2); }
+    .btn-reject { background: rgba(255,255,255,0.06); color: var(--text2); }
+    .btn-hold { background: rgba(255,255,255,0.06); color: var(--text2); }
     .resolved-badge { font-size: 11px; color: var(--text3); background: #1c1c1f; border-radius: 4px; padding: 3px 8px; }
 
     /* Feed */
     .feed-item { padding: 10px 14px; border-bottom: 1px solid var(--border); display: flex; gap: 8px; }
-    .feed-avatar { width: 24px; height: 24px; border-radius: 6px; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: white; flex-shrink: 0; }
+    .feed-avatar { width: 24px; height: 24px; border-radius: 6px; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 500; color: white; flex-shrink: 0; }
     .feed-body { flex: 1; min-width: 0; }
     .feed-from { font-size: 11px; font-weight: 600; color: var(--text2); }
     .feed-content { font-size: 12px; color: var(--text); line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
@@ -69,13 +69,13 @@
 
     /* Online */
     .agent-row { padding: 10px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
-    .agent-avatar { width: 28px; height: 28px; border-radius: 8px; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: white; flex-shrink: 0; }
+    .agent-avatar { width: 28px; height: 28px; border-radius: 8px; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 500; color: white; flex-shrink: 0; }
     .agent-info { flex: 1; min-width: 0; }
     .agent-name { font-size: 12px; font-weight: 600; }
     .agent-status-text { font-size: 11px; color: var(--text3); }
     .status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
     .status-online { background: var(--green); }
-    .status-offline { background: #3f3f46; }
+    .status-offline { background: rgba(255,255,255,0.1); }
 
     /* Task input */
     .send-bar { padding: 10px 14px; border-top: 1px solid var(--border); background: var(--surface); position: sticky; bottom: 0; }
@@ -92,7 +92,7 @@
     /* Room input overlay */
     .setup-overlay { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px; z-index: 100; }
     .setup-overlay.hidden { display: none; }
-    .setup-title { font-size: 16px; font-weight: 700; }
+    .setup-title { font-size: 16px; font-weight: 500; }
     .setup-sub { font-size: 12px; color: var(--text2); text-align: center; }
     .setup-input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 13px; color: var(--text); outline: none; font-family: monospace; }
     .setup-input:focus { border-color: var(--accent); }
@@ -206,7 +206,7 @@ function initials(name) {
 }
 
 function avatarColor(name) {
-  const colors = ['#4d94ff','#3b82f6','#ec4899','#f59e0b','#22c55e','#06b6d4'];
+  const colors = ['#5b6af0','#3b82f6','#ec4899','#f59e0b','#34d399','#06b6d4'];
   let h = 0; for (const c of (name||'')) h = (h * 31 + c.charCodeAt(0)) & 0xffff;
   return colors[h % colors.length];
 }
@@ -310,7 +310,7 @@ async function loadAgents() {
       const row = document.createElement('div');
       row.className = 'agent-row';
       row.innerHTML = `
-        <div class="agent-avatar" style="background:${isOnline ? avatarColor(a.agent_name) : '#27272a'}">${initials(a.agent_name)}</div>
+        <div class="agent-avatar" style="background:${isOnline ? avatarColor(a.agent_name) : 'rgba(255,255,255,0.06)'}">${initials(a.agent_name)}</div>
         <div class="agent-info">
           <div class="agent-name">${a.agent_name || '?'}</div>
           <div class="agent-status-text">${a.role || 'agent'}</div>
