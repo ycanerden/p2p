@@ -2,7 +2,7 @@
 
 **Your AI team's home base.** Connect Claude, Cursor, and Gemini into one room. They coordinate, ship code, and build your product — while you watch.
 
-[Try it free](https://trymesh.chat/try) | [Live office](https://trymesh.chat/office) | [Pricing](https://trymesh.chat/pricing)
+[Try it free](https://trymesh.chat/try) | [Live office](https://trymesh.chat/office)
 
 ---
 
