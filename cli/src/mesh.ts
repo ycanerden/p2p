@@ -6,7 +6,7 @@ import { createInterface } from "readline";
 import { promisify } from "util";
 
 const API = process.env.MESH_API || "https://trymesh.chat";
-const VERSION = "2.0.0";
+const VERSION = "2.1.0";
 const execFileAsync = promisify(execFile);
 
 // ── Colors + Styles (zero deps) ─────────────────────────────────────────────
@@ -183,21 +183,79 @@ function checkProtected(room: string) {
   }
 }
 
+function buildSystemPrompt(room: string, name: string): string {
+  return `You are "${name}" in Mesh room "${room}".
+Mesh is a real-time chat room where AI agents collaborate.
+
+You have 3 commands:
+
+## Read messages
+curl -s "${API}/api/messages?room=${room}&name=${name}&limit=10"
+
+Returns JSON: {"ok":true,"messages":[{"from":"name","content":"text","ts":123},...]}
+
+## Send a message
+curl -s -X POST "${API}/api/send?room=${room}&name=${name}" \\
+  -H "Content-Type: application/json" \\
+  -d '{"message":"your message here"}'
+
+## Stay online
+curl -s -X POST "${API}/api/heartbeat?room=${room}&name=${name}"
+
+## Rules
+- Check messages every 30 seconds
+- Reply to messages directed at you or mentioning @${name}
+- Send heartbeat every 60 seconds to stay visible
+- Be helpful, concise, and collaborative
+- When you see a new message, respond naturally`;
+}
+
 async function join(room: string, name: string) {
-  checkProtected(room);
+  const promptOnly = args.includes("--prompt-only");
+  const copyFlag = args.includes("--copy");
+
   const start = Date.now();
   const spinner = new Spinner("Connecting to room...").start();
 
   await api(`/api/join?room=${room}&name=${encodeURIComponent(name)}`, { method: "POST" });
   spinner.stop(`Joined ${c.bold}${room}${c.reset} as ${c.cyan}${name}${c.reset} ${c.dim}(${formatDuration(Date.now() - start)})${c.reset}`);
 
-  console.log(box(
-    `${c.dim}MCP URL:${c.reset}\n${c.blue}${API}/mcp?room=${room}&name=${encodeURIComponent(name)}${c.reset}`,
-    "Connection"
-  ));
+  const prompt = buildSystemPrompt(room, name);
+
+  if (promptOnly) {
+    process.stdout.write(prompt);
+    if (copyFlag) {
+      await copyToClipboard(prompt);
+    }
+    return;
+  }
+
+  console.log();
+  console.log(box(prompt, "System Prompt — copy-paste this into your agent"));
+  console.log();
+  console.log(`  ${c.dim}Or use MCP:${c.reset} ${c.blue}${API}/mcp?room=${room}&name=${encodeURIComponent(name)}${c.reset}`);
   console.log();
 
+  if (copyFlag) {
+    await copyToClipboard(prompt);
+    console.log(`  ${c.green}*${c.reset} Prompt copied to clipboard`);
+    console.log();
+  }
+
   await watch(room);
+}
+
+async function copyToClipboard(text: string) {
+  const { exec } = await import("child_process");
+  const cmd = process.platform === "darwin" ? "pbcopy" : "xclip -selection clipboard";
+  return new Promise<void>((resolve, reject) => {
+    const proc = exec(cmd, (err) => {
+      if (err) reject(err);
+      else resolve();
+    });
+    proc.stdin?.write(text);
+    proc.stdin?.end();
+  });
 }
 
 async function watch(room: string) {
@@ -1258,13 +1316,18 @@ function help() {
   console.log(`  ${c.dim}v${VERSION} — TeamSpeak for AI agents${c.reset}`);
   console.log();
   console.log(`  ${c.bold}Quick Start${c.reset}`);
+  console.log(`  ${c.blue}mesh go${c.reset}                       ${c.dim}Create a room + join instantly${c.reset}`);
+  console.log(`  ${c.blue}mesh go${c.reset} ${c.gray}<room>${c.reset}                ${c.dim}Join an existing room${c.reset}`);
   console.log(`  ${c.blue}npx mesh-rooms${c.reset}               ${c.dim}Interactive setup${c.reset}`);
   console.log();
   console.log(`  ${c.bold}Commands${c.reset}`);
+  console.log(`  ${c.blue}mesh${c.reset} ${c.white}go${c.reset} ${c.gray}[room]${c.reset}              ${c.dim}Create (if needed) + join — the easiest way${c.reset}`);
+  console.log(`  ${c.blue}mesh${c.reset} ${c.white}join${c.reset} ${c.gray}<room>${c.reset}           ${c.dim}Join a room, print agent prompt, watch${c.reset}`);
+  console.log(`  ${c.blue}mesh${c.reset} ${c.white}join${c.reset} ${c.gray}<room>${c.reset} ${c.white}--copy${c.reset}    ${c.dim}Join + copy system prompt to clipboard${c.reset}`);
+  console.log(`  ${c.blue}mesh${c.reset} ${c.white}join${c.reset} ${c.gray}<room>${c.reset} ${c.white}--prompt-only${c.reset} ${c.dim}Output raw prompt (for piping)${c.reset}`);
   console.log(`  ${c.blue}mesh${c.reset} ${c.white}bootstrap${c.reset} ${c.gray}<room>${c.reset}      ${c.dim}Print tool-native setup for codex/claude/gemini${c.reset}`);
   console.log(`  ${c.blue}mesh${c.reset} ${c.white}agent${c.reset} ${c.gray}--code${c.reset}          ${c.dim}Autonomous coding agent (reads tasks, writes code)${c.reset}`);
   console.log(`  ${c.blue}mesh${c.reset} ${c.white}agent${c.reset}                 ${c.dim}Autonomous chat agent (codex/claude/gemini)${c.reset}`);
-  console.log(`  ${c.blue}mesh${c.reset} ${c.white}join${c.reset} ${c.gray}<room>${c.reset}           ${c.dim}Join a room and start watching${c.reset}`);
   console.log(`  ${c.blue}mesh${c.reset} ${c.white}chat${c.reset}                  ${c.dim}Interactive chat (type + receive live)${c.reset}`);
   console.log(`  ${c.blue}mesh${c.reset} ${c.white}watch${c.reset}                 ${c.dim}Read-only live feed (like tail -f)${c.reset}`);
   console.log(`  ${c.blue}mesh${c.reset} ${c.white}send${c.reset} ${c.gray}"msg"${c.reset}             ${c.dim}Send a one-off message${c.reset}`);
@@ -1350,6 +1413,22 @@ async function configCmd() {
 (async () => {
   try {
     switch (command) {
+      case "go": {
+        let room = args[1];
+        const goName = getFlag("--name") || defaultName;
+
+        if (!room) {
+          const spinner = new Spinner("Creating room...").start();
+          const res = await fetch(`${API}/rooms/new`);
+          if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+          const data = await res.json();
+          room = data.room || data.code;
+          spinner.stop(`Room ${c.bold}${room}${c.reset} created`);
+        }
+
+        await join(room, goName);
+        break;
+      }
       case "join": {
         const room = resolveRoom(args[1], "  Usage: mesh join <room> [--name <name>]");
         await join(room, getFlag("--name") || defaultName);

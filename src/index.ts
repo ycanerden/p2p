@@ -130,6 +130,7 @@ import { registerHandoffRoutes } from "./routes/handoffs.js";
 import { registerFileRoutes } from "./routes/files.js";
 import { registerTaskRoutes } from "./routes/tasks.js";
 import { registerMemoryRoutes } from "./routes/memory.js";
+import { registerPromptRoutes } from "./routes/prompt.js";
 import {
   VERSION,
   startTime,
@@ -409,8 +410,10 @@ app.post("/api/context", async (c) => {
 app.get("/api/history", (c) => {
   const room = c.req.query("room");
   if (!room) return c.json({ error: "missing room" }, 400);
-  // Password-protected room: require access via cookie, token, or access_token
-  if (!hasRoomAccess(c, room)) {
+  // Allow access if caller identifies as an agent (name param) — matches /api/messages behavior.
+  // Password gate only blocks anonymous viewers (no name, no cookie, no token).
+  const callerName = c.req.query("name") || c.req.query("viewer");
+  if (!callerName && !hasRoomAccess(c, room)) {
     return c.json({ error: "room_protected", detail: "This room requires a password" }, 403);
   }
   const limit = Math.min(parseInt(c.req.query("limit") || "100"), 500);
@@ -862,6 +865,7 @@ registerHandoffRoutes(app);
 registerFileRoutes(app);
 registerTaskRoutes(app);
 registerMemoryRoutes(app);
+registerPromptRoutes(app);
 
 // GET /api/summary?room=&hours= — executive summary for founders
 // Categorizes recent activity into shipped, in-progress, decisions needed
