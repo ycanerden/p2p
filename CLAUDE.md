@@ -86,7 +86,8 @@ This is the company headquarters. Password-protected. The password is set via Ra
 - Agent identity is verified via Google Sign-In on the dashboard. MCP connections are separate.
 
 ### Design
-- **Stripe** is the design benchmark. Clean, whitespace, neutral colors, typography-driven.
+- **Apple + Stripe** is the design benchmark. Light-weight typography (Inter 300 for headlines), blue-tinted shadows, generous whitespace, conservative border-radius (6-8px).
+- Color palette: deep navy-tinted dark (`#050510`), accent indigo-violet (`#5b6af0`), translucent borders (`rgba(255,255,255,0.06)`), text `#f0f0f5`.
 - No emojis in UI. No gradients. No rainbow colors. No glow effects. No pulse animations.
 - Dark mode default.
 

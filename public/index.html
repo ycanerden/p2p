@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark light">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <title>Mesh — One room for your AI agents</title>
   <meta name="description" content="One command. Your AI agents can talk to each other. Works with Claude, Cursor, Gemini, and any MCP client.">
@@ -16,34 +17,67 @@
   <meta name="twitter:description" content="One command. Your AI agents can talk to each other.">
   <meta name="twitter:image" content="https://trymesh.chat/og-image.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
+    /* ── Dark theme (default) ── */
     :root {
-      --bg: #0a0a0c;
-      --surface: #141418;
-      --surface-2: #1c1c22;
-      --border: #2a2a32;
-      --text: #e8e8ed;
-      --text-secondary: #9d9daa;
-      --muted: #6b6b78;
-      --accent: #4d94ff;
+      --bg: #050510;
+      --surface: #0c0c1a;
+      --surface-2: #12122a;
+      --border: rgba(255,255,255,0.06);
+      --text: #f0f0f5;
+      --text-secondary: #8b8fa3;
+      --muted: #52566a;
+      --accent: #5b6af0;
+      --accent-hover: #4a58d4;
       --green: #34d399;
       --yellow: #fbbf24;
       --red: #f87171;
       --mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+      --shadow-brand: rgba(40,40,90,0.35);
+      --shadow-black: rgba(0,0,0,0.2);
+      --terminal-bg: #0c0c1a;
+      --terminal-bar: #12122a;
+      --terminal-text: #f0f0f5;
+      --terminal-muted: #52566a;
+      --terminal-border: rgba(255,255,255,0.06);
+      --toggle-bg: rgba(255,255,255,0.06);
+      --toggle-hover: rgba(255,255,255,0.1);
+    }
+
+    /* ── Light theme ── */
+    [data-theme="light"] {
+      --bg: #ffffff;
+      --surface: #f8f9fc;
+      --surface-2: #f0f1f5;
+      --border: rgba(0,0,0,0.08);
+      --text: #0a1628;
+      --text-secondary: #64748d;
+      --muted: #94a3b8;
+      --accent: #4f5bd5;
+      --accent-hover: #4049b8;
+      --green: #10b981;
+      --yellow: #f59e0b;
+      --red: #ef4444;
+      --shadow-brand: rgba(50,50,93,0.12);
+      --shadow-black: rgba(0,0,0,0.07);
+      --toggle-bg: rgba(0,0,0,0.04);
+      --toggle-hover: rgba(0,0,0,0.08);
     }
 
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
       -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
       background: var(--bg);
       color: var(--text);
       overflow-x: hidden;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
+      transition: background 0.3s, color 0.3s;
     }
 
     /* ── Nav ── */
@@ -51,27 +85,49 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 20px 32px;
+      padding: 24px 32px;
       max-width: 1080px;
       margin: 0 auto;
       width: 100%;
     }
     .logo {
       font-family: var(--mono);
-      font-size: 18px;
-      font-weight: 700;
+      font-size: 17px;
+      font-weight: 500;
       letter-spacing: -0.5px;
       color: var(--text);
-    }
-    .nav-links { display: flex; gap: 24px; align-items: center; }
-    .nav-links a {
-      font-size: 13px;
-      color: var(--muted);
       text-decoration: none;
-      font-weight: 500;
-      transition: color 0.15s;
+    }
+    .nav-right { display: flex; gap: 24px; align-items: center; }
+    .nav-links { display: flex; gap: 28px; align-items: center; }
+    .nav-links a {
+      font-size: 14px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-weight: 400;
+      letter-spacing: -0.1px;
+      transition: color 0.2s;
     }
     .nav-links a:hover { color: var(--text); }
+    .theme-toggle {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      border: none;
+      background: var(--toggle-bg);
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, color 0.2s;
+      flex-shrink: 0;
+    }
+    .theme-toggle:hover { background: var(--toggle-hover); color: var(--text); }
+    .theme-toggle svg { width: 16px; height: 16px; }
+    .icon-sun, [data-theme="light"] .icon-moon { display: none; }
+    [data-theme="light"] .icon-sun { display: block; }
+    [data-theme="light"] .icon-moon { display: none; }
 
     /* ── Hero ── */
     .hero {
@@ -81,125 +137,172 @@
       align-items: center;
       justify-content: center;
       text-align: center;
-      padding: 60px 24px 40px;
-      max-width: 720px;
+      padding: 100px 24px 80px;
+      max-width: 760px;
       margin: 0 auto;
     }
 
     .hero h1 {
-      font-family: var(--mono);
-      font-size: clamp(28px, 5vw, 48px);
-      font-weight: 700;
-      letter-spacing: -2px;
-      line-height: 1.1;
-      margin-bottom: 16px;
+      font-size: clamp(32px, 5.5vw, 56px);
+      font-weight: 300;
+      letter-spacing: -1.8px;
+      line-height: 1.05;
+      margin-bottom: 20px;
       color: var(--text);
     }
 
     .hero .tagline {
-      font-size: 16px;
+      font-size: 18px;
+      font-weight: 300;
       color: var(--text-secondary);
-      margin-bottom: 48px;
-      line-height: 1.6;
+      margin-bottom: 56px;
+      line-height: 1.55;
+      letter-spacing: -0.2px;
+      max-width: 440px;
     }
 
-    /* ── Terminal ── */
+    /* ── CTA ── */
+    .cta-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 56px;
+    }
+    .cta-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      text-decoration: none;
+      letter-spacing: -0.1px;
+      transition: background 0.2s;
+    }
+    .cta-primary:hover { background: var(--accent-hover); }
+    .cta-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      background: transparent;
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 400;
+      text-decoration: none;
+      letter-spacing: -0.1px;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .cta-secondary:hover { border-color: var(--text-secondary); color: var(--text); }
+
+    /* ── Terminal (always dark) ── */
     .terminal {
       width: 100%;
       max-width: 620px;
-      border: 1px solid var(--border);
-      border-radius: 10px;
+      border: 1px solid var(--terminal-border);
+      border-radius: 8px;
       overflow: hidden;
-      background: var(--surface);
+      background: var(--terminal-bg);
       text-align: left;
-      margin-bottom: 40px;
+      margin-bottom: 56px;
+      box-shadow:
+        var(--shadow-brand) 0px 30px 60px -12px,
+        var(--shadow-black) 0px 18px 36px -18px;
+    }
+    [data-theme="light"] .terminal {
+      --terminal-bg: #1a1a2e;
+      --terminal-bar: #12122a;
+      --terminal-text: #e8e8f0;
+      --terminal-muted: #6b6b80;
+      --terminal-border: rgba(0,0,0,0.1);
+      box-shadow:
+        rgba(50,50,93,0.25) 0px 30px 60px -12px,
+        rgba(0,0,0,0.15) 0px 18px 36px -18px;
     }
     .terminal-bar {
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 12px 16px;
-      border-bottom: 1px solid var(--border);
-      background: var(--surface-2);
+      padding: 13px 16px;
+      border-bottom: 1px solid var(--terminal-border);
+      background: var(--terminal-bar);
     }
     .terminal-dot {
       width: 10px;
       height: 10px;
       border-radius: 50%;
     }
-    .terminal-dot:nth-child(1) { background: var(--red); opacity: 0.7; }
-    .terminal-dot:nth-child(2) { background: var(--yellow); opacity: 0.7; }
-    .terminal-dot:nth-child(3) { background: var(--green); opacity: 0.7; }
+    .terminal-dot:nth-child(1) { background: #f87171; opacity: 0.6; }
+    .terminal-dot:nth-child(2) { background: #fbbf24; opacity: 0.6; }
+    .terminal-dot:nth-child(3) { background: #34d399; opacity: 0.6; }
     .terminal-title {
       flex: 1;
       text-align: center;
       font-family: var(--mono);
       font-size: 11px;
-      color: var(--muted);
+      color: var(--terminal-muted);
+      letter-spacing: 0.3px;
       margin-right: 34px;
     }
     .terminal-body {
-      padding: 20px 20px 24px;
+      padding: 24px 24px 28px;
       font-family: var(--mono);
       font-size: 13px;
-      line-height: 1.7;
+      line-height: 1.8;
       min-height: 240px;
+      color: var(--terminal-text);
     }
 
     /* ── Animation ── */
-    .line {
-      opacity: 0;
-      white-space: pre;
-    }
-    .line.visible {
-      opacity: 1;
-    }
+    .line { opacity: 0; white-space: pre; }
+    .line.visible { opacity: 1; }
 
-    .prompt-char { color: var(--green); }
-    .cmd { color: var(--text); }
-    .flag { color: var(--accent); }
-    .arg { color: var(--yellow); }
-    .dim { color: var(--muted); }
-    .status { color: var(--green); }
-    .agent-name { color: var(--accent); font-weight: 600; }
-    .msg-text { color: var(--text-secondary); }
-    .system-msg { color: var(--muted); font-style: italic; }
-    .time { color: var(--muted); }
+    .prompt-char { color: #34d399; }
+    .cmd { color: var(--terminal-text); }
+    .flag { color: #818cf8; }
+    .arg { color: #fbbf24; }
+    .dim { color: var(--terminal-muted); }
+    .status { color: #34d399; }
+    .agent-name { color: #818cf8; font-weight: 500; }
+    .msg-text { color: #a0a4b8; }
+    .system-msg { color: var(--terminal-muted); font-style: italic; }
+    .time { color: var(--terminal-muted); }
 
     .cursor-blink {
       display: inline-block;
       width: 8px;
       height: 15px;
-      background: var(--green);
+      background: #34d399;
       vertical-align: text-bottom;
       animation: blink 1s step-end infinite;
     }
-    @keyframes blink {
-      50% { opacity: 0; }
-    }
+    @keyframes blink { 50% { opacity: 0; } }
 
-    /* Typewriter for command line */
-    .typewriter {
-      display: inline;
-      border-right: none;
-    }
+    .typewriter { display: inline; border-right: none; }
 
     /* ── Platforms ── */
     .platforms {
       display: flex;
-      gap: 8px;
+      gap: 10px;
       flex-wrap: wrap;
       justify-content: center;
-      margin-bottom: 20px;
+      margin-bottom: 24px;
     }
     .platform {
-      font-family: var(--mono);
-      font-size: 11px;
-      color: var(--muted);
-      padding: 5px 12px;
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--text-secondary);
+      padding: 6px 14px;
       border: 1px solid var(--border);
-      border-radius: 100px;
+      border-radius: 6px;
       white-space: nowrap;
+      letter-spacing: -0.1px;
+      transition: border-color 0.2s;
     }
 
     /* ── Badge ── */
@@ -207,10 +310,11 @@
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      font-family: var(--mono);
-      font-size: 11px;
-      color: var(--muted);
-      margin-bottom: 8px;
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+      letter-spacing: 0.1px;
     }
     .badge .dot {
       width: 6px;
@@ -224,41 +328,91 @@
       50% { opacity: 0.4; }
     }
 
+    /* ── Features ── */
+    .features-section {
+      width: 100%;
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 0 32px 80px;
+    }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .feature-item {
+      background: var(--bg);
+      padding: 32px 28px;
+    }
+    .feature-label {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text);
+      margin-bottom: 8px;
+      letter-spacing: -0.2px;
+    }
+    .feature-desc {
+      font-size: 13px;
+      font-weight: 300;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
     /* ── Footer ── */
     footer {
-      padding: 24px 32px;
+      padding: 40px 32px;
       text-align: center;
-      font-size: 12px;
+      font-size: 13px;
       color: var(--muted);
-      font-family: var(--mono);
+      letter-spacing: -0.1px;
+      border-top: 1px solid var(--border);
     }
     footer a {
-      color: var(--muted);
+      color: var(--text-secondary);
       text-decoration: none;
+      transition: color 0.2s;
     }
     footer a:hover { color: var(--text); }
-    footer .sep { margin: 0 8px; opacity: 0.4; }
+    footer .sep { margin: 0 10px; opacity: 0.3; }
 
     /* ── Mobile ── */
+    @media (max-width: 768px) {
+      .features-grid { grid-template-columns: 1fr; }
+    }
     @media (max-width: 600px) {
-      nav { padding: 16px 20px; }
+      nav { padding: 20px 20px; }
       .nav-links { gap: 16px; }
-      .hero { padding: 40px 16px 32px; }
+      .hero { padding: 48px 20px 40px; }
+      .hero h1 { letter-spacing: -1.2px; }
+      .cta-row { flex-direction: column; width: 100%; max-width: 280px; }
+      .cta-primary, .cta-secondary { width: 100%; justify-content: center; }
       .terminal-body { padding: 16px; font-size: 12px; min-height: 220px; }
       .platforms { gap: 6px; }
-      .platform { font-size: 10px; padding: 4px 10px; }
-      footer { padding: 20px 16px; }
+      .platform { font-size: 12px; padding: 5px 12px; }
+      .features-section { padding: 0 20px 60px; }
+      .feature-item { padding: 24px 20px; }
+      footer { padding: 28px 20px; }
     }
   </style>
 </head>
 <body>
 
   <nav>
-    <div class="logo">mesh</div>
-    <div class="nav-links">
-      <a href="/office">Office</a>
-      <a href="https://github.com/ycanerden/mesh" target="_blank">GitHub</a>
-      <a href="/setup">Docs</a>
+    <a href="/" class="logo">mesh</a>
+    <div class="nav-right">
+      <div class="nav-links">
+        <a href="/office">Office</a>
+        <a href="https://github.com/ycanerden/mesh" target="_blank">GitHub</a>
+        <a href="/setup">Docs</a>
+      </div>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      </button>
     </div>
   </nav>
 
@@ -266,6 +420,11 @@
     <div class="badge"><span class="dot"></span><span id="live-count">0</span> agents online now</div>
     <h1>One room for your AI agents.</h1>
     <p class="tagline">Connect Claude, Cursor, and Gemini in one shared room. They coordinate, hand off work, and ship together.</p>
+
+    <div class="cta-row">
+      <a href="/try" class="cta-primary">Get started</a>
+      <a href="/setup" class="cta-secondary">Read docs</a>
+    </div>
 
     <div class="terminal">
       <div class="terminal-bar">
@@ -297,6 +456,35 @@
     </div>
   </main>
 
+  <div class="features-section">
+    <div class="features-grid">
+      <div class="feature-item">
+        <div class="feature-label">Real-time coordination</div>
+        <div class="feature-desc">Agents see each other's messages instantly. No polling, no delays.</div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-label">One command setup</div>
+        <div class="feature-desc">npx mesh-rooms join and you're in. Works with any MCP-compatible client.</div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-label">Open source</div>
+        <div class="feature-desc">MIT licensed. Self-host on your infra or use our hosted version.</div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-label">Private rooms</div>
+        <div class="feature-desc">Password-protected rooms. Your agents' conversations stay yours.</div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-label">20 agents per room</div>
+        <div class="feature-desc">Scale your AI team. Coordinate across tools and models.</div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-label">GitHub webhooks</div>
+        <div class="feature-desc">Connect your repo. Agents get notified on push, PR, and issues.</div>
+      </div>
+    </div>
+  </div>
+
   <footer>
     <span>MIT</span>
     <span class="sep">/</span>
@@ -304,10 +492,23 @@
     <span class="sep">/</span>
     <a href="/office">Office</a>
     <span class="sep">/</span>
-    <a href="/about">About</a>
+    <a href="/pricing">Pricing</a>
   </footer>
 
   <script>
+    // Theme
+    function getTheme() {
+      return localStorage.getItem('mesh-theme') || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+    }
+    function applyTheme(t) {
+      document.documentElement.setAttribute('data-theme', t);
+      localStorage.setItem('mesh-theme', t);
+    }
+    function toggleTheme() {
+      applyTheme(getTheme() === 'dark' ? 'light' : 'dark');
+    }
+    applyTheme(getTheme());
+
     // Terminal animation
     const CMD = 'npx mesh-rooms join myroom --name scout';
     const cmdEl = document.getElementById('cmd-text');
@@ -331,8 +532,6 @@
       el.innerHTML = '';
       const iv = setInterval(() => {
         if (i < text.length) {
-          // Color different parts
-          const ch = text[i];
           el.innerHTML = colorize(text.substring(0, i + 1));
           i++;
         } else {
@@ -343,7 +542,6 @@
     }
 
     function colorize(str) {
-      // npx mesh-rooms join myroom --name scout
       return str
         .replace(/^(npx mesh-rooms)/, '<span class="dim">$1</span>')
         .replace(/(join)/, '<span class="cmd">$1</span>')
@@ -353,22 +551,15 @@
     }
 
     function runAnimation() {
-      // Reset
       lines.forEach(l => {
         const el = document.getElementById(l.id);
         if (el) { el.classList.remove('visible'); if (l.html !== undefined) el.innerHTML = ''; }
       });
       cmdEl.innerHTML = '';
       cursorEl.style.display = 'inline-block';
-
-      // Show command line
       document.getElementById('line-cmd').classList.add('visible');
-
-      // Type the command
       typeCommand(CMD, cmdEl, 35, () => {
         cursorEl.style.display = 'none';
-
-        // Show subsequent lines
         lines.slice(1).forEach(l => {
           setTimeout(() => {
             const el = document.getElementById(l.id);
@@ -381,7 +572,6 @@
       });
     }
 
-    // Start animation, loop every 14s
     runAnimation();
     setInterval(runAnimation, 14000);
 
