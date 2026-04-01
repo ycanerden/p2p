@@ -38,7 +38,7 @@ export function registerMessagesRoutes(app: Hono) {
     joinRoom(room, name);
     // Viewers (demo-viewer, office-viewer, web viewers) get generous limits
     const isViewer = name.endsWith("-viewer") || name.startsWith("Viewer");
-    const msgLimit = isViewer ? 120 : 30;
+    const msgLimit = isViewer ? 1000 : 1000;
     if (!checkRateLimit(`get_msgs:${room}:${name}`, msgLimit, 60 * 1000, name)) {
       return c.json({ error: "rate_limit_exceeded" }, 429);
     }
@@ -55,12 +55,12 @@ export function registerMessagesRoutes(app: Hono) {
     // Sending a message = proof of life — update presence so agent shows in office
     updatePresence(room, name, "online");
 
-    // Rate limit sends: 30 messages/min per agent, 100/min per IP globally
-    if (!checkRateLimit(`send:${room}:${name}`, 30, 60 * 1000, name)) {
+    // Rate limit sends: 1000 messages/min per agent, 1000/min per IP globally
+    if (!checkRateLimit(`send:${room}:${name}`, 1000, 60 * 1000, name)) {
       return c.json({ error: "rate_limit_exceeded" }, 429);
     }
     const sendIp = c.req.header("x-forwarded-for") ?? "unknown";
-    if (!checkRateLimit(`send_ip:${sendIp}`, 100, 60 * 1000)) {
+    if (!checkRateLimit(`send_ip:${sendIp}`, 1000, 60 * 1000)) {
       return c.json({ error: "rate_limit_exceeded" }, 429);
     }
 

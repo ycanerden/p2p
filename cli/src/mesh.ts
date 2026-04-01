@@ -9,6 +9,24 @@ const API = process.env.MESH_API || "https://trymesh.chat";
 const VERSION = "2.1.0";
 const execFileAsync = promisify(execFile);
 
+const API_HOSTNAME = (() => {
+  try {
+    return new URL(API).hostname;
+  } catch {
+    return "";
+  }
+})();
+const API_PORT = (() => {
+  try {
+    const parsed = new URL(API);
+    return parsed.port || (parsed.protocol === "http:" ? "80" : "443");
+  } catch {
+    return "443";
+  }
+})();
+const CURL_STATUS_MARKER = "__MESH_STATUS__:";
+let resolvedApiAddress: string | undefined;
+
 // ── Colors + Styles (zero deps) ─────────────────────────────────────────────
 const c = {
   reset: "\x1b[0m",
@@ -145,13 +163,99 @@ function getConfigName(): string | undefined {
 }
 
 // ── API helpers ─────────────────────────────────────────────────────────────
-async function api(path: string, opts?: RequestInit) {
-  const res = await fetch(`${API}${path}`, opts);
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`HTTP ${res.status}: ${text}`);
+async function warmApiDns() {
+  if (!API_HOSTNAME) return;
+  try {
+    await execFileAsync("nslookup", [API_HOSTNAME], {
+      timeout: 3000,
+      maxBuffer: 1024 * 128,
+    });
+  } catch {}
+}
+
+async function resolveApiAddress() {
+  if (!API_HOSTNAME) return undefined;
+  if (resolvedApiAddress) return resolvedApiAddress;
+  const commands: Array<[string, string[]]> = [
+    ["dscacheutil", ["-q", "host", "-a", "name", API_HOSTNAME]],
+    ["nslookup", [API_HOSTNAME]],
+  ];
+  for (const [command, args] of commands) {
+    try {
+      const { stdout } = await execFileAsync(command, args, {
+        timeout: 3000,
+        maxBuffer: 1024 * 128,
+      });
+      const matches = stdout.match(/\b\d{1,3}(?:\.\d{1,3}){3}\b/g);
+      if (matches && matches.length > 0) {
+        resolvedApiAddress = matches[matches.length - 1];
+        return resolvedApiAddress;
+      }
+    } catch {}
   }
-  return res.json();
+  return undefined;
+}
+
+async function curlApi(path: string, opts?: RequestInit) {
+  await warmApiDns();
+  const resolvedAddress = await resolveApiAddress();
+  const method = (opts?.method || "GET").toUpperCase();
+  const headers = new Headers(opts?.headers || {});
+  const args = [
+    "-sS",
+    "--retry", "12",
+    "--retry-all-errors",
+    "--retry-delay", "1",
+    "--connect-timeout", "10",
+    "--max-time", "45",
+    "-w", `\n${CURL_STATUS_MARKER}%{http_code}`,
+  ];
+  if (resolvedAddress && API_HOSTNAME) {
+    args.push("--resolve", `${API_HOSTNAME}:${API_PORT}:${resolvedAddress}`);
+  }
+  if (method !== "GET") args.push("-X", method);
+  for (const [key, value] of headers.entries()) {
+    args.push("-H", `${key}: ${value}`);
+  }
+  if (typeof opts?.body === "string") {
+    args.push("--data", opts.body);
+  }
+  args.push(`${API}${path}`);
+  const { stdout } = await execFileAsync("curl", args, {
+    timeout: 60000,
+    maxBuffer: 1024 * 1024 * 8,
+  });
+  const marker = `\n${CURL_STATUS_MARKER}`;
+  const markerIdx = stdout.lastIndexOf(marker);
+  if (markerIdx === -1) {
+    throw new Error("curl_missing_status");
+  }
+  const body = stdout.slice(0, markerIdx);
+  const statusCode = Number(stdout.slice(markerIdx + marker.length).trim());
+  if (!Number.isFinite(statusCode) || statusCode < 200 || statusCode >= 300) {
+    throw new Error(`HTTP ${statusCode}: ${body}`);
+  }
+  return JSON.parse(body);
+}
+
+async function api(path: string, opts?: RequestInit) {
+  try {
+    const res = await fetch(`${API}${path}`, opts);
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`HTTP ${res.status}: ${text}`);
+    }
+    return res.json();
+  } catch (error: any) {
+    const detail = String(error?.message || error || "");
+    const shouldFallback =
+      process.env.MESH_API_USE_CURL !== "0" &&
+      /fetch failed|Unable to connect|ConnectionRefused|ENOTFOUND|EAI_AGAIN|getaddrinfo|resolve host|network/i.test(detail);
+    if (!shouldFallback) {
+      throw error;
+    }
+    return curlApi(path, opts);
+  }
 }
 
 // ── Pretty Box ──────────────────────────────────────────────────────────────
@@ -516,6 +620,8 @@ type AgentConfig = {
   cwd: string;
   systemPrompt: string;
   model?: string;
+  codexSandbox: string;
+  providerTimeoutMs: number;
 };
 
 type MeshMessage = {
@@ -634,13 +740,13 @@ async function runCodex(prompt: string, config: AgentConfig) {
     if ((config as any).codeMode) {
       args.push("--sandbox", "networking");
     } else {
-      args.push("--sandbox", "read-only");
+      args.push("--sandbox", config.codexSandbox);
     }
     if (config.model) {
       args.push("--model", config.model);
     }
     args.push(prompt);
-    await execFileAsync("codex", args, { timeout: 300000, maxBuffer: 1024 * 1024 * 8 });
+    await execFileAsync("codex", args, { timeout: config.providerTimeoutMs, maxBuffer: 1024 * 1024 * 8 });
     return await fs.readFile(tempFile, "utf8");
   } finally {
     await fs.unlink(tempFile).catch(() => {});
@@ -724,6 +830,8 @@ async function agent(room: string, name: string) {
     cwd: getFlag("--cwd") || process.cwd(),
     systemPrompt: getFlag("--system-prompt") || process.env.MESH_AGENT_SYSTEM_PROMPT || defaultPrompt,
     model: getFlag("--model") || process.env.MESH_AGENT_MODEL,
+    codexSandbox: getFlag("--sandbox") || process.env.MESH_AGENT_SANDBOX || "read-only",
+    providerTimeoutMs: Number(getFlag("--timeout-ms") || process.env.MESH_AGENT_TIMEOUT_MS || "120000"),
     codeMode,
   };
 

@@ -166,7 +166,7 @@ const GOG_BIN = process.env.GOG_BIN || "gog";
 const GOG_ACCOUNT = process.env.GOG_ACCOUNT;
 const GOG_CLIENT = process.env.GOG_CLIENT;
 
-// ── Global rate limit: 200 requests/min per IP ──────────────────────────────
+// ── Global rate limit: 1000 requests/min per IP ──────────────────────────────
 // Prevents abuse from spamming the API and burning Railway budget
 const ipHits = new Map<string, { count: number; reset: number }>();
 app.use("*", async (c, next) => {
@@ -177,8 +177,8 @@ app.use("*", async (c, next) => {
     ipHits.set(ip, { count: 1, reset: now + 60_000 });
   } else {
     entry.count++;
-    if (entry.count > 200) {
-      return c.json({ error: "rate_limit_exceeded", detail: "Max 200 requests/min" }, 429);
+    if (entry.count > 1000) {
+      return c.json({ error: "rate_limit_exceeded", detail: "Max 1000 requests/min" }, 429);
     }
   }
   // Cleanup old entries every 5 min
@@ -1527,7 +1527,7 @@ function registerMcpTools(server: McpServer, room: string, name: string) {
     },
     async ({ message, to, type }) => {
       // Rate limit sends: 30 messages/min per agent
-      if (!checkRateLimit(`send:${room}:${name}`, 30, 60 * 1000, name)) {
+      if (!checkRateLimit(`send:${room}:${name}`, 1000, 60 * 1000, name)) {
         return {
           content: [
             {
@@ -1599,7 +1599,7 @@ function registerMcpTools(server: McpServer, room: string, name: string) {
     {},
     async () => {
       // Rate limit: 10 calls/min per room+user
-      if (!checkRateLimit(`get_msgs:${room}:${name}`, 10, 60 * 1000, name)) {
+      if (!checkRateLimit(`get_msgs:${room}:${name}`, 1000, 60 * 1000, name)) {
         return {
           content: [
             {

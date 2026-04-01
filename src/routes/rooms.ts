@@ -16,7 +16,9 @@ import {
   getRoomPresence,
   ensureRoom,
   appendMessage,
-  roomExists
+  roomExists,
+  getRoomContext,
+  setRoomContext
 } from "../rooms.js";
 import { checkRateLimit, injectAnalytics } from "./utils.js";
 

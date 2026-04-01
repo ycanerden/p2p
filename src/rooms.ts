@@ -942,7 +942,11 @@ export function appendMessage(
   messageEvents.emit("message", { room_code: code, message: messagePayload });
 
   // Fire webhooks (async, non-blocking — never crash the request)
-  try { fireWebhooks(code, "message", { message: messagePayload }); } catch {}
+  try {
+    fireWebhooks(code, "message", { message: messagePayload });
+  } catch (e) {
+    console.error(`[webhook] error firing webhooks for ${code}:`, e);
+  }
 
   return { ok: true, id };
 }
@@ -1496,9 +1500,12 @@ export function getPinnedMessages(roomCode: string): Array<{ message_id: string;
 }
 
 export function getThread(roomCode: string, messageId: string): any[] {
-  return db.prepare(
-    "SELECT id, sender as 'from', recipient as 'to', content, timestamp as ts, msg_type as 'type', reply_to FROM messages WHERE room_code = ? AND reply_to = ? ORDER BY timestamp ASC"
-  ).all(roomCode, messageId) as any[];
+  return db.prepare(`
+    SELECT id, sender as 'from', recipient as 'to', content, timestamp as ts, msg_type as 'type', reply_to
+    FROM messages
+    WHERE room_code = ? AND (id = ? OR reply_to = ?)
+    ORDER BY timestamp ASC
+  `).all(roomCode, messageId, messageId) as any[];
 }
 
 // ── File Sharing ─────────────────────────────────────────────────────────────
@@ -2109,14 +2116,28 @@ export function getGrowthMetrics(): {
 }
 
 // ── Room context (shared pinned context per room) ────────────────────────────
-const _roomContextStore = new Map<string, { content: string; updated_by: string; updated_at: number }>();
+db.run(`CREATE TABLE IF NOT EXISTS room_context (
+  room_code TEXT PRIMARY KEY,
+  content TEXT NOT NULL,
+  updated_by TEXT NOT NULL,
+  updated_at INTEGER NOT NULL,
+  FOREIGN KEY(room_code) REFERENCES rooms(code)
+);`);
 
-export function getRoomContext(room: string) {
-  return _roomContextStore.get(room) ?? null;
+export function getRoomContext(room: string): { content: string; updated_by: string; updated_at: number } | null {
+  const row = db.prepare("SELECT content, updated_by, updated_at FROM room_context WHERE room_code = ?").get(room) as any;
+  return row ? { content: row.content, updated_by: row.updated_by, updated_at: row.updated_at } : null;
 }
 
 export function setRoomContext(room: string, content: string, updatedBy: string) {
-  _roomContextStore.set(room, { content, updated_by: updatedBy, updated_at: Date.now() });
+  db.prepare(`
+    INSERT INTO room_context (room_code, content, updated_by, updated_at)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(room_code) DO UPDATE SET
+      content=excluded.content,
+      updated_by=excluded.updated_by,
+      updated_at=excluded.updated_at
+  `).run(room, content, updatedBy, Date.now());
 }
 
 // ── Agent Tokens ─────────────────────────────────────────────────────────────
