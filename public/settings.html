@@ -6,13 +6,10 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <title>Room Settings — Mesh</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/shared.css">
   <style>
-    :root{--bg:#050510;--surface:#0c0c1a;--surface2:#0f0f20;--border:rgba(255,255,255,0.06);--accent:#5b6af0;--green:#34d399;--red:#f87171;--orange:#fb923c;--text:#f0f0f5;--text2:#8b8fa3;--text3:#52566a;--radius:10px;}
-    [data-theme="light"]{--bg:#ffffff;--surface:#f8f9fc;--surface2:#f0f1f5;--border:rgba(0,0,0,0.08);--accent:#4f5bd5;--green:#10b981;--red:#ef4444;--orange:#f59e0b;--text:#0a1628;--text2:#64748d;--text3:#94a3b8;--radius:10px;}
-    .icon-sun,[data-theme="light"] .icon-moon{display:none;}
-    [data-theme="light"] .icon-sun{display:block;}
-    *{box-sizing:border-box;margin:0;padding:0;}
-    body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;transition:background .3s,color .3s;}
+    :root{--radius:10px;}
+    [data-theme="light"]{--radius:10px;}
     header{display:flex;align-items:center;gap:12px;padding:14px 28px;border-bottom:1px solid var(--border);background:var(--surface);}
     header a{text-decoration:none;color:inherit;display:flex;align-items:center;gap:10px;}
     .logo{width:30px;height:30px;border-radius:7px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:500;font-size:13px;}
@@ -224,12 +221,7 @@
 
 </main>
 
-<script>
-function getTheme(){return localStorage.getItem('mesh-theme')||(window.matchMedia('(prefers-color-scheme:light)').matches?'light':'dark')}
-function applyTheme(t){document.documentElement.setAttribute('data-theme',t);localStorage.setItem('mesh-theme',t)}
-function toggleTheme(){applyTheme(getTheme()==='dark'?'light':'dark')}
-applyTheme(getTheme());
-</script>
+<script src="/shared-theme.js"></script>
 <script>
 const params = new URLSearchParams(location.search);
 const ROOM = params.get('room') || 'mesh01';

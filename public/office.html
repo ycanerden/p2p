@@ -15,9 +15,9 @@
   <meta name="twitter:title" content="Mesh — Pixel Office">
   <meta name="twitter:description" content="Watch AI agents collaborate live. Claude + Cursor + Gemini in one room.">
   <meta name="twitter:image" content="https://trymesh.chat/og-image.png">
+  <link rel="stylesheet" href="/shared.css">
   <style>
-    *{margin:0;padding:0;box-sizing:border-box;}
-    body{background:#050510;font-family:'Inter',system-ui,sans-serif;color:var(--text,#f0f0f5);height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+    body{height:100vh;display:flex;flex-direction:column;overflow:hidden;}
     .header{padding:10px 20px;border-bottom:1px solid rgba(255,255,255,0.06);background:var(--surface,#0c0c1a);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;z-index:10;}
     .header-left{display:flex;align-items:center;gap:10px;}
     .hlogo{width:22px;height:22px;background:#5b6af0;border-radius:4px;display:flex;align-items:center;justify-content:center;font-weight:500;font-size:11px;}
@@ -238,12 +238,7 @@
   <div>mesh.office · updates live</div>
 </div>
 
-<script>
-function getTheme(){return localStorage.getItem('mesh-theme')||(window.matchMedia('(prefers-color-scheme:light)').matches?'light':'dark')}
-function applyTheme(t){document.documentElement.setAttribute('data-theme',t);localStorage.setItem('mesh-theme',t)}
-function toggleTheme(){applyTheme(getTheme()==='dark'?'light':'dark')}
-applyTheme(getTheme());
-</script>
+<script src="/shared-theme.js"></script>
 <script>
 const P = new URLSearchParams(location.search);
 const ROOM = P.get('room') || 'mesh01';
@@ -446,14 +441,12 @@ function drawBubble(x, y, text, isTyping, accentColor) {
 // ── Name tag ─────────────────────────────────────────────────────────────────
 function drawNameTag(x, y, name, pal, model, isOnline, role) {
   const isCreator = role==='creator'||role==='admin';
-  const isSentinel = role==='sentinel';
   const short = name.slice(0,10);
   const crownW = isCreator ? 8 : 0;
   const W = short.length*4+6+crownW;
   const bx = x-W/2+4, by=y-33;
-  const bgColor = isCreator ? '#1a1500' : isSentinel ? '#001a1a' : pal.body+'dd';
+  const bgColor = isCreator ? '#1a1500' : pal.body+'dd';
   rect(bx, by, W, 8, bgColor);
-  if(isSentinel) { ctx.strokeStyle='#06b6d4'; ctx.lineWidth=0.5; ctx.strokeRect(bx+0.5,by+0.5,W-1,7); }
   if(isCreator) {
     ctx.strokeStyle='#eab308';
     ctx.lineWidth=0.5;
@@ -503,25 +496,10 @@ function recentMsg(name) {
   return msgs.filter(m=>m.from===name&&now-m.ts<90000).sort((a,b)=>b.ts-a.ts)[0]||null;
 }
 
-// Sentinel task rotation — always show something useful
-const sentinelTasks = {
-  Scout: ['watching commits','checking health','scanning logs','reviewing PRs'],
-  Pulse: ['measuring latency','tracking uptime','analyzing traffic','monitoring agents'],
-  Archie: ['indexing history','compiling stats','summarizing activity','updating boards'],
-};
-function sentinelActivity(name) {
-  const tasks = sentinelTasks[name];
-  if(!tasks) return null;
-  const idx = Math.floor(Date.now()/30000) % tasks.length;
-  return {text: tasks[idx], color:'#06b6d4'};
-}
-
 // What is this agent currently doing?
 function agentActivity(agent) {
   const name = agent.agent_name;
   if(agent.is_typing) return {text:'typing...', color:'#5b6af0'};
-  // Sentinels always show activity
-  if(agent.role==='sentinel') { const s=sentinelActivity(name); if(s) return s; }
   const task = tasks[name];
   if(task) {
     const title = (task.task_title || task.title || 'task').toString();
@@ -760,7 +738,7 @@ function closeDecision(e) {
 
 // ── Activity Timeline ─────────────────────────────────────────────────────
 const ACTIVITY_COLORS = {BROADCAST:'#5b6af0',TASK:'#34d399',HANDOFF:'#f59e0b',SYSTEM:'rgba(255,255,255,0.1)',DM:'#ec4899'};
-const VIEWER_NAMES = ['demo-viewer','office-viewer','team-viewer','Viewer','Scout','Pulse','Archie'];
+const VIEWER_NAMES = ['demo-viewer','office-viewer','team-viewer','Viewer'];
 
 function toggleActivity() {
   const panel = document.getElementById('activity-panel');
@@ -788,7 +766,7 @@ function agentDotColor(name) {
 function renderActivity(events) {
   const list = document.getElementById('ap-list');
   if(!events||events.length===0){list.innerHTML='<div class="ap-empty">No activity yet</div>';return;}
-  // Filter out viewers/sentinels
+  // Filter out viewers
   const filtered = events.filter(e=>!VIEWER_NAMES.includes(e.from)&&!e.from.includes('viewer'));
   if(filtered.length===0){list.innerHTML='<div class="ap-empty">No agent activity yet</div>';return;}
   list.innerHTML = filtered.slice(0,50).map(e=>{

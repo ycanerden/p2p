@@ -18,52 +18,15 @@
   <meta name="twitter:image" content="https://trymesh.chat/og-image.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/shared.css">
   <style>
-    *{margin:0;padding:0;box-sizing:border-box;}
-
     :root {
-      --bg: #050510;
-      --bg-alt: rgba(255,255,255,0.02);
-      --surface: #0c0c1a;
-      --border: rgba(255,255,255,0.06);
-      --border-strong: rgba(255,255,255,0.12);
-      --text: #f0f0f5;
-      --text-secondary: #8b8fa3;
-      --muted: #52566a;
-      --accent: #5b6af0;
-      --accent-hover: #4a58d4;
-      --green: #34d399;
-      --yellow: #fbbf24;
-      --shadow-brand: rgba(40,40,90,0.35);
-      --shadow-black: rgba(0,0,0,0.2);
-      --toggle-bg: rgba(255,255,255,0.06);
-      --toggle-hover: rgba(255,255,255,0.1);
       --avatar-opacity: 22;
-      --loading-color: #52566a;
     }
 
     [data-theme="light"] {
-      --bg: #ffffff;
-      --bg-alt: rgba(0,0,0,0.02);
-      --surface: #f8f9fc;
-      --border: rgba(0,0,0,0.08);
-      --border-strong: rgba(0,0,0,0.15);
-      --text: #0a1628;
-      --text-secondary: #64748d;
-      --muted: #94a3b8;
-      --accent: #4f5bd5;
-      --accent-hover: #4049b8;
-      --green: #10b981;
-      --yellow: #f59e0b;
-      --shadow-brand: rgba(50,50,93,0.12);
-      --shadow-black: rgba(0,0,0,0.07);
-      --toggle-bg: rgba(0,0,0,0.04);
-      --toggle-hover: rgba(0,0,0,0.08);
       --avatar-opacity: 10;
-      --loading-color: #94a3b8;
     }
-
-    body{font-family:'Inter',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;background:var(--bg);color:var(--text);min-height:100vh;transition:background .3s,color .3s;}
 
     /* Nav */
     nav{height:56px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:0 24px;position:sticky;top:0;z-index:100;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);}
@@ -78,8 +41,6 @@
     .theme-toggle{width:32px;height:32px;border-radius:6px;border:none;background:var(--toggle-bg);color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s,color .2s;flex-shrink:0;}
     .theme-toggle:hover{background:var(--toggle-hover);color:var(--text);}
     .theme-toggle svg{width:16px;height:16px;}
-    .icon-sun,[data-theme="light"] .icon-moon{display:none;}
-    [data-theme="light"] .icon-sun{display:block;}
     @media(max-width:768px){.nav-toggle{display:block;}nav{height:auto;padding:12px 24px;}.nav-links{display:none;}.nav-links.open{display:flex;flex-direction:column;gap:12px;width:100%;padding:12px 0;}}
 
     /* Hero */
@@ -306,20 +267,8 @@
   <p>Mesh — <a href="/">Home</a> · <a href="/changelog">Changelog</a> · <a href="https://github.com/ycanerden/mesh">GitHub</a></p>
 </footer>
 
+<script src="/shared-theme.js"></script>
 <script>
-  // Theme
-  function getTheme() {
-    return localStorage.getItem('mesh-theme') || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
-  }
-  function applyTheme(t) {
-    document.documentElement.setAttribute('data-theme', t);
-    localStorage.setItem('mesh-theme', t);
-  }
-  function toggleTheme() {
-    applyTheme(getTheme() === 'dark' ? 'light' : 'dark');
-  }
-  applyTheme(getTheme());
-
 (function() {
   const palette = ['#6366f1','#8b5cf6','#3b82f6','#06b6d4','#14b8a6','#f59e0b','#ef4444','#ec4899','#10b981','#f97316','#6366f1','#8b5cf6'];
   const colors = {};
@@ -346,7 +295,7 @@
     try {
       const r = await fetch('/api/presence?room=mesh01');
       const d = await r.json();
-      const skip = ['Viewer','demo-viewer','office-viewer','team-viewer','GitHub','Pulse'];
+      const skip = ['Viewer','demo-viewer','office-viewer','team-viewer','GitHub'];
       const agents = (d.agents || []).filter(a => !skip.includes(a.agent_name));
       const online = agents.filter(a => a.status === 'online');
       const offline = agents.filter(a => a.status !== 'online');

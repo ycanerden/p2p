@@ -644,6 +644,20 @@ app.get("/invite", (c) => {
   return c.redirect(`/setup?room=${encodeURIComponent(safe)}`);
 });
 
+// ── Shared assets ─────────────────────────────────────────────────────────────
+app.get("/shared.css", async (c) => {
+  try {
+    const css = await Bun.file("./public/shared.css").text();
+    return new Response(css, { headers: { "Content-Type": "text/css; charset=utf-8", "Cache-Control": "public, max-age=3600" } });
+  } catch { return c.text("Not found", 404); }
+});
+app.get("/shared-theme.js", async (c) => {
+  try {
+    const js = await Bun.file("./public/shared-theme.js").text();
+    return new Response(js, { headers: { "Content-Type": "application/javascript; charset=utf-8", "Cache-Control": "public, max-age=3600" } });
+  } catch { return c.text("Not found", 404); }
+});
+
 // ── Favicon ───────────────────────────────────────────────────────────────────
 app.get("/favicon.svg", async (c) => {
   try {
@@ -732,16 +746,7 @@ app.get("/download/mac", (c) => {
 });
 
 // ── Watch: Live public spectator view of a room ───────────────────────────────
-app.get("/watch", async (c) => {
-  try {
-    const html = injectAnalytics(await Bun.file("./public/watch.html").text());
-    return new Response(html, {
-      headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" },
-    });
-  } catch {
-    return c.redirect("/");
-  }
-});
+app.get("/watch", (c) => c.redirect("/try", 301));
 
 // Pixel office — visual workspace showing agents at desks
 app.get("/office", async (c) => {
@@ -755,43 +760,15 @@ app.get("/office", async (c) => {
   }
 });
 
-// Team page — investor-facing agent roster
-app.get("/team", async (c) => {
-  try {
-    const html = injectAnalytics(await Bun.file("./public/team.html").text());
-    return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" } });
-  } catch {
-    return c.redirect("/office");
-  }
-});
-
-// Agent profile page — detailed activity & stats
-app.get("/agent/:name", async (c) => {
-  try {
-    const html = injectAnalytics(await Bun.file("./public/agent.html").text());
-    return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" } });
-  } catch {
-    return c.redirect("/team");
-  }
-});
-
-// Leaderboard — agent rankings by tasks + messages
-app.get("/leaderboard", async (c) => {
-  try {
-    const html = injectAnalytics(await Bun.file("./public/leaderboard.html").text());
-    return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" } });
-  } catch {
-    return c.redirect("/office");
-  }
-});
-
-// Analytics — team-wide performance trends
+app.get("/team", (c) => c.redirect("/company", 301));
+app.get("/agent/:name", (c) => c.redirect("/dashboard", 301));
+app.get("/leaderboard", (c) => c.redirect("/dashboard", 301));
 app.get("/analytics", async (c) => {
   try {
     const html = injectAnalytics(await Bun.file("./public/analytics.html").text());
     return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" } });
   } catch {
-    return c.redirect("/team");
+    return c.redirect("/dashboard");
   }
 });
 
@@ -878,7 +855,7 @@ app.get("/api/summary", async (c) => {
   const hours = Math.min(parseInt(c.req.query("hours") || "1", 10), 72);
   const sinceTs = Date.now() - hours * 3600_000;
 
-  const SKIP = ["GitHub", "Pulse", "office-viewer", "team-viewer", "demo-viewer", "Viewer", "system", "Scout", "Archie"];
+  const SKIP = ["GitHub", "office-viewer", "team-viewer", "demo-viewer", "Viewer", "system"];
 
   try {
     const result = getAllMessages(room, 500);
@@ -983,14 +960,7 @@ app.get("/checkout/success", async (c) => {
 });
 
 // Activity — cross-room live feed
-app.get("/activity", async (c) => {
-  try {
-    const html = injectAnalytics(await Bun.file("./public/activity.html").text());
-    return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" } });
-  } catch {
-    return c.redirect("/");
-  }
-});
+app.get("/activity", (c) => c.redirect("/dashboard", 301));
 
 app.get("/settings", async (c) => {
   try {
@@ -1014,27 +984,8 @@ app.get("/compact", async (c) => {
 // Waitlist — redirect to setup (product is live, no waitlist needed)
 app.get("/waitlist", (c) => c.redirect("/setup", 301));
 app.get("/early-access", (c) => c.redirect("/setup", 301));
-// Keep the old handler shape for fallback compatibility
-app.get("/waitlist-old", async (c) => {
-  try {
-    const html = injectAnalytics(await Bun.file("./public/waitlist.html").text());
-    return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" } });
-  } catch {
-    return c.redirect("/");
-  }
-});
-
-// Public demo — watch live agent collaboration
-app.get("/demo", async (c) => {
-  try {
-    const html = injectAnalytics(await Bun.file("./public/demo.html").text());
-    return new Response(html, {
-      headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache, no-store" },
-    });
-  } catch (e) {
-    return c.redirect("/dashboard?room=mesh01&mode=watch");
-  }
-});
+app.get("/waitlist-old", (c) => c.redirect("/setup", 301));
+app.get("/demo", (c) => c.redirect("/try", 301));
 
 // Pixel Office — game-style virtual office view
 // ── Agent Personality Persistence (auth: caller must identify themselves) ──
@@ -1228,14 +1179,7 @@ app.get("/docs", async (c) => {
 
 app.get("/api-docs", (c) => c.redirect("/docs", 301));
 
-app.get("/master-dashboard", async (c) => {
-  try {
-    const dashboardHtml = await Bun.file("./public/master-dashboard.html").text();
-    return c.html(dashboardHtml);
-  } catch (e) {
-    return c.json({ error: "master dashboard not found" }, 404);
-  }
-});
+app.get("/master-dashboard", (c) => c.redirect("/dashboard", 301));
 
 // ── Task Board API ───────────────────────────────────────────────────────────
 // ── Webhooks ───────────────────────────────────────────────────────────────
@@ -1484,14 +1428,7 @@ app.post("/api/projects/auto", async (c) => {
   }, 201);
 });
 
-app.get("/new-project", async (c) => {
-  try {
-    const html = injectAnalytics(await Bun.file("./public/new-project.html").text());
-    return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" } });
-  } catch {
-    return c.redirect("/");
-  }
-});
+app.get("/new-project", (c) => c.redirect("/dashboard", 301));
 
 // ── Master Dashboard Data ─────────────────────────────────────────────────────
 app.get("/api/dashboard-data", (c) => {
@@ -2282,46 +2219,7 @@ app.post("/api/mcp-invoke", async (c) => {
   }
 });
 
-// ── Sentinel Agents: Keep office alive 24/7 ──────────────────────────────────
-// Lightweight server-side agents that maintain presence in default rooms
-// so visitors always see activity on /office
-
-const SENTINEL_ROOM = process.env.SENTINEL_ROOM || "mesh01";
-const SENTINELS = [
-  { name: "Scout", role: "monitor", tasks: ["watching GitHub commits", "checking API health", "scanning error logs", "reviewing deploy status"] },
-  { name: "Pulse", role: "ops", tasks: ["measuring response times", "tracking uptime", "analyzing traffic patterns", "monitoring agent activity"] },
-  { name: "Archie", role: "archivist", tasks: ["summarizing daily activity", "indexing room history", "compiling agent stats", "updating leaderboard"] },
-];
-
-function startSentinels() {
-  if (process.env.DISABLE_SENTINELS === "1") return;
-  console.log(`[sentinel] Starting ${SENTINELS.length} sentinel agents in ${SENTINEL_ROOM}`);
-
-  for (const s of SENTINELS) {
-    ensureRoom(SENTINEL_ROOM);
-    joinRoom(SENTINEL_ROOM, s.name);
-    updatePresence(SENTINEL_ROOM, s.name, "online", "mesh-server", "sentinel");
-  }
-
-  // Rotate sentinel activity every 45 seconds — keeps them "alive" on /office
-  setInterval(() => {
-    for (const s of SENTINELS) {
-      updatePresence(SENTINEL_ROOM, s.name, "online", "mesh-server", "sentinel");
-      // Randomly toggle typing to show activity
-      const isTyping = Math.random() < 0.3;
-      setTyping(SENTINEL_ROOM, s.name, isTyping);
-    }
-  }, 45_000);
-
-  // Sentinel heartbeat log
-  setInterval(() => {
-    const active = getActiveAgentsCount();
-    console.log(`[sentinel] heartbeat — ${active} agents across all rooms`);
-  }, 300_000); // every 5 min
-}
-
-// Start sentinels after a short delay to let the server boot
-setTimeout(startSentinels, 3000);
+// Sentinel agents removed — real agent activity only, no fake presence.
 
 app.get("/try", async (c) => {
   const html = injectAnalytics(await Bun.file("./public/try.html").text());
@@ -2337,13 +2235,7 @@ app.get("/billing/success", async (c) => {
   });
 });
 
-// /daily — auto-generated daily digest page for marketing automation
-app.get("/daily", async (c) => {
-  try {
-    const html = injectAnalytics(await Bun.file("./public/daily.html").text());
-    return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" } });
-  } catch { return c.redirect("/"); }
-});
+app.get("/daily", (c) => c.redirect("/company", 301));
 
 // /company — 0-employee AI company narrative page
 app.get("/company", async (c) => {
@@ -2354,23 +2246,7 @@ app.get("/company", async (c) => {
 });
 
 // /live — public streaming showcase page (designed for Twitch/YouTube OBS source)
-app.get("/live", async (c) => {
-  try {
-    let html = await Bun.file("./public/live.html").text();
-    // Inject read-only access token so the live page can view password-protected rooms
-    const room = c.req.query("room") || "mesh01";
-    const hash = getRoomPasswordHash(room);
-    if (hash) {
-      const token = `${room}.${hash}`;
-      html = html.replace(
-        "const ACCESS = params.get('access_token') || '';",
-        `const ACCESS = params.get('access_token') || '${token}';`
-      );
-    }
-    html = injectAnalytics(html);
-    return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" } });
-  } catch { return c.redirect("/"); }
-});
+app.get("/live", (c) => c.redirect("/try", 301));
 
 // Embeddable widget — drop-in script + iframe frame
 app.get("/widget.js", async (c) => {

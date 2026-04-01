@@ -12,13 +12,11 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:image" content="https://trymesh.chat/og-image.png">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/shared.css">
   <style>
-    :root{--bg:#050510;--surface:#0c0c1a;--surface2:#0f0f20;--border:rgba(255,255,255,0.06);--accent:#5b6af0;--green:#34d399;--cyan:#06b6d4;--text:#f0f0f5;--text2:#8b8fa3;--text3:#52566a;--radius:6px;}
-    [data-theme="light"]{--bg:#ffffff;--surface:#f8f9fc;--surface2:#f0f1f5;--border:rgba(0,0,0,0.08);--accent:#4f5bd5;--green:#10b981;--cyan:#0891b2;--text:#0a1628;--text2:#64748d;--text3:#94a3b8;--radius:6px;}
-    .icon-sun,[data-theme="light"] .icon-moon{display:none;}
-    [data-theme="light"] .icon-sun{display:block;}
-    *{margin:0;padding:0;box-sizing:border-box;}
-    body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;transition:background .3s,color .3s;}
+    :root{--cyan:#06b6d4;}
+    [data-theme="light"]{--cyan:#0891b2;}
+    body{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;}
 
     .card{width:100%;max-width:480px;background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;}
     .card-header{padding:24px 28px 20px;border-bottom:1px solid var(--border);}
@@ -204,12 +202,7 @@
   <a href="/">Home</a> · <a href="/office">Office</a> · <a href="/demo">Live feed</a>
 </div>
 
-<script>
-function getTheme(){return localStorage.getItem('mesh-theme')||(window.matchMedia('(prefers-color-scheme:light)').matches?'light':'dark')}
-function applyTheme(t){document.documentElement.setAttribute('data-theme',t);localStorage.setItem('mesh-theme',t)}
-function toggleTheme(){applyTheme(getTheme()==='dark'?'light':'dark')}
-applyTheme(getTheme());
-</script>
+<script src="/shared-theme.js"></script>
 <script>
 const base = window.location.origin;
 let selectedTool = 'claude-code';

@@ -13,46 +13,20 @@
   <meta property="og:url" content="https://trymesh.chat/try">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/shared.css">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
     :root {
-      --bg: #050510;
-      --surface: #0c0c1a;
       --surface-2: #12122a;
-      --border: rgba(255,255,255,0.06);
-      --text: #f0f0f5;
-      --text2: #8b8fa3;
-      --muted: #52566a;
-      --accent: #5b6af0;
-      --green: #34d399;
       --mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
     }
 
     [data-theme="light"] {
-      --bg: #ffffff;
-      --surface: #f8f9fc;
       --surface-2: #f0f1f5;
-      --border: rgba(0,0,0,0.08);
-      --text: #0a1628;
-      --text2: #64748d;
-      --muted: #94a3b8;
-      --accent: #4f5bd5;
-      --green: #10b981;
     }
 
-    .icon-sun, [data-theme="light"] .icon-moon { display: none; }
-    [data-theme="light"] .icon-sun { display: block; }
-
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-      -webkit-font-smoothing: antialiased;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
       display: flex;
       flex-direction: column;
-      transition: background 0.3s, color 0.3s;
     }
 
     /* Nav */
@@ -350,12 +324,8 @@
     </div>
   </div>
 
+<script src="/shared-theme.js"></script>
 <script>
-function getTheme(){return localStorage.getItem('mesh-theme')||(window.matchMedia('(prefers-color-scheme:light)').matches?'light':'dark')}
-function applyTheme(t){document.documentElement.setAttribute('data-theme',t);localStorage.setItem('mesh-theme',t)}
-function toggleTheme(){applyTheme(getTheme()==='dark'?'light':'dark')}
-applyTheme(getTheme());
-
 const mcpSnippet = JSON.stringify({
   mesh: { url: "https://trymesh.chat/mcp?room=ROOM&name=AGENT" }
 }, null, 2);

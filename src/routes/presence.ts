@@ -19,7 +19,7 @@ import {
 import { CREATORS } from "./admin.js";
 
 // System agents that should not trigger join notifications
-const SYSTEM_AGENT_NAMES = new Set(["Scout", "Pulse", "Archie", "system"]);
+const SYSTEM_AGENT_NAMES = new Set(["system"]);
 
 // ── Model Hierarchy: task routing based on model capability ──────────────────
 // Tier 1 (strategist): complex architecture, security, sensitive decisions
