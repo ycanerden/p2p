@@ -6,78 +6,71 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <title>Mesh — Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/shared.css">
   <style>
     :root {
-      --sidebar-w: 300px;
+      --sidebar-w: 260px;
       --topbar-h: 52px;
     }
 
-    body {
-      overflow: hidden;
-    }
+    body { overflow: hidden; }
 
-    /* ===================== TOP BAR ===================== */
+    /* ===== TOP BAR ===== */
     .topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 24px;
-      height: var(--topbar-h);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px; height: var(--topbar-h);
       border-bottom: 1px solid var(--border);
       background: var(--surface);
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      z-index: 200;
+      position: fixed; top: 0; left: 0; right: 0; z-index: 200;
       backdrop-filter: blur(24px);
     }
     .topbar-left { display: flex; align-items: center; gap: 14px; }
     .logo {
-      width: 32px; height: 32px; border-radius: 8px;
+      width: 28px; height: 28px; border-radius: 6px;
       background: var(--accent);
       display: flex; align-items: center; justify-content: center;
-      font-size: 15px; font-weight: 500; color: #fff;
+      font-size: 13px; font-weight: 600; color: #fff;
+      text-decoration: none;
     }
-    .topbar-title h1 { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; }
-    .topbar-title .subtitle { font-size: 11px; color: var(--text3); margin-top: 1px; }
-    .topbar-center { display: flex; align-items: center; gap: 12px; }
+    .topbar-title {
+      text-decoration: none; color: inherit;
+    }
+    .topbar-title h1 {
+      font-size: 15px; font-weight: 600; letter-spacing: -0.3px;
+      color: var(--text);
+    }
+    .topbar-title .subtitle {
+      font-size: 11px; color: var(--text3); margin-top: 1px;
+    }
+    .topbar-center { display: flex; align-items: center; gap: 10px; }
     .room-input {
       background: var(--surface2); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); padding: 6px 12px; color: var(--text);
+      border-radius: 6px; padding: 6px 12px; color: var(--text);
       font-size: 13px; font-family: 'JetBrains Mono', monospace;
-      outline: none; width: 140px; transition: border-color .15s;
+      outline: none; width: 160px; transition: border-color .15s;
     }
     .room-input:focus { border-color: var(--accent); }
     .room-input::placeholder { color: var(--text3); }
-    .topbar-right { display: flex; align-items: center; gap: 14px; }
-    .live-badge {
+    .topbar-right { display: flex; align-items: center; gap: 12px; }
+    .conn-badge {
       display: flex; align-items: center; gap: 6px;
-      padding: 4px 10px; border-radius: var(--radius-sm);
+      padding: 4px 10px; border-radius: 6px;
       background: var(--green-dim); border: 1px solid var(--border);
     }
-    .live-dot {
+    .conn-dot {
       width: 6px; height: 6px; border-radius: 50%; background: var(--green);
-      animation: pulse-dot 2s infinite;
     }
-    .live-dot.offline { background: var(--red); animation: none; }
-    @keyframes pulse-dot {
-      0%, 100% { opacity: 1; }
-      50% { opacity: .4; }
-    }
-    .live-label { font-size: 11px; color: var(--green); font-weight: 600; }
-    .meta-tag {
-      font-size: 11px; color: var(--text3); padding: 4px 10px;
-      background: var(--surface2); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); font-family: 'JetBrains Mono', monospace;
-    }
+    .conn-dot.offline { background: var(--red); }
+    .conn-label { font-size: 11px; color: var(--green); font-weight: 600; }
+    .conn-label.offline { color: var(--red); }
     .mobile-menu-btn {
       display: none; background: none; border: 1px solid var(--border);
-      color: var(--text); width: 36px; height: 36px; border-radius: 8px;
-      cursor: pointer; font-size: 18px;
+      color: var(--text); width: 36px; height: 36px; border-radius: 6px;
+      cursor: pointer; font-size: 18px; align-items: center; justify-content: center;
     }
 
-    /* ===================== LAYOUT ===================== */
+    /* ===== LAYOUT ===== */
     .layout {
       display: grid;
       grid-template-columns: var(--sidebar-w) 1fr;
@@ -85,62 +78,19 @@
       margin-top: var(--topbar-h);
     }
 
-    /* ===================== SIDEBAR ===================== */
+    /* ===== SIDEBAR ===== */
     .sidebar {
       border-right: 1px solid var(--border);
       background: var(--surface);
       display: flex; flex-direction: column;
       overflow: hidden;
-      transition: transform .3s ease;
     }
-    .sidebar-scroll { flex: 1; overflow-y: auto; }
-
-    /* Metric cards */
-    .metrics-grid {
-      display: grid; grid-template-columns: 1fr 1fr 1fr;
-      gap: 8px; padding: 16px;
+    .sidebar-scroll {
+      flex: 1; overflow-y: auto; padding: 16px;
     }
-    .metric-card {
-      background: var(--surface2); border-radius: var(--radius-sm);
-      padding: 12px; border: 1px solid var(--border);
-      transition: border-color .2s;
-    }
-    .metric-card:hover { border-color: var(--border-light); }
-    .metric-card.wide { grid-column: span 2; }
-    .metric-value {
-      font-size: 20px; font-weight: 600; line-height: 1;
-      font-variant-numeric: tabular-nums;
-      color: var(--text);
-    }
-    .metric-value.accent { color: var(--accent); }
-    .metric-value.green { color: var(--green); }
-    .metric-value.orange { color: var(--orange); }
-    .metric-value.blue { color: var(--blue); }
-    .metric-label { font-size: 10px; color: var(--text3); margin-top: 6px; text-transform: uppercase; letter-spacing: .5px; font-weight: 500; }
-    .metric-trend {
-      font-size: 10px; margin-top: 4px; font-weight: 600;
-    }
-    .metric-trend.up { color: var(--green); }
-    .metric-trend.down { color: var(--red); }
-    .metric-trend.flat { color: var(--text2); }
-
-    /* Health strip */
-    .health-strip {
-      display: flex; gap: 5px; padding: 0 16px 12px; flex-wrap: wrap;
-    }
-    .health-chip {
-      font-size: 10px; padding: 3px 9px; border-radius: var(--radius-xs);
-      font-weight: 600; display: flex; align-items: center; gap: 4px;
-    }
-    .health-chip.ok { background: var(--green-dim); color: var(--green); }
-    .health-chip.warn { background: var(--orange-dim); color: var(--orange); }
-    .health-chip.err { background: var(--red-dim); color: var(--red); }
-
-    /* Sidebar sections */
-    .sidebar-section { padding: 0 16px 16px; }
     .sidebar-heading {
-      font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px;
-      color: var(--text2); margin-bottom: 10px; font-weight: 500;
+      font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px;
+      color: var(--text3); margin-bottom: 12px; font-weight: 500;
       display: flex; align-items: center; justify-content: space-between;
     }
     .sidebar-heading .count {
@@ -148,327 +98,122 @@
       padding: 1px 8px; font-size: 10px; color: var(--text2);
     }
 
-    /* Agent presence list */
+    /* Agent list */
     .agent-item {
       display: flex; align-items: center; gap: 10px;
-      padding: 9px 12px; border-radius: var(--radius-sm); margin-bottom: 4px;
-      background: var(--surface2); border: 1px solid transparent;
-      transition: all .2s; cursor: default;
+      padding: 8px 10px; border-radius: 6px; margin-bottom: 3px;
+      transition: background .15s;
     }
-    .agent-item:hover { border-color: var(--border-light); background: var(--surface3); }
-    .agent-avatar {
-      width: 32px; height: 32px; border-radius: 6px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 15px; flex-shrink: 0; position: relative;
-      overflow: hidden;
+    .agent-item:hover { background: var(--surface2); }
+    .agent-dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
     }
-    /* Pixel art characters via box-shadow (8 unique bots, 8x8 grid, 3px per pixel) */
-    .pixel-bot {
-      width: 3px; height: 3px;
-      position: absolute; top: 4px; left: 4px;
-      image-rendering: pixelated;
-    }
-    .agent-avatar.active .pixel-bot { animation: pixel-bounce 0.8s ease infinite; }
-    @keyframes pixel-bounce {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-2px); }
-    }
-    /* Bot 0: Robot (blue) */
-    .bot-0 { box-shadow:
-      3px 0 #5b6af0, 6px 0 #5b6af0, 9px 0 #5b6af0, 12px 0 #5b6af0, 15px 0 #5b6af0,
-      0px 3px #5b6af0, 3px 3px #818cf8, 6px 3px #818cf8, 9px 3px #818cf8, 12px 3px #818cf8, 15px 3px #818cf8, 18px 3px #5b6af0,
-      0px 6px #5b6af0, 3px 6px #fff, 6px 6px #2563eb, 9px 6px #818cf8, 12px 6px #fff, 15px 6px #2563eb, 18px 6px #5b6af0,
-      0px 9px #5b6af0, 3px 9px #818cf8, 6px 9px #818cf8, 9px 9px #818cf8, 12px 9px #818cf8, 15px 9px #818cf8, 18px 9px #5b6af0,
-      3px 12px #5b6af0, 6px 12px #5b6af0, 9px 12px #818cf8, 12px 12px #5b6af0, 15px 12px #5b6af0,
-      3px 15px #5b6af0, 6px 15px #818cf8, 9px 15px #818cf8, 12px 15px #818cf8, 15px 15px #5b6af0,
-      0px 18px #5b6af0, 6px 18px #5b6af0, 12px 18px #5b6af0, 18px 18px #5b6af0,
-      0px 21px #5b6af0, 3px 21px #5b6af0, 12px 21px #5b6af0, 15px 21px #5b6af0;
-    }
-    /* Bot 1: Ghost (green) */
-    .bot-1 { box-shadow:
-      6px 0 #34d399, 9px 0 #34d399, 12px 0 #34d399,
-      3px 3px #34d399, 6px 3px #4ade80, 9px 3px #4ade80, 12px 3px #4ade80, 15px 3px #34d399,
-      3px 6px #4ade80, 6px 6px #fff, 9px 6px #4ade80, 12px 6px #fff, 15px 6px #4ade80,
-      3px 9px #4ade80, 6px 9px #166534, 9px 9px #4ade80, 12px 9px #166534, 15px 9px #4ade80,
-      3px 12px #4ade80, 6px 12px #4ade80, 9px 12px #4ade80, 12px 12px #4ade80, 15px 12px #4ade80,
-      3px 15px #4ade80, 6px 15px #34d399, 9px 15px #4ade80, 12px 15px #34d399, 15px 15px #4ade80,
-      3px 18px #34d399, 6px 18px #34d399, 9px 18px #34d399, 12px 18px #34d399, 15px 18px #34d399,
-      3px 21px #34d399, 9px 21px #34d399, 15px 21px #34d399;
-    }
-    /* Bot 2: Skull (red) */
-    .bot-2 { box-shadow:
-      6px 0 #ef4444, 9px 0 #ef4444, 12px 0 #ef4444,
-      3px 3px #ef4444, 6px 3px #fca5a5, 9px 3px #fca5a5, 12px 3px #fca5a5, 15px 3px #ef4444,
-      3px 6px #fca5a5, 6px 6px #1c1917, 9px 6px #fca5a5, 12px 6px #1c1917, 15px 6px #fca5a5,
-      3px 9px #fca5a5, 6px 9px #fca5a5, 9px 9px #fca5a5, 12px 9px #fca5a5, 15px 9px #fca5a5,
-      6px 12px #1c1917, 9px 12px #fca5a5, 12px 12px #1c1917,
-      3px 15px #ef4444, 6px 15px #ef4444, 9px 15px #ef4444, 12px 15px #ef4444, 15px 15px #ef4444,
-      3px 18px #ef4444, 9px 18px #ef4444, 15px 18px #ef4444;
-    }
-    /* Bot 3: Wizard (blue) */
-    .bot-3 { box-shadow:
-      9px 0 #3b82f6,
-      6px 3px #3b82f6, 9px 3px #60a5fa, 12px 3px #3b82f6,
-      3px 6px #3b82f6, 6px 6px #60a5fa, 9px 6px #93c5fd, 12px 6px #60a5fa, 15px 6px #3b82f6,
-      6px 9px #fbbf24, 9px 9px #fbbf24, 12px 9px #fbbf24,
-      3px 12px #fbbf24, 6px 12px #fff, 9px 12px #1e3a5f, 12px 12px #fff, 15px 12px #1e3a5f,
-      3px 15px #fbbf24, 6px 15px #fbbf24, 9px 15px #fbbf24, 12px 15px #fbbf24, 15px 15px #fbbf24,
-      6px 18px #3b82f6, 9px 18px #60a5fa, 12px 18px #3b82f6,
-      3px 21px #3b82f6, 6px 21px #3b82f6, 12px 21px #3b82f6, 15px 21px #3b82f6;
-    }
-    /* Bot 4: Slime (orange) */
-    .bot-4 { box-shadow:
-      6px 3px #f59e0b, 9px 3px #f59e0b, 12px 3px #f59e0b,
-      3px 6px #f59e0b, 6px 6px #fbbf24, 9px 6px #fbbf24, 12px 6px #fbbf24, 15px 6px #f59e0b,
-      3px 9px #fbbf24, 6px 9px #fff, 9px 9px #78350f, 12px 9px #fff, 15px 9px #78350f,
-      3px 12px #fbbf24, 6px 12px #fbbf24, 9px 12px #fbbf24, 12px 12px #fbbf24, 15px 12px #fbbf24,
-      3px 15px #fbbf24, 6px 15px #fde68a, 9px 15px #fbbf24, 12px 15px #fde68a, 15px 15px #fbbf24,
-      0px 18px #f59e0b, 3px 18px #f59e0b, 6px 18px #f59e0b, 9px 18px #f59e0b, 12px 18px #f59e0b, 15px 18px #f59e0b, 18px 18px #f59e0b;
-    }
-    /* Bot 5: Eye (pink) */
-    .bot-5 { box-shadow:
-      6px 3px #ec4899, 9px 3px #ec4899, 12px 3px #ec4899,
-      3px 6px #ec4899, 6px 6px #f9a8d4, 9px 6px #f9a8d4, 12px 6px #f9a8d4, 15px 6px #ec4899,
-      3px 9px #f9a8d4, 6px 9px #fff, 9px 9px #fff, 12px 9px #831843, 15px 9px #f9a8d4,
-      3px 12px #f9a8d4, 6px 12px #fff, 9px 12px #831843, 12px 12px #fff, 15px 12px #f9a8d4,
-      3px 15px #ec4899, 6px 15px #f9a8d4, 9px 15px #f9a8d4, 12px 15px #f9a8d4, 15px 15px #ec4899,
-      6px 18px #ec4899, 9px 18px #ec4899, 12px 18px #ec4899;
-    }
-    /* Bot 6: Diamond (cyan) */
-    .bot-6 { box-shadow:
-      9px 0 #06b6d4,
-      6px 3px #06b6d4, 9px 3px #67e8f9, 12px 3px #06b6d4,
-      3px 6px #06b6d4, 6px 6px #67e8f9, 9px 6px #a5f3fc, 12px 6px #67e8f9, 15px 6px #06b6d4,
-      0px 9px #06b6d4, 3px 9px #67e8f9, 6px 9px #a5f3fc, 9px 9px #cffafe, 12px 9px #a5f3fc, 15px 9px #67e8f9, 18px 9px #06b6d4,
-      3px 12px #06b6d4, 6px 12px #67e8f9, 9px 12px #a5f3fc, 12px 12px #67e8f9, 15px 12px #06b6d4,
-      6px 15px #06b6d4, 9px 15px #67e8f9, 12px 15px #06b6d4,
-      9px 18px #06b6d4;
-    }
-    /* Bot 7: Bird (lime) */
-    .bot-7 { box-shadow:
-      6px 0 #84cc16, 9px 0 #84cc16,
-      3px 3px #84cc16, 6px 3px #a3e635, 9px 3px #a3e635, 12px 3px #84cc16,
-      3px 6px #a3e635, 6px 6px #fff, 9px 6px #365314, 12px 6px #a3e635,
-      3px 9px #a3e635, 6px 9px #a3e635, 9px 9px #a3e635, 12px 9px #a3e635, 15px 9px #f59e0b, 18px 9px #f59e0b,
-      6px 12px #a3e635, 9px 12px #d9f99d, 12px 12px #a3e635,
-      3px 15px #84cc16, 6px 15px #a3e635, 9px 15px #a3e635, 12px 15px #84cc16,
-      3px 18px #84cc16, 12px 18px #84cc16,
-      0px 21px #84cc16, 3px 21px #84cc16, 12px 21px #84cc16, 15px 21px #84cc16;
-    }
-    .agent-status-dot {
-      position: absolute; bottom: -1px; right: -1px;
-      width: 10px; height: 10px; border-radius: 50%;
-      border: 2px solid var(--surface2);
-    }
-    .agent-status-dot.online { background: var(--green); }
-    .agent-status-dot.typing { background: var(--accent2); animation: pulse-dot 1s infinite; }
-    .agent-status-dot.idle { background: var(--orange); }
-    .agent-status-dot.offline { background: var(--text3); }
-    .agent-info { flex: 1; min-width: 0; }
-    .agent-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .agent-meta { font-size: 10px; color: var(--text2); margin-top: 1px; }
-    .agent-typing-text { color: var(--accent2); font-style: italic; }
-    .agent-heartbeat { font-size: 10px; color: var(--text3); white-space: nowrap; }
-
-    /* Leaderboard */
-    .lb-item {
-      display: flex; align-items: center; gap: 10px;
-      padding: 8px 12px; border-radius: var(--radius-xs); margin-bottom: 3px;
-      background: var(--surface2); font-size: 13px;
-      transition: background .2s;
-    }
-    .lb-item:hover { background: var(--surface3); }
-    .lb-rank { font-weight: 500; color: var(--accent2); min-width: 24px; text-align: center; }
-    .lb-rank.gold { color: #ffd700; }
-    .lb-rank.silver { color: #c0c0c0; }
-    .lb-rank.bronze { color: #cd7f32; }
-    .lb-name { font-weight: 600; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .lb-score { font-size: 11px; color: var(--green); font-weight: 500; font-variant-numeric: tabular-nums; }
-    .lb-bar {
-      height: 3px; border-radius: 2px; background: var(--accent-dim);
-      margin-top: 4px; overflow: hidden;
-    }
-    .lb-bar-fill { height: 100%; border-radius: 2px; background: var(--accent); transition: width .5s ease; }
-
-    /* ===================== MAIN AREA ===================== */
-    .main { display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
-
-    /* Main tabs */
-    .main-tabs {
-      display: flex; gap: 0; border-bottom: 1px solid var(--border);
-      background: var(--surface); padding: 0 24px;
-      overflow-x: auto; -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
-    }
-    .main-tabs::-webkit-scrollbar { display: none; }
-    .main-tab {
-      padding: 14px 20px; font-size: 13px; font-weight: 600;
-      color: var(--text2); cursor: pointer; white-space: nowrap;
-      border-bottom: 2px solid transparent; transition: all .2s;
-      display: flex; align-items: center; gap: 7px;
-    }
-    .main-tab:hover { color: var(--text); }
-    .main-tab.active { color: var(--text); border-bottom-color: var(--accent); }
-    .main-tab .tab-badge {
-      font-size: 10px; background: var(--accent-dim); color: var(--accent2);
-      padding: 1px 7px; border-radius: 8px; font-weight: 500;
-    }
-
-    /* Workspace Tab */
-    .workspace-container {
-      padding: 40px;
-      max-width: 800px;
-      margin: 0 auto;
-      display: flex;
-      flex-direction: column;
-      gap: 32px;
-    }
-    .workspace-hero {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    .workspace-hero h2 { font-size: 24px; margin-bottom: 8px; }
-    .workspace-hero p { color: var(--text2); font-size: 14px; }
-    
-    .workspace-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 20px;
-    }
-    .workspace-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      transition: all .2s;
-    }
-    .workspace-card:hover { border-color: var(--accent); transform: translateY(-2px); }
-    .workspace-card-icon { font-size: 32px; }
-    .workspace-card-title { font-size: 16px; font-weight: 600; }
-    .workspace-card-desc { font-size: 13px; color: var(--text2); line-height: 1.5; }
-    .workspace-card-btn {
-      margin-top: auto;
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      padding: 10px;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: opacity .2s;
-    }
-    .workspace-card-btn:hover { opacity: .9; }
-
-    .tab-panel { display: none; flex: 1; overflow: hidden; flex-direction: column; }
-    .tab-panel.active { display: flex; }
-
-    /* ===================== CHAT TAB ===================== */
-    .messages-container {
-      flex: 1; overflow-y: auto; padding: 28px 32px; display: flex; flex-direction: column;
-      /* Office-style subtle grid background */
-      background:
-        repeating-linear-gradient(90deg,rgba(255,255,255,.012) 0,rgba(255,255,255,.012) 1px,transparent 1px,transparent 40px),
-        repeating-linear-gradient(0deg,rgba(255,255,255,.012) 0,rgba(255,255,255,.012) 1px,transparent 1px,transparent 40px),
-        var(--bg);
-    }
-    .messages-list { display: flex; flex-direction: column; gap: 8px; }
-
-    .msg {
-      max-width: 68%; padding: 11px 16px; border-radius: 8px;
-      font-size: 13.5px; line-height: 1.55; word-wrap: break-word;
-      animation: msg-in .25s ease; position: relative;
-    }
-    @keyframes msg-in {
-      from { opacity: 0; transform: translateY(4px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    .msg.other {
-      align-self: flex-start;
-      background: var(--surface2); border: 1px solid var(--border);
-      border-bottom-left-radius: 3px;
-    }
-    .msg.self {
-      align-self: flex-end;
-      background: var(--surface3);
-      color: var(--text); border-bottom-right-radius: 3px;
-    }
-    .msg.system {
-      align-self: center; max-width: 85%;
-      background: var(--surface2); border: 1px dashed var(--border);
-      border-radius: var(--radius-sm); text-align: center; font-size: 12px;
-      color: var(--text2); padding: 8px 16px;
-    }
-    .msg-header {
-      display: flex; align-items: center; gap: 7px; margin-bottom: 3px;
-      flex-wrap: wrap;
-    }
-    .msg-avatar-dot { width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0;margin-top:1px; }
-    .msg-sender { font-weight: 600; font-size: 12px; color: var(--text); }
-    .msg-time { font-size: 10px; color: var(--text2); }
-    .msg.self .msg-time { color: rgba(255,255,255,.55); }
-    .msg-admin-actions {
-      display: none;
-      margin-left: auto;
-      gap: 8px;
-      align-items: center;
-    }
-    .msg:hover .msg-admin-actions { display: flex; }
-    .msg-btn {
-      background: none;
-      border: none;
-      color: var(--text3);
-      cursor: pointer;
-      font-size: 11px;
-      padding: 2px 4px;
-      border-radius: 4px;
-      transition: all .2s;
-    }
-    .msg-btn:hover { background: var(--surface); color: var(--red); }
-    .msg-btn.redact:hover { color: var(--orange); }
-    .msg-type-badge {
-      font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: 500;
-      text-transform: uppercase; letter-spacing: .5px; line-height: 1;
-    }
-    .msg-type-badge.broadcast { background: var(--accent-dim); color: var(--accent2); }
-    .msg-type-badge.task { background: var(--orange-dim); color: var(--orange); }
-    .msg-type-badge.handoff { background: var(--green-dim); color: var(--green); }
-    .msg-type-badge.direct { background: var(--red-dim); color: var(--red); }
-    .msg-type-badge.status { background: var(--blue-dim); color: var(--blue); }
-    .msg-type-badge.system { background: var(--surface3); color: var(--text2); }
-    .msg-type-badge.help { background: var(--red-dim); color: var(--red); box-shadow: 0 0 8px var(--red-dim); }
-
-    .msg.help {
-      border: 2px solid var(--red) !important;
-      background: rgba(248,113,113,.05) !important;
-      animation: msg-help-flash 2s infinite !important;
-    }
-    @keyframes msg-help-flash {
-      0%, 100% { border-color: var(--red); box-shadow: 0 0 0px var(--red); }
-      50% { border-color: #ff0000; box-shadow: 0 0 15px rgba(255,0,0,0.3); }
-    }
-
-    .msg-body { font-size: 14px; line-height: 1.55; white-space: pre-wrap; }
-    .msg-reply-ref {
-      font-size: 11px; color: var(--text2); border-left: 2px solid var(--accent);
-      padding-left: 8px; margin-bottom: 4px; font-style: italic;
+    .agent-dot.online { background: var(--green); }
+    .agent-dot.offline { background: var(--text3); }
+    .agent-name {
+      font-size: 13px; font-weight: 500; color: var(--text);
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .msg.self .msg-reply-ref { color: rgba(255,255,255,.5); border-left-color: rgba(255,255,255,.3); }
-    .msg-to {
-      font-size: 10px; color: var(--text2); margin-top: 2px;
+    .agent-name.offline { color: var(--text3); }
+    .agent-time {
+      font-size: 10px; color: var(--text3); margin-left: auto; white-space: nowrap;
     }
-    .msg.self .msg-to { color: rgba(255,255,255,.5); }
-    .msg.dm { border-left: 2px solid var(--accent2); padding-left: 10px; }
-    .msg.dm-to-me { border-left-color: var(--orange); background: rgba(251,146,60,.04); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
-    .msg.dm-to-me .msg-to { color: var(--orange); font-weight: 600; }
+
+    /* Admin panel */
+    .admin-section {
+      border-top: 1px solid var(--border);
+      padding: 16px;
+    }
+    .admin-heading {
+      font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px;
+      color: var(--text3); margin-bottom: 10px; font-weight: 500;
+    }
+    .admin-row {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+    }
+    .admin-input {
+      flex: 1; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 6px; padding: 6px 10px; color: var(--text);
+      font-size: 12px; font-family: inherit; outline: none;
+    }
+    .admin-input:focus { border-color: var(--accent); }
+    .admin-btn {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 6px; padding: 6px 12px; color: var(--text2);
+      font-size: 11px; font-weight: 500; cursor: pointer;
+      transition: all .15s;
+    }
+    .admin-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .admin-btn.danger:hover { border-color: var(--red); color: var(--red); }
+    .admin-toggle {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 12px; color: var(--text2); cursor: pointer;
+    }
+    .admin-toggle input { accent-color: var(--accent); }
+
+    /* ===== MAIN ===== */
+    .main { display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
+
+    /* Messages */
+    .messages-area {
+      flex: 1; overflow-y: auto; padding: 24px 32px;
+      display: flex; flex-direction: column;
+    }
+    .messages-list { display: flex; flex-direction: column; gap: 2px; }
+
+    .msg {
+      padding: 6px 0; font-size: 14px; line-height: 1.55;
+      word-wrap: break-word;
+    }
+    .msg-header {
+      display: inline;
+    }
+    .msg-time {
+      font-size: 11px; color: var(--text3); margin-right: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-variant-numeric: tabular-nums;
+    }
+    .msg-sender {
+      font-weight: 600; font-size: 13px; margin-right: 6px;
+    }
+    .msg-type-badge {
+      font-size: 9px; padding: 1px 5px; border-radius: 3px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .3px; margin-right: 6px;
+      vertical-align: middle;
+    }
+    .msg-type-badge.task { background: var(--orange-dim); color: var(--orange); }
+    .msg-type-badge.handoff { background: var(--green-dim); color: var(--green); }
+    .msg-type-badge.direct { background: var(--accent-dim); color: var(--accent2); }
+    .msg-type-badge.status { background: var(--blue-dim); color: var(--blue); }
+    .msg-type-badge.system { background: var(--surface3); color: var(--text2); }
+    .msg-type-badge.help { background: var(--red-dim); color: var(--red); }
+    .msg-body {
+      color: var(--text); font-size: 14px; line-height: 1.55;
+      white-space: pre-wrap;
+    }
+    .msg-to {
+      font-size: 11px; color: var(--text3); margin-left: 4px;
+    }
+    .msg.system {
+      color: var(--text3); font-size: 12px; font-style: italic;
+      padding: 4px 0;
+    }
+
+    .msg-admin-actions {
+      display: none; margin-left: 8px; gap: 6px;
+      align-items: center; vertical-align: middle;
+    }
+    .msg:hover .msg-admin-actions { display: inline-flex; }
+    .msg-admin-btn {
+      background: none; border: none; color: var(--text3);
+      cursor: pointer; font-size: 10px; padding: 1px 4px;
+      border-radius: 3px; transition: all .15s;
+    }
+    .msg-admin-btn:hover { background: var(--surface2); color: var(--red); }
 
     .date-sep {
-      text-align: center; font-size: 11px; color: var(--text2);
-      padding: 16px 0 8px; font-weight: 600; position: relative;
+      text-align: center; font-size: 11px; color: var(--text3);
+      padding: 20px 0 8px; font-weight: 500; position: relative;
     }
     .date-sep::before, .date-sep::after {
       content: ''; position: absolute; top: 50%; height: 1px;
@@ -477,329 +222,106 @@
     .date-sep::before { left: 0; }
     .date-sep::after { right: 0; }
 
-    .typing-bar {
-      padding: 4px 24px; font-size: 12px; color: var(--text2);
-      min-height: 24px; font-style: italic;
-    }
-
     .empty-state {
       flex: 1; display: flex; flex-direction: column; align-items: center;
-      justify-content: center; gap: 10px; color: var(--text2);
+      justify-content: center; gap: 8px; color: var(--text3);
     }
-    .empty-icon { font-size: 48px; opacity: .5; }
     .empty-text { font-size: 14px; }
+
+    .mention {
+      background: rgba(91,106,240,.12); color: var(--accent2);
+      border-radius: 3px; padding: 0 3px; font-weight: 600; font-size: .92em;
+    }
+    .mention-self {
+      background: rgba(91,106,240,.25); color: #fff;
+    }
 
     /* Composer */
     .composer {
       padding: 12px 24px 16px; border-top: 1px solid var(--border);
       background: var(--surface); display: flex; gap: 8px; align-items: flex-end;
     }
-    .composer-left { display: flex; flex-direction: column; gap: 6px; }
-    .composer-name {
-      width: 110px; background: var(--surface2); border: 1px solid var(--border);
-      border-radius: var(--radius-xs); padding: 7px 10px; color: var(--text);
+    .composer-fields {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .composer-small-input {
+      width: 120px; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 6px; padding: 7px 10px; color: var(--text);
       font-size: 12px; font-family: inherit; outline: none;
     }
-    .composer-name:focus { border-color: var(--accent); }
-    .composer-type {
-      width: 110px; background: var(--surface2); border: 1px solid var(--border);
-      border-radius: var(--radius-xs); padding: 7px 10px; color: var(--text);
-      font-size: 12px; font-family: inherit; outline: none;
-      appearance: none; -webkit-appearance: none;
-      cursor: pointer;
-    }
-    .composer-type:focus { border-color: var(--accent); }
-    .composer-body {
-      flex: 1; display: flex; flex-direction: column; gap: 0;
-    }
+    .composer-small-input:focus { border-color: var(--accent); }
+    .composer-small-input::placeholder { color: var(--text3); }
     .composer-input {
       flex: 1; background: var(--surface2); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 12px 16px; color: var(--text);
+      border-radius: 6px; padding: 10px 14px; color: var(--text);
       font-size: 14px; font-family: inherit; resize: none;
-      outline: none; min-height: 44px; max-height: 140px;
-      transition: border-color .2s;
+      outline: none; min-height: 40px; max-height: 120px;
+      transition: border-color .15s;
     }
     .composer-input:focus { border-color: var(--accent); }
     .composer-input::placeholder { color: var(--text3); }
     .send-btn {
-      width: 40px; height: 40px; border-radius: var(--radius-sm);
-      background: var(--accent);
-      border: none; color: #fff; cursor: pointer; font-size: 16px;
+      width: 38px; height: 38px; border-radius: 6px;
+      background: var(--accent); border: none; color: #fff;
+      cursor: pointer; font-size: 15px;
       display: flex; align-items: center; justify-content: center;
       transition: opacity .15s; flex-shrink: 0;
     }
     .send-btn:hover { opacity: .85; }
-    .send-btn:active { transform: scale(.97); }
-    .send-btn:disabled { opacity: .35; cursor: not-allowed; transform: none; box-shadow: none; }
+    .send-btn:disabled { opacity: .3; cursor: not-allowed; }
 
-    /* ===================== FILES TAB ===================== */
-    .files-grid {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 10px; padding: 20px 24px;
-    }
-    .file-card {
-      background: var(--surface2); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); padding: 14px;
-      transition: all .2s; cursor: default;
-    }
-    .file-card:hover { border-color: var(--border-light); background: var(--surface3); }
-    .file-card-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-    .file-icon { font-size: 24px; }
-    .file-name { font-size: 14px; font-weight: 600; word-break: break-all; }
-    .file-desc { font-size: 12px; color: var(--text2); margin-bottom: 8px; line-height: 1.4; }
-    .file-meta { display: flex; gap: 12px; font-size: 11px; color: var(--text3); }
-
-    /* ===================== HANDOFFS TAB ===================== */
-    .handoffs-list { padding: 20px 24px; display: flex; flex-direction: column; gap: 10px; }
-    .handoff-card {
-      background: var(--surface2); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); padding: 16px;
-      transition: border-color .2s;
-    }
-    .handoff-card:hover { border-color: var(--border-light); }
-    .handoff-top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-    .handoff-arrow { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; }
-    .handoff-arrow-icon { color: var(--accent2); }
-    .handoff-status {
-      font-size: 10px; padding: 3px 8px; border-radius: 4px; font-weight: 500;
-      text-transform: uppercase; margin-left: auto;
-    }
-    .handoff-status.pending { background: var(--orange-dim); color: var(--orange); }
-    .handoff-status.accepted { background: var(--green-dim); color: var(--green); }
-    .handoff-status.rejected { background: var(--red-dim); color: var(--red); }
-    .handoff-summary { font-size: 13px; color: var(--text2); line-height: 1.5; }
-    .handoff-time { font-size: 11px; color: var(--text3); margin-top: 8px; }
-
-    /* ===================== DIRECTORY TAB ===================== */
-    .directory-grid {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap: 10px; padding: 20px 24px;
-    }
-    .dir-card {
-      background: var(--surface2); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); padding: 16px;
-      transition: all .2s;
-    }
-    .dir-card:hover { border-color: var(--accent); }
-    .dir-card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-    .dir-avatar {
-      width: 38px; height: 38px; border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 18px;
-    }
-    .dir-name { font-size: 15px; font-weight: 500; }
-    .dir-model { font-size: 11px; color: var(--text2); }
-    .dir-status {
-      margin-left: auto; width: 8px; height: 8px; border-radius: 50%;
-    }
-    .dir-status.online { background: var(--green); box-shadow: 0 0 6px var(--green); }
-    .dir-status.offline { background: var(--text3); }
-    .dir-skills { display: flex; flex-wrap: wrap; gap: 4px; }
-    .dir-skill {
-      font-size: 10px; padding: 3px 8px; border-radius: 4px;
-      background: var(--surface3); color: var(--text2); font-weight: 600;
-    }
-
-    /* ===================== PINS TAB ===================== */
-    .pins-list { padding: 20px 24px; display: flex; flex-direction: column; gap: 8px; }
-    .pin-card {
-      background: var(--surface2); border: 1px solid var(--border);
-      border-left: 3px solid var(--accent);
-      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-      padding: 12px 16px; transition: border-color .2s;
-    }
-    .pin-card:hover { border-color: var(--accent); }
-    .pin-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-    .pin-sender { font-size: 12px; font-weight: 500; }
-    .pin-time { font-size: 10px; color: var(--text3); }
-    .pin-body { font-size: 13px; color: var(--text); line-height: 1.5; white-space: pre-wrap; }
-
-    /* ===================== SCROLLBAR ===================== */
-    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    /* ===== SCROLLBAR ===== */
+    ::-webkit-scrollbar { width: 5px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: var(--text2); }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text3); }
 
-    /* ===================== MOBILE ===================== */
-    @media (max-width: 860px) {
-      :root { --sidebar-w: 0px; --topbar-h: 56px; }
+    /* ===== MOBILE ===== */
+    @media (max-width: 768px) {
+      :root { --sidebar-w: 0px; --topbar-h: 52px; }
       .layout { grid-template-columns: 1fr; }
       .sidebar {
         position: fixed; top: var(--topbar-h); left: 0; bottom: 0;
         width: 280px; z-index: 150;
         transform: translateX(-100%);
-        box-shadow: 20px 0 50px rgba(0,0,0,0.5);
-        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 12px 0 40px rgba(0,0,0,0.5);
+        transition: transform .25s ease;
       }
       .sidebar.open { transform: translateX(0); }
       .sidebar-overlay {
         display: none; position: fixed; inset: 0; top: var(--topbar-h);
-        background: rgba(0,0,0,.6); z-index: 140;
-        backdrop-filter: blur(4px);
+        background: rgba(0,0,0,.5); z-index: 140;
       }
       .sidebar-overlay.show { display: block; }
-      .mobile-menu-btn { display: flex !important; align-items: center; justify-content: center; }
+      .mobile-menu-btn { display: flex !important; }
       .topbar-center { display: none; }
-      .meta-tag { display: none; }
-      .messages-container { padding: 16px 12px; }
-      .composer { padding: 12px 12px 16px; gap: 6px; }
-      .composer-left { flex-direction: row; width: 100%; justify-content: space-between; }
-      .composer-name { width: calc(50% - 4px); height: 36px; }
-      .composer-type { width: calc(50% - 4px); height: 36px; }
-      .composer-body { width: 100%; order: -1; }
-      .composer-input { min-height: 44px; font-size: 16px; } /* Prevent iOS zoom */
-      .msg { max-width: 92%; padding: 10px 14px; }
-      .files-grid, .directory-grid { grid-template-columns: 1fr; padding: 16px 12px; }
-      .main-tabs { padding: 0 8px; gap: 4px; }
-      .main-tab { padding: 12px 14px; font-size: 12px; }
-      .main-tab span { display: block; }
-      
-      #kanban-board {
-        grid-template-columns: 1fr !important;
-        gap: 20px !important;
-      }
-      .workspace-grid { grid-template-columns: 1fr; }
-      .workspace-container { padding: 24px 16px; }
+      .messages-area { padding: 16px 12px; }
+      .composer { padding: 10px 12px 14px; gap: 6px; }
+      .composer-fields { flex-direction: row; width: 100%; }
+      .composer-small-input { width: calc(50% - 2px); }
+      .composer-input { min-height: 40px; font-size: 16px; }
     }
-
-    /* Collapsible sections */
-    .sidebar-content { display: flex; flex-direction: column; gap: 6px; }
-    .sidebar-section.collapsed .sidebar-content { display: none !important; }
-    .mention { background: rgba(91,106,240,.15); color: var(--accent2); border-radius: 3px; padding: 1px 4px; font-weight: 600; font-size: .9em; }
-    .mention-self { background: rgba(91,106,240,.3); color: #fff; }
-    .sidebar-section.collapsed .sidebar-toggle { transform: rotate(-90deg); }
-    .sidebar-toggle { transition: transform 0.2s; font-size: 10px; opacity: 0.5; }
-
-    /* ===================== TOAST NOTIFICATIONS ===================== */
-    #toast-container { position:fixed; bottom:24px; right:24px; z-index:9999; display:flex; flex-direction:column; gap:10px; pointer-events:none; }
-    .toast { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px 16px; max-width:320px; box-shadow:0 8px 32px rgba(0,0,0,.4); pointer-events:all; cursor:pointer; animation:toast-in .25s ease; }
-    .toast.mention { border-color:var(--accent); }
-    .toast-from { font-size:12px; font-weight:500; color:var(--text); margin-bottom:3px; }
-    .toast-content { font-size:12px; color:var(--text2); line-height:1.4; word-break:break-word; }
-    @keyframes toast-in { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
-    @keyframes toast-out { to { opacity:0; transform:translateY(8px); } }
-
-    /* ===================== ANIMATIONS ===================== */
-    @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-    @keyframes slide-up { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-    .animate-in { animation: slide-up .3s ease; }
-
-    /* ===================== KANBAN ===================== */
-    .kanban-col { min-height: 200px; }
-    .kanban-card {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px 14px;
-      margin-bottom: 8px;
-      animation: slide-up .2s ease;
-    }
-    .kanban-card .kc-agent {
-      font-size: 12px;
-      font-weight: 500;
-      margin-bottom: 4px;
-    }
-    .kanban-card .kc-title {
-      font-size: 13px;
-      color: var(--text);
-      line-height: 1.4;
-      margin-bottom: 6px;
-    }
-    .kanban-card .kc-meta {
-      font-size: 10px;
-      color: var(--text3);
-      display: flex;
-      justify-content: space-between;
-    }
-    .kanban-card .kc-id {
-      font-family: monospace;
-      font-size: 11px;
-      color: var(--accent2);
-    }
-    .kanban-card .kc-actions {
-      margin-top: 8px;
-      display: flex;
-      gap: 6px;
-    }
-    .kanban-card .kc-actions button {
-      font-size: 11px;
-      padding: 3px 10px;
-      border-radius: 6px;
-      border: 1px solid var(--border);
-      background: var(--surface);
-      color: var(--text2);
-      cursor: pointer;
-    }
-    .kanban-card .kc-actions button:hover {
-      border-color: var(--accent);
-      color: var(--text);
-    }
-
-    /* Project progress bar in sidebar */
-    .project-progress-wrap {
-      width: 100%;
-      height: 4px;
-      background: var(--surface3);
-      border-radius: 2px;
-      margin-top: 6px;
-      overflow: hidden;
-    }
-    .project-progress-fill {
-      height: 100%;
-      background: var(--green);
-      transition: width 0.4s ease;
-    }
-    .project-title-sm {
-      font-size: 10px;
-      color: var(--text2);
-      margin-top: 4px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      display: block;
-    }
-    [data-theme="light"] .theme-toggle { background: rgba(0,0,0,0.04); }
   </style>
 </head>
 <body>
-  <div id="toast-container"></div>
-
   <!-- Top bar -->
   <div class="topbar">
     <div class="topbar-left">
       <button class="mobile-menu-btn" id="menu-btn" onclick="toggleSidebar()">&#9776;</button>
-      <a href="/" class="logo" style="text-decoration:none;color:inherit;">M</a>
-      <a href="/" class="topbar-title" style="text-decoration:none;color:inherit;">
+      <a href="/" class="logo">M</a>
+      <a href="/" class="topbar-title">
         <h1>Mesh</h1>
-        <div class="subtitle" id="header-subtitle">Team Coordination</div>
+        <div class="subtitle" id="header-subtitle">Dashboard</div>
       </a>
     </div>
     <div class="topbar-center">
-      <input type="text" class="room-input" id="room-input" placeholder="Switch workspace (e.g., mesh01, team-room)..." />
+      <input type="text" class="room-input" id="room-input" placeholder="Room name..." />
     </div>
     <div class="topbar-right">
-      <div class="live-badge" id="live-badge">
-        <div class="live-dot" id="live-dot"></div>
-        <span class="live-label" id="live-label">Live</span>
+      <div class="conn-badge" id="conn-badge">
+        <div class="conn-dot" id="conn-dot"></div>
+        <span class="conn-label" id="conn-label">Connected</span>
       </div>
-      <span class="meta-tag" id="version-tag">v--</span>
-      <span class="meta-tag" id="uptime-tag">--</span>
-      <div style="position:relative;" id="pages-menu-wrap">
-        <button onclick="document.getElementById('pages-dropdown').style.display=document.getElementById('pages-dropdown').style.display==='none'?'block':'none'" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 8px;cursor:pointer;color:var(--text2);font-size:12px;line-height:1;font-family:inherit;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text2)'">Pages ▾</button>
-        <div id="pages-dropdown" style="display:none;position:absolute;top:calc(100% + 4px);right:0;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);min-width:120px;z-index:200;overflow:hidden;">
-          <a href="/?tab=rooms" style="display:block;padding:8px 12px;font-size:12px;color:var(--text2);text-decoration:none;" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background=''">Rooms</a>
-          <a href="/team" style="display:block;padding:8px 12px;font-size:12px;color:var(--text2);text-decoration:none;" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background=''">Team</a>
-          <a href="/office" style="display:block;padding:8px 12px;font-size:12px;color:var(--text2);text-decoration:none;" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background=''">Office</a>
-          <a href="/analytics" style="display:block;padding:8px 12px;font-size:12px;color:var(--text2);text-decoration:none;" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background=''">Analytics</a>
-        </div>
-      </div>
-      <button id="notif-btn" onclick="requestNotifPerm()" title="Enable mention notifications" style="display:none;background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 8px;cursor:pointer;color:var(--text2);font-size:12px;line-height:1;font-family:inherit;">Notify</button>
-      <button id="invite-btn" onclick="copyInviteLink()" title="Copy invite link for this room" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 8px;cursor:pointer;color:var(--text2);font-size:12px;line-height:1;font-family:inherit;">Invite</button>
-      <button onclick="goToSettings()" title="Room settings — privacy, Telegram, admin" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 8px;cursor:pointer;color:var(--text2);font-size:12px;line-height:1;font-family:inherit;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text2)'">Settings</button>
-      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme" style="width:32px;height:32px;border-radius:6px;border:none;background:rgba(255,255,255,0.06);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;">
-        <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/></svg>
-        <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-      </button>
     </div>
   </div>
 
@@ -807,195 +329,49 @@
   <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
 
   <div class="layout">
-    <!-- Sidebar -->
+    <!-- Sidebar: Presence -->
     <div class="sidebar" id="sidebar">
       <div class="sidebar-scroll">
-        <!-- Metrics -->
-        <div class="metrics-grid">
-          <div class="metric-card">
-            <div class="metric-value accent" id="m-agents">--</div>
-            <div class="metric-label">Agents</div>
-          </div>
-          <div class="metric-card">
-            <div class="metric-value green" id="m-msgmin">--</div>
-            <div class="metric-label">Msg/min</div>
-          </div>
-          <div class="metric-card">
-            <div class="metric-value blue" id="m-rooms">--</div>
-            <div class="metric-label">Workspaces</div>
-          </div>
-          <div class="metric-card wide">
-            <div class="metric-value" id="m-total">--</div>
-            <div class="metric-label">Total Messages</div>
-          </div>
-          <div class="metric-card">
-            <div class="metric-value orange" id="m-latency">--</div>
-            <div class="metric-label">Speed</div>
-          </div>
+        <div class="sidebar-heading">
+          <span>Online</span>
+          <span class="count" id="presence-count">0</span>
         </div>
+        <div id="agents-list">
+          <div style="color:var(--text3);font-size:12px;">Connecting...</div>
+        </div>
+      </div>
 
-        <!-- Health -->
-        <div class="health-strip" id="health-strip">
-          <div class="health-chip ok">Loading...</div>
+      <!-- Admin controls (hidden by default) -->
+      <div class="admin-section" id="admin-section" style="display:none;">
+        <div class="admin-heading">Admin</div>
+        <div class="admin-row">
+          <input type="text" class="admin-input" id="whitelist-input" placeholder="Whitelist agent..." />
+          <button class="admin-btn" onclick="adminWhitelist()">Add</button>
         </div>
-
-        <!-- Connect Agent -->
-        <div class="sidebar-section">
-          <button id="connect-agent-btn" onclick="showConnectModal()" style="width:100%;padding:10px 0;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;">+ Connect Agent</button>
+        <div class="admin-row">
+          <input type="text" class="admin-input" id="ban-input" placeholder="Ban agent..." />
+          <button class="admin-btn danger" onclick="adminBan()">Ban</button>
         </div>
-
-        <!-- Workspaces (Collapsible) -->
-        <div class="sidebar-section" id="section-workspaces">
-          <div class="sidebar-heading" onclick="toggleSection('workspaces')" style="cursor:pointer;user-select:none;">
-            <span>Workspaces</span>
-            <span class="sidebar-toggle" id="toggle-workspaces">▼</span>
-          </div>
-          <div class="sidebar-content" id="workspaces-list">
-            <div style="color:var(--text2);font-size:12px;padding:6px 0;">Loading...</div>
-          </div>
-        </div>
-
-        <!-- Agent Presence (Collapsible) -->
-        <div class="sidebar-section" id="section-agents">
-          <div class="sidebar-heading" onclick="toggleSection('agents')" style="cursor:pointer;user-select:none;">
-            <span>Online Agents</span>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <span class="count" id="presence-count">0</span>
-              <span class="sidebar-toggle" id="toggle-agents">▼</span>
-            </div>
-          </div>
-          <div class="sidebar-content" id="agents-list">
-            <div style="color:var(--text2);font-size:12px;padding:6px 0;">Connecting...</div>
-          </div>
-        </div>
-
-        <!-- Leaderboard (Collapsible) -->
-        <div class="sidebar-section" id="section-leaderboard">
-          <div class="sidebar-heading" onclick="toggleSection('leaderboard')" style="cursor:pointer;user-select:none;">
-            <span>Leaderboard</span>
-            <span class="sidebar-toggle" id="toggle-leaderboard">▼</span>
-          </div>
-          <div class="sidebar-content" id="leaderboard-list">
-            <div style="color:var(--text2);font-size:12px;">Loading...</div>
-          </div>
-        </div>
+        <label class="admin-toggle">
+          <input type="checkbox" id="readonly-toggle" onchange="adminReadOnly(this.checked)" />
+          <span>Read-only mode</span>
+        </label>
       </div>
     </div>
 
     <!-- Main area -->
     <div class="main">
-      <div class="main-tabs" id="main-tabs">
-        <div class="main-tab active" data-tab="chat">
-          <span>Chat</span>
-          <span class="tab-badge" id="chat-badge" style="display:none;">0</span>
+      <div class="messages-area" id="messages-area">
+        <div class="messages-list" id="messages-list"></div>
+      </div>
+
+      <div class="composer">
+        <div class="composer-fields">
+          <input type="text" class="composer-small-input" id="sender-name" placeholder="Your name" />
+          <input type="text" class="composer-small-input" id="msg-to" placeholder="To (optional)" />
         </div>
-        <div class="main-tab" data-tab="summary"><span>Summary</span></div>
-        <div class="main-tab" data-tab="tasks"><span>Tasks</span></div>
-        <div class="main-tab" data-tab="files"><span>Files</span></div>
-        <div class="main-tab" data-tab="handoffs"><span>Handoffs</span></div>
-        <div class="main-tab" data-tab="workspace"><span>Workspace</span></div>
-        <div class="main-tab" data-tab="pins"><span>Pins <span class="tab-badge" id="pin-count">0</span></span></div>
-      </div>
-
-      <!-- Chat panel -->
-      <div class="tab-panel active" id="panel-chat">
-        <div class="messages-container" id="messages-container">
-          <div class="messages-list" id="messages-list"></div>
-        </div>
-        <div class="typing-bar" id="typing-bar"></div>
-        <div class="composer">
-          <div class="composer-left">
-            <input type="text" class="composer-name" id="sender-name" placeholder="Your name" />
-            <select class="composer-type" id="msg-type">
-              <option value="BROADCAST">Chat</option>
-              <option value="TASK">Task</option>
-              <option value="DIRECT">DM</option>
-              <option value="HANDOFF">Handoff</option>
-              <option value="HELP">🆘 Help</option>
-            </select>
-          </div>
-          <div class="composer-body">
-            <textarea class="composer-input" id="msg-input" placeholder="Send a message to the mesh..." rows="1"></textarea>
-          </div>
-          <button class="send-btn" id="send-btn">&#x27A4;</button>
-        </div>
-      </div>
-
-      <!-- Tasks / Kanban panel -->
-      <!-- Summary panel -->
-      <div class="tab-panel" id="panel-summary">
-        <div id="summary-tab-content" style="padding:16px 20px;overflow-y:auto;flex:1;font-size:13px;color:var(--text2);line-height:1.6;">
-          <div style="color:var(--text3);">Loading summary...</div>
-        </div>
-      </div>
-
-      <div class="tab-panel" id="panel-tasks">
-        <div style="padding:16px 20px;overflow-y:auto;flex:1;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-            <h3 style="font-size:16px;font-weight:500;">Task Board</h3>
-            <button onclick="showAssignTaskModal()" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;">+ Assign Task</button>
-          </div>
-          <div id="kanban-board" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;min-height:300px;">
-            <div class="kanban-col" id="kanban-pending">
-              <div style="font-size:13px;font-weight:500;color:var(--orange);margin-bottom:10px;padding:8px 12px;background:var(--orange-dim);border-radius:8px;text-align:center;">To Do</div>
-              <div class="kanban-cards" id="cards-pending"></div>
-            </div>
-            <div class="kanban-col" id="kanban-in_progress">
-              <div style="font-size:13px;font-weight:500;color:var(--blue);margin-bottom:10px;padding:8px 12px;background:var(--blue-dim);border-radius:8px;text-align:center;">In Progress</div>
-              <div class="kanban-cards" id="cards-in_progress"></div>
-            </div>
-            <div class="kanban-col" id="kanban-done">
-              <div style="font-size:13px;font-weight:500;color:var(--green);margin-bottom:10px;padding:8px 12px;background:var(--green-dim);border-radius:8px;text-align:center;">Done</div>
-              <div class="kanban-cards" id="cards-done"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Files panel -->
-      <div class="tab-panel" id="panel-files">
-        <div class="files-grid" id="files-container" style="overflow-y:auto;"></div>
-      </div>
-
-      <!-- Handoffs panel -->
-      <div class="tab-panel" id="panel-handoffs">
-        <div class="handoffs-list" id="handoffs-container" style="overflow-y:auto;"></div>
-      </div>
-
-      <!-- Workspace panel -->
-      <div class="tab-panel" id="panel-workspace">
-        <div class="workspace-container" style="overflow-y:auto;">
-          <div class="workspace-hero">
-            <h2>Google Workspace</h2>
-            <p>Create documents, slides, and sheets directly in your shared workspace.</p>
-          </div>
-          <div class="workspace-grid">
-            <div class="workspace-card">
-              <div class="workspace-card-icon">📄</div>
-              <div class="workspace-card-title">Google Doc</div>
-              <div class="workspace-card-desc">Start a new document for requirements, notes, or technical specs.</div>
-              <button class="workspace-card-btn" onclick="showWorkspaceModal('doc')">Create Doc</button>
-            </div>
-            <div class="workspace-card">
-              <div class="workspace-card-icon">📊</div>
-              <div class="workspace-card-title">Google Slides</div>
-              <div class="workspace-card-desc">Generate a presentation deck for pitches or status updates.</div>
-              <button class="workspace-card-btn" onclick="showWorkspaceModal('slides')">Create Slides</button>
-            </div>
-            <div class="workspace-card">
-              <div class="workspace-card-icon">📈</div>
-              <div class="workspace-card-title">Google Sheet</div>
-              <div class="workspace-card-desc">Create a spreadsheet for project tracking or data analysis.</div>
-              <button class="workspace-card-btn" onclick="showWorkspaceModal('sheets')">Create Sheet</button>
-            </div>
-          </div>
-          <div id="workspace-results" style="margin-top:32px;"></div>
-        </div>
-      </div>
-
-      <!-- Pins panel -->
-      <div class="tab-panel" id="panel-pins">
-        <div class="pins-list" id="pins-container" style="overflow-y:auto;"></div>
+        <textarea class="composer-input" id="msg-input" placeholder="Send a message..." rows="1"></textarea>
+        <button class="send-btn" id="send-btn">&#x27A4;</button>
       </div>
     </div>
   </div>
@@ -1005,284 +381,120 @@
   'use strict';
 
   // === Config ===
-  const urlParams = new URLSearchParams(window.location.search);
-  let ROOM = urlParams.get('room') || 'mesh01';
-  const VIEWER_DEFAULT = 'Viewer';
+  const params = new URLSearchParams(window.location.search);
+  let ROOM = params.get('room') || 'mesh01';
+  const DEFAULT_NAME = 'dashboard-viewer';
 
   // === State ===
-  let allMessages = [];
-  let lastMsgHash = '';
-  let presenceMap = {};
-  let agentTaskMap = {}; // agent_name → current in_progress task title
-  let leaderboardData = [];
-  let metricsData = {};
-  let healthData = {};
-  let filesData = [];
-  let handoffsData = [];
-  let directoryData = [];
-  let pinsData = [];
+  let messages = [];
+  let presence = {};
   let isOnline = false;
-  let heartbeatTimer = null;
-  let activeTab = 'chat';
   let autoScroll = true;
+  let lastMsgTs = 0;
   let sidebarOpen = false;
 
-  // === Admin Mode ===
-  const adminToken = localStorage.getItem('mesh-admin-token') || urlParams.get('token');
+  // === Admin ===
+  const adminToken = localStorage.getItem('mesh-admin-token') || params.get('token');
   const isAdmin = !!adminToken;
 
-  async function adminAction(msgId, mode) {
-    if (!isAdmin) return;
-    if (mode === 'delete' && !confirm('Delete this message?')) return;
-    try {
-      const res = await fetch('/api/messages/' + msgId + '?room=' + encodeURIComponent(ROOM) + '&mode=' + mode + '&token=' + encodeURIComponent(adminToken), {
-        method: 'DELETE'
-      });
-      const data = await res.json();
-      if (data.ok) {
-        // Optimistic UI: remove or update local state
-        allMessages = allMessages.filter(m => m.id !== msgId);
-        renderMessages();
-      } else {
-        alert('Admin action failed: ' + (data.error || 'Unknown error'));
-      }
-    } catch (e) {
-      alert('Error: ' + e.message);
-    }
+  // === DOM ===
+  const $ = id => document.getElementById(id);
+  const roomInput = $('room-input');
+  const senderInput = $('sender-name');
+  const toInput = $('msg-to');
+  const msgInput = $('msg-input');
+  const sendBtn = $('send-btn');
+  const messagesArea = $('messages-area');
+  const messagesList = $('messages-list');
+
+  // === Init ===
+  roomInput.value = ROOM;
+  senderInput.value = localStorage.getItem('mesh-sender-name') || params.get('name') || DEFAULT_NAME;
+  $('header-subtitle').textContent = 'Room: ' + ROOM;
+
+  if (isAdmin) {
+    $('admin-section').style.display = '';
+  }
+
+  // === Escaping & formatting ===
+  const escEl = document.createElement('div');
+  function esc(s) {
+    if (!s) return '';
+    escEl.textContent = String(s);
+    return escEl.innerHTML;
+  }
+
+  function formatContent(text, viewerName) {
+    if (!text) return '';
+    let s = esc(text);
+    // Bold **text**
+    s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    // Inline code `text`
+    s = s.replace(/`([^`]+)`/g, '<code style="background:var(--surface3);padding:1px 4px;border-radius:3px;font-size:12px;font-family:var(--font-mono);">$1</code>');
+    // @mentions
+    s = s.replace(/@([\w\-]+)/g, function(match, name) {
+      const isSelf = viewerName && name.toLowerCase() === viewerName.toLowerCase();
+      return '<span class="mention' + (isSelf ? ' mention-self' : '') + '">@' + name + '</span>';
+    });
+    return s;
   }
 
   // === Color system ===
-  const agentColors = {};
+  const colors = {};
   const palette = [
     '#6c5ce7','#00b894','#fdcb6e','#ff7675','#74b9ff',
     '#a29bfe','#55efc4','#fab1a0','#81ecec','#ffeaa7',
     '#fd79a8','#00cec9','#e17055','#0984e3','#636e72'
   ];
-  let colorIdx = 0;
+  let ci = 0;
   function getColor(name) {
     if (!name) return palette[0];
-    if (!agentColors[name]) agentColors[name] = palette[colorIdx++ % palette.length];
-    return agentColors[name];
+    if (!colors[name]) colors[name] = palette[ci++ % palette.length];
+    return colors[name];
   }
 
-  // === Escape HTML ===
-  const escDiv = document.createElement('div');
-  function esc(s) {
-    if (!s) return '';
-    escDiv.textContent = String(s);
-    return escDiv.innerHTML;
-  }
-  function formatContent(s, viewerName) {
-    if (!s) return '';
-    const escaped = esc(s);
-    // Highlight @mentions — self = accent bg, others = subtle
-    return escaped.replace(/@([\w\- ]+)/g, function(match, name) {
-      const isSelf = viewerName && name.trim().toLowerCase() === viewerName.toLowerCase();
-      if (isSelf) return '<span class="mention mention-self">@' + esc(name) + '</span>';
-      return '<span class="mention">@' + esc(name) + '</span>';
-    });
+  // === Connection status ===
+  function setOnline(online) {
+    if (online === isOnline) return;
+    isOnline = online;
+    const dot = $('conn-dot');
+    const label = $('conn-label');
+    dot.classList.toggle('offline', !online);
+    label.textContent = online ? 'Connected' : 'Disconnected';
+    label.classList.toggle('offline', !online);
   }
 
-  // === DOM refs ===
-  const $ = id => document.getElementById(id);
-  const roomInput = $('room-input');
-  const senderInput = $('sender-name');
-  const msgInput = $('msg-input');
-  const sendBtn = $('send-btn');
-  const msgTypeSelect = $('msg-type');
-  const messagesContainer = $('messages-container');
-  const messagesList = $('messages-list');
-  const typingBar = $('typing-bar');
-  const chatBadge = $('chat-badge');
-
-  // === Init sender name from localStorage / URL ===
-  const savedName = localStorage.getItem('mesh-sender-name');
-  senderInput.value = savedName || urlParams.get('name') || 'Viewer';
-  // Save on every keystroke (not just blur) so name survives sends/refreshes
-  senderInput.addEventListener('input', function() {
-    const v = this.value.trim();
-    if (v) localStorage.setItem('mesh-sender-name', v);
-  });
-  // Auto-sync display_name from server once connected
-  async function syncDisplayName() {
-    const name = senderInput.value.trim();
-    if (!name || name === 'Viewer') return;
+  // === API ===
+  async function api(path, opts) {
     try {
-      const data = await api('/api/presence?room=' + encodeURIComponent(ROOM));
-      const me = (data.agents || []).find(a => a.agent_name === name || a.display_name === name);
-      if (me && me.display_name && me.display_name !== name) {
-        senderInput.value = me.display_name;
-        localStorage.setItem('mesh-sender-name', me.display_name);
-      }
-    } catch {}
-  }
-  setTimeout(syncDisplayName, 2000);
-
-  // === Google OAuth ===
-  // Env-gated: activated when GOOGLE_CLIENT_ID is set in Railway.
-  // Falls back gracefully to the existing name/email gate when disabled.
-  let googleAuthEnabled = false;
-  let googleClientId = null;
-  let currentGoogleUser = null;
-
-  async function initGoogleAuth() {
-    try {
-      const cfg = await api('/api/auth/config');
-      if (!cfg.google_oauth_enabled) return;
-      googleAuthEnabled = true;
-      googleClientId = cfg.client_id;
-
-      // Check for existing session
-      const existingToken = localStorage.getItem('mesh-google-session');
-      if (existingToken) {
-        try {
-          const meRes = await fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + existingToken } });
-          if (meRes.ok) {
-            const me = await meRes.json();
-            if (me.ok) {
-              currentGoogleUser = me.user;
-              senderInput.value = me.user.name;
-              localStorage.setItem('mesh-sender-name', me.user.name);
-              localStorage.setItem('mesh-user-seen', '1');
-              renderUserBadge(me.user);
-              return;
-            }
-          }
-        } catch {}
-        localStorage.removeItem('mesh-google-session');
-      }
-
-      // Show sign-in button
-      injectGoogleSignIn();
-    } catch {}
-  }
-
-  function renderUserBadge(user) {
-    const existing = document.getElementById('google-user-badge');
-    if (existing) existing.remove();
-    const badge = document.createElement('div');
-    badge.id = 'google-user-badge';
-    badge.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;font-size:13px;cursor:pointer;';
-    badge.title = 'Click to sign out';
-    badge.innerHTML =
-      (user.picture ? '<img src="' + user.picture + '" style="width:22px;height:22px;border-radius:50%;object-fit:cover;" onerror="this.style.display=\'none\'" />' : '') +
-      '<span style="color:var(--text);font-weight:500;">' + esc(user.name) + '</span>';
-    badge.addEventListener('click', googleSignOut);
-    // Insert near sender input
-    const senderWrap = senderInput.closest('div') || senderInput.parentNode;
-    if (senderWrap && senderWrap.parentNode) {
-      senderWrap.parentNode.insertBefore(badge, senderWrap.nextSibling);
+      const r = await fetch(path, opts);
+      if (!r.ok) throw new Error(r.status);
+      setOnline(true);
+      return await r.json();
+    } catch {
+      setOnline(false);
+      return null;
     }
-    // Hide manual sender input when signed in
-    senderInput.style.display = 'none';
   }
 
-  function injectGoogleSignIn() {
-    if (!googleClientId || document.getElementById('google-gsi-script')) return;
-    const script = document.createElement('script');
-    script.id = 'google-gsi-script';
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.onload = function() {
-      window.google.accounts.id.initialize({
-        client_id: googleClientId,
-        callback: handleGoogleCredential,
-        auto_select: false,
-      });
-      // Render a sign-in button below the sender input
-      const btn = document.createElement('div');
-      btn.id = 'google-signin-btn';
-      btn.style.cssText = 'margin-top:6px;';
-      const senderWrap = senderInput.closest('div') || senderInput.parentNode;
-      if (senderWrap && senderWrap.parentNode) {
-        senderWrap.parentNode.insertBefore(btn, senderWrap.nextSibling);
-      }
-      window.google.accounts.id.renderButton(btn, { theme: 'filled_black', size: 'medium', text: 'signin_with', shape: 'pill' });
-    };
-    document.head.appendChild(script);
-  }
-
-  async function handleGoogleCredential(response) {
-    try {
-      const res = await fetch('/api/auth/google', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id_token: response.credential }),
-      });
-      const data = await res.json();
-      if (!data.ok) { console.error('Google auth failed:', data); return; }
-      localStorage.setItem('mesh-google-session', data.session_token);
-      localStorage.setItem('mesh-sender-name', data.user.name);
-      localStorage.setItem('mesh-user-seen', '1');
-      currentGoogleUser = data.user;
-      senderInput.value = data.user.name;
-      document.getElementById('google-signin-btn')?.remove();
-      renderUserBadge(data.user);
-      // If there was a pending send, retry
-      if (window.__pendingGoogleSend) {
-        window.__pendingGoogleSend = false;
-        sendMessage();
-      }
-    } catch (e) { console.error('Google auth error:', e); }
-  }
-
-  async function googleSignOut() {
-    const token = localStorage.getItem('mesh-google-session');
-    if (token) {
-      fetch('/api/auth/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } }).catch(() => {});
-      localStorage.removeItem('mesh-google-session');
-    }
-    currentGoogleUser = null;
-    senderInput.style.display = '';
-    senderInput.value = 'Viewer';
-    localStorage.removeItem('mesh-sender-name');
-    localStorage.removeItem('mesh-user-seen');
-    document.getElementById('google-user-badge')?.remove();
-    injectGoogleSignIn();
-  }
-
-  initGoogleAuth();
-
-  // === Init room input ===
-  roomInput.value = ROOM;
+  // === Room switching ===
   roomInput.addEventListener('keydown', function(e) {
     if (e.key === 'Enter') {
-      const newRoom = this.value.trim();
-      if (newRoom && newRoom !== ROOM) {
-        ROOM = newRoom;
-        allMessages = [];
-        lastMsgHash = '';
+      const room = this.value.trim();
+      if (room && room !== ROOM) {
+        ROOM = room;
+        messages = [];
         lastMsgTs = 0;
-        knownMsgTs = 0;
-        presenceMap = {};
+        presence = {};
         renderMessages();
-        renderAgents();
-        fetchAll();
-        // Update URL without reload
+        renderPresence();
+        $('header-subtitle').textContent = 'Room: ' + ROOM;
         const url = new URL(window.location);
         url.searchParams.set('room', ROOM);
         history.replaceState(null, '', url);
+        fetchAll();
       }
     }
-  });
-
-  // === Tab switching ===
-  document.querySelectorAll('.main-tab').forEach(tab => {
-    tab.addEventListener('click', function() {
-      const name = this.dataset.tab;
-      if (name === activeTab) return;
-      activeTab = name;
-      document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-      this.classList.add('active');
-      $('panel-' + name).classList.add('active');
-      // Fetch data for tab if needed
-      if (name === 'files') fetchFiles();
-      if (name === 'handoffs') fetchHandoffs();
-      if (name === 'pins') fetchPins();
-      if (name === 'summary') buildSummary();
-    });
   });
 
   // === Sidebar toggle (mobile) ===
@@ -1292,479 +504,120 @@
     $('sidebar-overlay').classList.toggle('show', sidebarOpen);
   };
 
-
-  window.copyInviteLink = function() {
-    const link = location.origin + '/invite?room=' + encodeURIComponent(ROOM);
-    navigator.clipboard.writeText(link).then(() => {
-      const btn = $('invite-btn');
-      btn.textContent = 'Copied!';
-      btn.style.borderColor = 'var(--green)';
-      btn.style.color = 'var(--green)';
-      setTimeout(() => { btn.textContent = 'Invite'; btn.style.borderColor = ''; btn.style.color = ''; }, 2000);
-    });
-  };
-
-  window.showWorkspaceModal = function(type) {
-    const typeNames = { doc: 'Google Doc', slides: 'Google Slides', sheets: 'Google Sheet' };
-    const toolNames = { doc: 'google.create_doc', slides: 'google.create_slides', sheets: 'google.create_sheet' };
-    
-    const modal = document.createElement('div');
-    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:9999;';
-    modal.innerHTML = `
-      <div class="card" style="width:100%;max-width:400px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:24px;">
-        <h3 style="margin-bottom:16px;">Create ${typeNames[type]}</h3>
-        <div style="margin-bottom:20px;">
-          <label style="display:block;font-size:12px;color:var(--text2);margin-bottom:6px;">Document Title</label>
-          <input type="text" id="ws-title" placeholder="e.g. Project Plan" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);outline:none;">
-        </div>
-        <div style="display:flex;gap:10px;">
-          <button id="ws-cancel" style="flex:1;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:10px;cursor:pointer;">Cancel</button>
-          <button id="ws-submit" style="flex:1;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px;font-weight:600;cursor:pointer;">Create</button>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(modal);
-    
-    const input = modal.querySelector('#ws-title');
-    input.focus();
-    
-    modal.querySelector('#ws-cancel').onclick = () => modal.remove();
-    modal.querySelector('#ws-submit').onclick = async () => {
-      const title = input.value.trim();
-      if (!title) { input.focus(); return; }
-      
-      const btn = modal.querySelector('#ws-submit');
-      const originalText = btn.textContent;
-      btn.disabled = true;
-      btn.textContent = 'Creating...';
-      
-      try {
-        const res = await fetch('/api/mcp-invoke', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            room: ROOM,
-            name: $('sender-name').value.trim() || 'User',
-            tool: toolNames[type],
-            arguments: { title }
-          })
-        });
-        const data = await res.json();
-        modal.remove();
-        
-        if (data.isError) {
-          alert('Error: ' + (data.content?.[0]?.text || 'Failed to create document'));
-        } else {
-          const result = JSON.parse(data.content[0].text);
-          if (result.url) {
-            const resultsEl = $('workspace-results');
-            const link = document.createElement('div');
-            link.style.cssText = 'background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;animation:msg-in .2s ease;';
-            link.innerHTML = `
-              <div style="display:flex;align-items:center;gap:12px;">
-                <span style="font-size:20px;">${type === 'doc' ? '📄' : type === 'slides' ? '📊' : '📈'}</span>
-                <div>
-                  <div style="font-size:13px;font-weight:600;">${esc(title)}</div>
-                  <div style="font-size:11px;color:var(--text3);">${typeNames[type]}</div>
-                </div>
-              </div>
-              <a href="${result.url}" target="_blank" style="background:var(--surface3);color:var(--text);text-decoration:none;font-size:12px;padding:6px 12px;border-radius:6px;border:1px solid var(--border);">Open</a>
-            `;
-            resultsEl.prepend(link);
-          }
-        }
-      } catch (e) {
-        btn.disabled = false;
-        btn.textContent = originalText;
-        alert('Network error: ' + e.message);
-      }
-    };
-    
-    input.onkeydown = (e) => {
-      if (e.key === 'Enter') modal.querySelector('#ws-submit').click();
-      if (e.key === 'Escape') modal.remove();
-    };
-  };
-
-  // === Auto-scroll detection ===
-  messagesContainer.addEventListener('scroll', function() {
-    const threshold = 80;
-    autoScroll = (this.scrollHeight - this.scrollTop - this.clientHeight) < threshold;
+  // === Auto-scroll ===
+  messagesArea.addEventListener('scroll', function() {
+    autoScroll = (this.scrollHeight - this.scrollTop - this.clientHeight) < 60;
   });
 
   // === Composer ===
+  senderInput.addEventListener('input', function() {
+    const v = this.value.trim();
+    if (v) localStorage.setItem('mesh-sender-name', v);
+  });
+
   msgInput.addEventListener('input', function() {
     this.style.height = 'auto';
-    this.style.height = Math.min(this.scrollHeight, 140) + 'px';
-    // Send typing indicator
-    sendTyping(true);
-    clearTimeout(this._typingTimeout);
-    this._typingTimeout = setTimeout(() => sendTyping(false), 2000);
+    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
   });
+
   msgInput.addEventListener('keydown', function(e) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
     }
   });
+
   sendBtn.addEventListener('click', sendMessage);
 
-  // === API helpers ===
-  async function api(path, opts) {
-    try {
-      const r = await fetch(path, opts);
-      if (!r.ok) throw new Error(r.status);
-      setOnline(true);
-      return await r.json();
-    } catch(e) {
-      setOnline(false);
-      return null;
-    }
+  async function sendMessage() {
+    const name = senderInput.value.trim() || DEFAULT_NAME;
+    const msg = msgInput.value.trim();
+    const to = toInput.value.trim();
+    if (!msg) return;
+
+    sendBtn.disabled = true;
+    const body = { message: msg, type: to ? 'DIRECT' : 'BROADCAST' };
+    if (to) body.to = to;
+
+    await api('/api/send?room=' + encodeURIComponent(ROOM) + '&name=' + encodeURIComponent(name), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    msgInput.value = '';
+    msgInput.style.height = 'auto';
+    sendBtn.disabled = false;
+    setTimeout(fetchMessages, 300);
   }
 
-  function setOnline(online) {
-    if (online === isOnline) return;
-    isOnline = online;
-    const dot = $('live-dot');
-    const label = $('live-label');
-    if (online) {
-      dot.classList.remove('offline');
-      label.textContent = 'Live';
-      label.style.color = 'var(--green)';
-    } else {
-      dot.classList.add('offline');
-      label.textContent = 'Offline';
-      label.style.color = 'var(--red)';
-    }
-  }
-
-  // === Fetch functions ===
-  async function fetchMetrics() {
-    const d = await api('/api/metrics');
-    if (!d) return;
-    metricsData = d;
-    $('m-agents').textContent = d.active_agents != null ? d.active_agents : '--';
-    $('m-msgmin').textContent = d.messages_per_minute != null ? d.messages_per_minute : '--';
-    $('m-rooms').textContent = d.active_rooms != null ? d.active_rooms : '--';
-    $('m-total').textContent = d.total_messages_sent != null ? formatNum(d.total_messages_sent) : '--';
-    $('m-latency').textContent = d.avg_latency_ms > 0 ? d.avg_latency_ms + 'ms' : '<1ms';
-  }
-
-  async function fetchHealth() {
-    const d = await api('/health');
-    if (!d) {
-      $('health-strip').innerHTML = '<div class="health-chip err">Offline</div>';
-      return;
-    }
-    healthData = d;
-    // Version
-    $('version-tag').textContent = d.version ? 'v' + d.version : 'v--';
-    // Uptime
-    const s = d.uptime_seconds || 0;
-    const h = Math.floor(s / 3600);
-    const m = Math.floor((s % 3600) / 60);
-    $('uptime-tag').textContent = h > 0 ? h + 'h ' + m + 'm' : m + 'm';
-    // Subtitle
-    $('header-subtitle').textContent = 'Room: ' + ROOM + ' | ' + (d.room_count || 0) + ' rooms active';
-    // Health chips
-    const checks = [
-      { label: 'Server', ok: d.status === 'ok' },
-      { label: 'SSE', ok: d.sse_enabled !== false },
-      { label: 'Rooms', ok: (d.room_count || 0) > 0 },
-    ];
-    $('health-strip').innerHTML = checks.map(c =>
-      '<div class="health-chip ' + (c.ok ? 'ok' : 'warn') + '">' + (c.ok ? '&#9679;' : '&#9675;') + ' ' + c.label + '</div>'
-    ).join('');
-  }
-
-  // === Toast notifications ===
-  let knownMsgTs = 0;
-  let lastMsgTs = 0; // tracks highest ts seen — used for incremental ?since= fetches
-  function showToast(from, content, isMention) {
-    const container = document.getElementById('toast-container');
-    if (!container) return;
-    const t = document.createElement('div');
-    t.className = 'toast' + (isMention ? ' mention' : '');
-    t.innerHTML = '<div class="toast-from">' + esc(from) + (isMention ? ' <span style="color:var(--accent)">mentioned you</span>' : '') + '</div>'
-      + '<div class="toast-content">' + esc((content||'').slice(0,120)) + '</div>';
-    t.onclick = function() { t.remove(); };
-    container.appendChild(t);
-    setTimeout(function() {
-      t.style.animation = 'toast-out .3s ease forwards';
-      setTimeout(function() { t.remove(); }, 300);
-    }, 5000);
-  }
-
+  // === Fetch: Messages ===
   async function fetchMessages() {
-    // Incremental fetch: use ?since= after first load to only pull new messages
-    // Pass viewer name so DMs addressed to you are included
-    const viewerParam = senderInput && senderInput.value.trim()
-      ? '&name=' + encodeURIComponent(senderInput.value.trim())
-      : '';
+    const viewerName = senderInput.value.trim() || DEFAULT_NAME;
+    const nameParam = '&name=' + encodeURIComponent(viewerName);
     const url = lastMsgTs > 0
-      ? '/api/history?room=' + encodeURIComponent(ROOM) + '&since=' + lastMsgTs + viewerParam
-      : '/api/history?room=' + encodeURIComponent(ROOM) + viewerParam;
+      ? '/api/history?room=' + encodeURIComponent(ROOM) + '&since=' + lastMsgTs + nameParam
+      : '/api/history?room=' + encodeURIComponent(ROOM) + '&limit=100' + nameParam;
+
     const d = await api(url);
     if (!d || !d.messages) return;
 
-    // On incremental fetch, merge new messages into allMessages
     if (lastMsgTs > 0 && d.messages.length > 0) {
-      const existingIds = new Set(allMessages.map(m => m.id));
-      const newMsgs = d.messages.filter(m => !existingIds.has(m.id));
-      if (newMsgs.length === 0) return;
-      allMessages = allMessages.concat(newMsgs);
-      // Keep last 200 in memory
-      if (allMessages.length > 200) allMessages = allMessages.slice(-200);
-
-      // Toast for new messages
-      const viewerName = (senderInput.value.trim() || VIEWER_DEFAULT).toLowerCase();
-      for (const m of newMsgs) {
-        if (m.from === (senderInput.value.trim() || VIEWER_DEFAULT)) continue;
-        const content = m.content || '';
-        const isMention = content.toLowerCase().includes('@' + viewerName);
-        if (isMention || !document.hasFocus()) {
-          showToast(m.from, content, isMention);
-          if (isMention && Notification.permission === 'granted') {
-            new Notification(m.from + ' mentioned you', { body: content.slice(0,80), icon: '/favicon.ico' });
-          }
-        }
-      }
-      lastMsgTs = Math.max(...allMessages.map(m => m.ts || 0));
+      const ids = new Set(messages.map(m => m.id));
+      const fresh = d.messages.filter(m => !ids.has(m.id));
+      if (fresh.length === 0) return;
+      messages = messages.concat(fresh);
+      if (messages.length > 200) messages = messages.slice(-200);
+      lastMsgTs = Math.max(...messages.map(m => m.ts || 0));
       renderMessages();
     } else if (lastMsgTs === 0) {
-      // Initial full load
-      allMessages = d.messages;
-      if (d.messages.length > 0) lastMsgTs = Math.max(...d.messages.map(m => m.ts || 0));
-      if (knownMsgTs === 0 && lastMsgTs > 0) knownMsgTs = lastMsgTs;
+      messages = d.messages;
+      if (messages.length > 0) lastMsgTs = Math.max(...messages.map(m => m.ts || 0));
       renderMessages();
     }
   }
 
+  // === Fetch: Presence ===
   async function fetchPresence() {
     const d = await api('/api/presence?room=' + encodeURIComponent(ROOM));
     if (!d) return;
     const agents = d.agents || d;
     if (!Array.isArray(agents)) return;
-    presenceMap = {};
-    agents.forEach(a => { presenceMap[a.agent_name] = a; });
-    renderAgents();
-    renderTyping();
+    presence = {};
+    agents.forEach(a => { presence[a.agent_name] = a; });
     $('presence-count').textContent = agents.filter(a => a.status === 'online' || a.status === 'typing').length;
+    renderPresence();
   }
 
-  async function fetchLeaderboard() {
-    const d = await api('/api/leaderboard?limit=5');
+  // === Fetch: Health ===
+  async function fetchHealth() {
+    const d = await api('/health');
     if (!d) return;
-    leaderboardData = d.leaderboard || d || [];
-    renderLeaderboard();
+    $('header-subtitle').textContent = 'Room: ' + ROOM + (d.version ? ' -- v' + d.version : '');
   }
 
-  async function fetchFiles() {
-    const d = await api('/api/files?room=' + encodeURIComponent(ROOM));
-    if (!d) return;
-    filesData = d.files || d || [];
-    renderFiles();
-  }
-
-  async function fetchHandoffs() {
-    const name = senderInput.value.trim() || VIEWER_DEFAULT;
-    const d = await api('/api/handoffs?name=' + encodeURIComponent(name));
-    if (!d) return;
-    handoffsData = d.handoffs || d || [];
-    renderHandoffs();
-  }
-
-  async function fetchDirectory() {
-    const d = await api('/api/directory');
-    if (!d) return;
-    directoryData = d.agents || d.directory || d || [];
-    renderDirectory();
-  }
-
-  async function fetchPins() {
-    const d = await api('/api/pins?room=' + encodeURIComponent(ROOM));
-    if (!d) return;
-    pinsData = d.pins || d || [];
-    renderPins();
-  }
-
-  async function fetchWorkspaces() {
-    try {
-      const response = await fetch('/api/rooms');
-      const data = await response.json();
-      const rooms = data.rooms || [];
-      renderWorkspaces(rooms);
-    } catch (e) {
-      console.error('Failed to fetch workspaces:', e);
-    }
-  }
-
-  function renderWorkspaces(rooms) {
-    const el = document.getElementById('workspaces-list');
-    if (!el) return;
-    if (!rooms || rooms.length === 0) {
-      el.innerHTML = '<div style="color:var(--text2);font-size:12px;">No workspaces</div>';
-      return;
-    }
-    // Sort by last_active, show top 8
-    const sorted = rooms.sort((a, b) => b.last_active - a.last_active).slice(0, 8);
-    el.innerHTML = sorted.map(room => {
-      const isCurrentRoom = room.code === ROOM;
-      const bg = isCurrentRoom ? 'var(--accent)' : 'transparent';
-      const color = isCurrentRoom ? '#fff' : 'var(--text1)';
-      const border = isCurrentRoom ? 'var(--accent)' : 'var(--border)';
-      
-      let projectHtml = '';
-      if (room.mode === 'project') {
-        const total = room.total_deliverables || 0;
-        const done = room.done_deliverables || 0;
-        const percent = total > 0 ? Math.round((done / total) * 100) : 0;
-        projectHtml = `
-          <div class="project-title-sm">${esc(room.project_title || 'Untitled Project')}</div>
-          <div class="project-progress-wrap">
-            <div class="project-progress-fill" style="width: ${percent}%"></div>
-          </div>
-        `;
-      }
-
-      return `<div style="padding:10px 12px;border:1px solid ${border};border-radius:var(--radius-sm);cursor:pointer;font-size:12px;background:${bg};color:${color};transition:all .2s;margin-bottom:6px;"
-              onclick="switchRoom('${room.code}')"
-              title="${room.agent_count} agents, ${room.message_count} msgs">
-        <div style="display:flex;align-items:center;justify-content:space-between;">
-          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;"># ${room.code}</span>
-          <span style="font-size:10px;opacity:0.5;">${room.agent_count} ag</span>
-        </div>
-        ${projectHtml}
-      </div>`;
-    }).join('');
-  }
-
-  // Restore sidebar state on load
-  document.addEventListener('DOMContentLoaded', () => {
-    ['workspaces', 'agents', 'leaderboard'].forEach(id => {
-      const isCollapsed = localStorage.getItem('sidebar-collapsed-' + id) === 'true';
-      const section = document.getElementById('section-' + id);
-      if (section) section.classList.toggle('collapsed', isCollapsed);
-    });
-  });
-  // Close pages dropdown when clicking outside
-  document.addEventListener('click', function(e) {
-    const wrap = document.getElementById('pages-menu-wrap');
-    const dd = document.getElementById('pages-dropdown');
-    if (wrap && dd && !wrap.contains(e.target)) dd.style.display = 'none';
-  });
-
-  // === Send heartbeat ===
+  // === Heartbeat ===
   async function sendHeartbeat() {
-    const name = senderInput.value.trim() || VIEWER_DEFAULT;
+    const name = senderInput.value.trim() || DEFAULT_NAME;
     await api('/api/heartbeat?room=' + encodeURIComponent(ROOM) + '&name=' + encodeURIComponent(name), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ hostname: (new URLSearchParams(location.search).get('tag')) || (navigator.userAgent.includes('Mac') ? 'macOS' : navigator.userAgent.includes('Win') ? 'Windows' : navigator.userAgent.includes('Linux') ? 'Linux' : 'Web') }),
+      body: JSON.stringify({}),
     });
-  }
-
-  async function sendTyping(isTyping) {
-    const name = senderInput.value.trim() || VIEWER_DEFAULT;
-    await api('/api/typing?room=' + encodeURIComponent(ROOM) + '&name=' + encodeURIComponent(name), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ is_typing: isTyping }),
-    });
-  }
-
-  function showFirstSendGate(onConfirm) {
-    if (document.getElementById('first-send-modal')) return;
-    const modal = document.createElement('div');
-    modal.id = 'first-send-modal';
-    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:9999;';
-    modal.innerHTML =
-      '<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:32px;max-width:400px;width:90%;">' +
-        '<h2 style="font-size:18px;font-weight:500;margin-bottom:6px;">Who are you?</h2>' +
-        '<p style="color:var(--text2);font-size:14px;margin-bottom:20px;">Enter your name and email to send messages. No spam.</p>' +
-        '<input id="gate-name" type="text" placeholder="Your name" style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px;margin-bottom:10px;outline:none;" />' +
-        '<input id="gate-email" type="email" placeholder="Email address (optional)" style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px;margin-bottom:16px;outline:none;" />' +
-        '<button id="gate-submit" style="width:100%;padding:11px;background:var(--text);color:var(--bg);border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">Send message</button>' +
-      '</div>';
-    document.body.appendChild(modal);
-    const nameInput = modal.querySelector('#gate-name');
-    nameInput.focus();
-    modal.querySelector('#gate-submit').addEventListener('click', async function() {
-      const n = modal.querySelector('#gate-name').value.trim();
-      const e = modal.querySelector('#gate-email').value.trim();
-      if (!n) { modal.querySelector('#gate-name').focus(); return; }
-      localStorage.setItem('mesh-sender-name', n);
-      localStorage.setItem('mesh-user-seen', '1');
-      senderInput.value = n;
-      if (e) {
-        localStorage.setItem('mesh-user-email', e);
-        fetch('/api/waitlist', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email: e, use_case: 'dashboard' }) }).catch(() => {});
-      }
-      modal.remove();
-      onConfirm(n);
-    });
-    modal.querySelector('#gate-email').addEventListener('keydown', function(ev) {
-      if (ev.key === 'Enter') modal.querySelector('#gate-submit').click();
-    });
-    modal.querySelector('#gate-name').addEventListener('keydown', function(ev) {
-      if (ev.key === 'Enter') modal.querySelector('#gate-email').focus();
-    });
-  }
-
-  async function sendMessage() {
-    const name = senderInput.value.trim() || VIEWER_DEFAULT;
-    const msg = msgInput.value.trim();
-    const type = msgTypeSelect.value;
-    if (!msg) return;
-
-    // Hard gate: must sign in with Google to send messages
-    if (googleAuthEnabled && !currentGoogleUser) {
-      window.__pendingGoogleSend = true;
-      window.google?.accounts.id.prompt();
-      return;
-    }
-    // Fallback for when Google OAuth is not configured
-    if (!googleAuthEnabled) {
-      const isViewer = name === VIEWER_DEFAULT || name === 'Viewer';
-      const hasSeen = localStorage.getItem('mesh-user-seen');
-      if (isViewer && !hasSeen) {
-        showFirstSendGate(function(confirmedName) {
-          sendMessage();
-        });
-        return;
-      }
-    }
-
-    // Use Google-verified name when signed in (prevent impersonation)
-    const verifiedName = currentGoogleUser ? currentGoogleUser.name : name;
-    localStorage.setItem('mesh-sender-name', verifiedName);
-
-    sendBtn.disabled = true;
-    const body = { message: msg, type: type };
-    await api('/api/send?room=' + encodeURIComponent(ROOM) + '&name=' + encodeURIComponent(verifiedName), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    msgInput.value = '';
-    msgInput.style.height = 'auto';
-    sendBtn.disabled = false;
-    sendTyping(false);
-    setTimeout(fetchMessages, 400);
   }
 
   // === Render: Messages ===
   function renderMessages() {
-    if (!allMessages.length) {
-      messagesList.innerHTML = '<div class="empty-state"><div class="empty-icon">&#x1F4AC;</div><div class="empty-text">No messages yet -- agents will appear here</div></div>';
+    if (!messages.length) {
+      messagesList.innerHTML = '<div class="empty-state"><div class="empty-text">No messages yet</div></div>';
       return;
     }
-    const viewerName = senderInput.value.trim() || VIEWER_DEFAULT;
+
+    const viewerName = senderInput.value.trim() || DEFAULT_NAME;
     let html = '';
     let lastDate = '';
 
-    for (let i = 0; i < allMessages.length; i++) {
-      const m = allMessages[i];
+    for (const m of messages) {
       const ts = new Date(m.ts || m.timestamp);
       const dateStr = ts.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
       if (dateStr !== lastDate) {
@@ -1772,50 +625,39 @@
         html += '<div class="date-sep">' + esc(dateStr) + '</div>';
       }
 
-      const time = ts.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      const time = ts.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
       const from = m.from || m.sender || 'Unknown';
-      const isSelf = from === viewerName;
       const type = (m.type || 'BROADCAST').toUpperCase();
-      const typeClass = type.toLowerCase();
       const content = m.content || m.message || '';
       const color = getColor(from);
       const isSystem = type === 'SYSTEM';
-      const isHelp = type === 'HELP';
-      const isDM = !!m.to;
-      const isDMToMe = isDM && (m.to || '').toLowerCase() === viewerName.toLowerCase();
-      const cssClass = isSystem ? 'system' : (isHelp ? 'help' : (isSelf ? 'self' : 'other'));
-      const dmClass = isDM ? ' dm' + (isDMToMe ? ' dm-to-me' : '') : '';
-      html += '<div class="msg ' + cssClass + dmClass + '">';
 
-      // Reply reference
-      if (m.reply_to) {
-        html += '<div class="msg-reply-ref">Replying to message</div>';
-      }
+      html += '<div class="msg' + (isSystem ? ' system' : '') + '">';
 
-      html += '<div class="msg-header">';
-      // Color only the tiny avatar dot, not the name — keeps it clean
-      html += '<span class="msg-avatar-dot" style="background:' + esc(color) + '"></span>';
-      html += '<span class="msg-sender">' + esc(from) + '</span>';
-      // Only show badge for non-default types
-      if (type !== 'BROADCAST') {
-        html += '<span class="msg-type-badge ' + esc(typeClass) + '">' + esc(type) + '</span>';
-      }
-      html += '<span class="msg-time">' + esc(time) + '</span>';
+      if (isSystem) {
+        html += '<span class="msg-time">' + esc(time) + '</span>';
+        html += '<span>' + formatContent(content, viewerName) + '</span>';
+      } else {
+        html += '<span class="msg-time">' + esc(time) + '</span>';
+        html += '<span class="msg-sender" style="color:' + esc(color) + '">' + esc(from) + '</span>';
 
-      // Admin actions
-      if (isAdmin && !isSystem) {
-        html += '<div class="msg-admin-actions">';
-        html += '<button class="msg-btn redact" onclick="adminAction(\'' + m.id + '\', \'redact\')" title="Redact content">Redact</button>';
-        html += '<button class="msg-btn delete" onclick="adminAction(\'' + m.id + '\', \'delete\')" title="Delete message">Delete</button>';
-        html += '</div>';
-      }
+        if (type !== 'BROADCAST') {
+          html += '<span class="msg-type-badge ' + esc(type.toLowerCase()) + '">' + esc(type) + '</span>';
+        }
 
-      html += '</div>';
+        if (m.to) {
+          html += '<span class="msg-to">to ' + esc(m.to) + '</span> ';
+        }
 
-      html += '<div class="msg-body">' + formatContent(content, viewerName) + '</div>';
+        html += '<span class="msg-body">' + formatContent(content, viewerName) + '</span>';
 
-      if (m.to) {
-        html += '<div class="msg-to">To: ' + esc(m.to) + '</div>';
+        // Admin actions
+        if (isAdmin) {
+          html += '<span class="msg-admin-actions">';
+          html += '<button class="msg-admin-btn" onclick="adminAction(\'' + m.id + '\',\'redact\')">redact</button>';
+          html += '<button class="msg-admin-btn" onclick="adminAction(\'' + m.id + '\',\'delete\')">delete</button>';
+          html += '</span>';
+        }
       }
 
       html += '</div>';
@@ -1825,632 +667,117 @@
 
     if (autoScroll) {
       requestAnimationFrame(function() {
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        messagesArea.scrollTop = messagesArea.scrollHeight;
       });
     }
   }
 
-  // === Render: Agents ===
-  function agentCard(a, indent) {
-    const name = a.agent_name || 'Unknown';
-    const displayName = a.display_name || name;
-    const status = a.is_typing ? 'typing' : (a.status || 'offline');
-    const color = getColor(name);
-    const isActive = status === 'online' || status === 'typing';
-    const hostname = a.hostname || '';
-    const role = a.role || 'worker';
-
-    var botHash = 0;
-    for (var ci = 0; ci < name.length; ci++) botHash = name.charCodeAt(ci) + ((botHash << 5) - botHash);
-    var botIdx = Math.abs(botHash) % 8;
-
-    let heartbeatText = '';
-    if (a.last_heartbeat) {
-      const ago = Math.floor((Date.now() - new Date(a.last_heartbeat).getTime()) / 1000);
-      if (ago < 10) heartbeatText = 'now';
-      else if (ago < 60) heartbeatText = ago + 's';
-      else heartbeatText = Math.floor(ago / 60) + 'm';
-    }
-
-    const currentTask = agentTaskMap[name] || agentTaskMap[displayName] || '';
-    const metaText = a.is_typing
-      ? '<span class="agent-typing-text">typing...</span>'
-      : currentTask
-        ? '<span style="color:var(--green);font-weight:500;">' + esc(currentTask.slice(0,30)) + (currentTask.length > 30 ? '…' : '') + '</span>'
-        : (hostname ? esc(hostname) + ' · ' : '') + esc(role);
-
-    const indentStyle = indent ? 'margin-left:' + (indent * 16) + 'px;' : '';
-    const connector = indent ? '<span style="color:var(--text3);margin-right:4px;font-size:10px;">└─</span>' : '';
-
-    return '<div class="agent-item" style="' + indentStyle + '">' +
-      (connector ? '<div style="display:flex;align-items:center;flex:1;">' + connector : '') +
-      '<div class="agent-avatar' + (isActive ? ' active' : '') + '" style="background:' + color + '10;">' +
-        '<div class="pixel-bot bot-' + botIdx + '"></div>' +
-        '<div class="agent-status-dot ' + esc(status) + '"></div>' +
-      '</div>' +
-      '<div class="agent-info">' +
-        '<div class="agent-name">' + esc(displayName) + (role === 'manager' ? ' <span style="font-size:9px;background:var(--accent-dim);color:var(--accent);padding:1px 5px;border-radius:3px;font-weight:600;">MGR</span>' : '') + '</div>' +
-        '<div class="agent-meta">' + metaText + '</div>' +
-      '</div>' +
-      (heartbeatText ? '<div class="agent-heartbeat">' + esc(heartbeatText) + '</div>' : '') +
-      (connector ? '</div>' : '') +
-    '</div>';
-  }
-
-  function renderAgents() {
+  // === Render: Presence ===
+  function renderPresence() {
     const el = $('agents-list');
-    const agents = Object.values(presenceMap).filter(function(a) {
-      return a.status === 'online' || a.status === 'typing' || a.is_typing;
-    });
-    if (!agents.length) {
-      el.innerHTML = '<div style="color:var(--text2);font-size:12px;padding:6px 0;">No agents online</div>';
+    const all = Object.values(presence);
+    const online = all.filter(a => a.status === 'online' || a.status === 'typing');
+    const offline = all.filter(a => a.status !== 'online' && a.status !== 'typing');
+
+    if (!all.length) {
+      el.innerHTML = '<div style="color:var(--text3);font-size:12px;">No agents</div>';
       return;
     }
 
-    // Build hierarchy tree
-    // Group by hostname → manager → workers
-    const byHost = {};
-    const noHost = [];
-    agents.forEach(function(a) {
-      const host = a.hostname || '';
-      if (host) {
-        if (!byHost[host]) byHost[host] = [];
-        byHost[host].push(a);
-      } else {
-        noHost.push(a);
-      }
-    });
-
     let html = '';
 
-    // Render grouped by machine
-    Object.keys(byHost).sort().forEach(function(host) {
-      const hostAgents = byHost[host];
-      // Host header
-      html += '<div style="font-size:10px;font-weight:600;color:var(--text3);padding:6px 0 3px;letter-spacing:.05em;text-transform:uppercase;">' + esc(host) + '</div>';
+    // Online first
+    for (const a of online) {
+      const name = a.display_name || a.agent_name || 'Unknown';
+      let time = '';
+      if (a.last_heartbeat) {
+        const ago = Math.floor((Date.now() - new Date(a.last_heartbeat).getTime()) / 1000);
+        time = ago < 10 ? 'now' : ago < 60 ? ago + 's' : Math.floor(ago / 60) + 'm';
+      }
+      html += '<div class="agent-item">';
+      html += '<div class="agent-dot online"></div>';
+      html += '<span class="agent-name">' + esc(name) + '</span>';
+      html += '<span class="agent-time">' + esc(time) + '</span>';
+      html += '</div>';
+    }
 
-      // Managers first, then workers
-      const managers = hostAgents.filter(function(a) { return a.role === 'manager'; });
-      const workers = hostAgents.filter(function(a) { return a.role !== 'manager'; });
-
-      managers.forEach(function(mgr) {
-        html += agentCard(mgr, 0);
-        // Workers that report to this manager
-        const children = workers.filter(function(w) { return w.parent_agent === mgr.agent_name; });
-        children.forEach(function(w) { html += agentCard(w, 1); });
-      });
-
-      // Workers with no manager
-      const orphans = workers.filter(function(w) { return !w.parent_agent || !agents.find(function(m) { return m.agent_name === w.parent_agent; }); });
-      orphans.forEach(function(w) { html += agentCard(w, managers.length ? 1 : 0); });
-    });
-
-    // Agents with no hostname
-    if (noHost.length) {
-      noHost.sort((a, b) => (a.role === 'manager' ? -1 : 1));
-      noHost.forEach(function(a) { html += agentCard(a, 0); });
+    // Offline
+    for (const a of offline) {
+      const name = a.display_name || a.agent_name || 'Unknown';
+      html += '<div class="agent-item">';
+      html += '<div class="agent-dot offline"></div>';
+      html += '<span class="agent-name offline">' + esc(name) + '</span>';
+      html += '</div>';
     }
 
     el.innerHTML = html;
   }
 
-  // === Render: Typing bar ===
-  function renderTyping() {
-    const viewerName = senderInput.value.trim() || VIEWER_DEFAULT;
-    const typing = Object.values(presenceMap).filter(function(a) {
-      return a.is_typing && a.agent_name !== viewerName;
-    });
-    if (typing.length === 0) {
-      typingBar.innerHTML = '';
-      return;
-    }
-    const names = typing.map(function(a) { return esc(a.agent_name); });
-    if (names.length === 1) {
-      typingBar.innerHTML = names[0] + ' is typing...';
-    } else if (names.length === 2) {
-      typingBar.innerHTML = names[0] + ' and ' + names[1] + ' are typing...';
-    } else {
-      typingBar.innerHTML = names.length + ' agents are typing...';
-    }
-  }
-
-  // === Render: Leaderboard ===
-  function renderLeaderboard() {
-    const el = $('leaderboard-list');
-    if (!leaderboardData.length) {
-      el.innerHTML = '<div style="color:var(--text2);font-size:12px;">No activity yet</div>';
-      return;
-    }
-
-    el.innerHTML = leaderboardData.slice(0, 5).map((a, i) => {
-      const name = a.agent_name || a.name;
-      const score = Math.floor(a.score || a.reputation_score || 0);
-      const medals = ['🥇', '🥈', '🥉'];
-      const rank = i < 3 ? medals[i] : `<span style="opacity:0.3;font-size:10px;width:16px;display:inline-block;text-align:center;">#${i+1}</span>`;
-      
-      return `<div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:space-between;font-size:12px;">
-        <div style="display:flex;align-items:center;gap:8px;overflow:hidden;flex:1;">
-          <span style="font-size:14px;">${rank}</span>
-          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text1);font-weight:500;">${name}</span>
-        </div>
-        <span title="Score: msgs + commits×25 + tasks×10" style="font-family:'JetBrains Mono',monospace;font-weight:500;color:var(--accent);font-size:11px;">${score}<span style="font-size:9px;opacity:0.5;margin-left:2px;">pts</span></span>
-      </div>`;
-    }).join('');
-  }
-
-  // === Render: Files ===
-  function renderFiles() {
-    const el = $('files-container');
-    if (!filesData.length) {
-      el.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><div class="empty-icon">&#x1F4C1;</div><div class="empty-text">No files shared yet</div></div>';
-      return;
-    }
-    const icons = {js:'&#x1F4DC;',ts:'&#x1F4D8;',py:'&#x1F40D;',json:'&#x1F4CB;',md:'&#x1F4DD;',html:'&#x1F310;',css:'&#x1F3A8;',sh:'&#x2699;',txt:'&#x1F4C4;',png:'&#x1F5BC;',jpg:'&#x1F5BC;',pdf:'&#x1F4D5;'};
-
-    el.innerHTML = filesData.map(function(f) {
-      const ext = (f.filename || '').split('.').pop().toLowerCase();
-      const icon = icons[ext] || '&#x1F4C4;';
-      const size = formatSize(f.size_bytes || 0);
-      const time = f.timestamp ? new Date(f.timestamp).toLocaleString() : '';
-
-      return '<div class="file-card">' +
-        '<div class="file-card-top">' +
-          '<span class="file-icon">' + icon + '</span>' +
-          '<span class="file-name">' + esc(f.filename) + '</span>' +
-        '</div>' +
-        (f.description ? '<div class="file-desc">' + esc(f.description) + '</div>' : '') +
-        '<div class="file-meta">' +
-          (f.uploader ? '<span>By ' + esc(f.uploader) + '</span>' : '') +
-          '<span>' + esc(size) + '</span>' +
-          (time ? '<span>' + esc(time) + '</span>' : '') +
-        '</div>' +
-      '</div>';
-    }).join('');
-  }
-
-  // === Render: Handoffs ===
-  function renderHandoffs() {
-    const el = $('handoffs-container');
-    if (!handoffsData.length) {
-      el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#x1F91D;</div><div class="empty-text">No handoffs recorded</div></div>';
-      return;
-    }
-    el.innerHTML = handoffsData.map(function(h) {
-      const status = (h.status || 'pending').toLowerCase();
-      const time = h.timestamp ? new Date(h.timestamp).toLocaleString() : '';
-
-      return '<div class="handoff-card">' +
-        '<div class="handoff-top">' +
-          '<div class="handoff-arrow">' +
-            '<span>' + esc(h.from || h.from_agent || '--') + '</span>' +
-            '<span class="handoff-arrow-icon">&#x2192;</span>' +
-            '<span>' + esc(h.to || h.to_agent || '--') + '</span>' +
-          '</div>' +
-          '<span class="handoff-status ' + esc(status) + '">' + esc(status) + '</span>' +
-        '</div>' +
-        (h.summary || h.message ? '<div class="handoff-summary">' + esc(h.summary || h.message) + '</div>' : '') +
-        (time ? '<div class="handoff-time">' + esc(time) + '</div>' : '') +
-      '</div>';
-    }).join('');
-  }
-
-  // === Render: Directory ===
-  function renderDirectory() {
-    const el = $('directory-container');
-    if (!directoryData.length) {
-      el.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><div class="empty-icon">&#x1F4D6;</div><div class="empty-text">No agents registered</div></div>';
-      return;
-    }
-    el.innerHTML = directoryData.map(function(a) {
-      const name = a.name || a.agent_name || 'Unknown';
-      const color = getColor(name);
-      const initial = name.charAt(0).toUpperCase();
-      const online = a.status === 'online';
-      const skills = a.skills || a.capabilities || [];
-
-      return '<div class="dir-card">' +
-        '<div class="dir-card-header">' +
-          '<div class="dir-avatar" style="background:' + color + '18;color:' + color + '">' + esc(initial) + '</div>' +
-          '<div>' +
-            '<div class="dir-name">' + esc(name) + '</div>' +
-            (a.model ? '<div class="dir-model">' + esc(a.model) + '</div>' : '') +
-          '</div>' +
-          '<div class="dir-status ' + (online ? 'online' : 'offline') + '"></div>' +
-        '</div>' +
-        (Array.isArray(skills) && skills.length ? '<div class="dir-skills">' + skills.map(function(s) {
-          return '<span class="dir-skill">' + esc(s) + '</span>';
-        }).join('') + '</div>' : '') +
-      '</div>';
-    }).join('');
-  }
-
-  // === Render: Pins ===
-  function renderPins() {
-    const el = $('pins-container');
-    if (!pinsData.length) {
-      el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#x1F4CC;</div><div class="empty-text">No pinned messages</div></div>';
-      return;
-    }
-    el.innerHTML = pinsData.map(function(p) {
-      const time = p.ts || p.timestamp ? new Date(p.ts || p.timestamp).toLocaleString() : '';
-      const color = getColor(p.from || p.sender);
-      return '<div class="pin-card">' +
-        '<div class="pin-header">' +
-          '<span class="pin-sender" style="color:' + esc(color) + '">' + esc(p.from || p.sender || 'Unknown') + '</span>' +
-          (time ? '<span class="pin-time">' + esc(time) + '</span>' : '') +
-        '</div>' +
-        '<div class="pin-body">' + esc(p.content || p.message || '') + '</div>' +
-      '</div>';
-    }).join('');
-  }
-
-  // === Helpers ===
-  function formatNum(n) {
-    if (n == null) return '--';
-    if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
-    if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
-    return String(n);
-  }
-
-  function formatSize(bytes) {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-  }
-
-  // === Fetch all ===
-  function fetchAll() {
-    fetchMetrics();
-    fetchHealth();
-    fetchMessages();
-    fetchPresence();
-    fetchLeaderboard();
-    fetchWorkspaces();
-    if (activeTab === 'files') fetchFiles();
-    if (activeTab === 'handoffs') fetchHandoffs();
-    if (activeTab === 'directory') fetchDirectory();
-    if (activeTab === 'pins') fetchPins();
-  }
-
-  // === Init ===
-  fetchAll();
-  sendHeartbeat();
-
-  // === Polling intervals ===
-  setInterval(fetchMessages, 3000);
-  setInterval(fetchPresence, 5000);
-  setInterval(fetchMetrics, 10000);
-  setInterval(fetchHealth, 15000);
-  setInterval(fetchLeaderboard, 30000);
-  setInterval(fetchWorkspaces, 30000);
-  setInterval(sendHeartbeat, 15000);
-
-  // Fetch active tab data periodically
-  setInterval(function() {
-    if (activeTab === 'files') fetchFiles();
-    if (activeTab === 'handoffs') fetchHandoffs();
-    if (activeTab === 'directory') fetchDirectory();
-    if (activeTab === 'pins') fetchPins();
-  }, 15000);
-
-  // Search enter key
-  const searchInput = document.getElementById('search-input');
-  if (searchInput) {
-    searchInput.addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') doSearch();
-    });
-  }
-
-})();
-
-function goToSettings() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const room = urlParams.get('room') || 'mesh01';
-  window.location.href = '/settings?room=' + encodeURIComponent(room);
-}
-
-function switchRoom(roomCode) {
-  window.location.search = '?room=' + encodeURIComponent(roomCode);
-}
-
-function requestNotifPerm() {
-  if (!('Notification' in window)) return;
-  Notification.requestPermission().then(function(p) {
-    const btn = document.getElementById('notif-btn');
-    if (p === 'granted') { if (btn) btn.textContent = '🔔✓'; }
-    else { if (btn) btn.style.display = 'none'; }
-  });
-}
-// Show notification bell if permission not yet granted
-if ('Notification' in window && Notification.permission === 'default') {
-  const nb = document.getElementById('notif-btn');
-  if (nb) nb.style.display = '';
-}
-
-function toggleSection(id) {
-  const section = document.getElementById('section-' + id);
-  if (!section) return;
-  const isCollapsing = !section.classList.contains('collapsed');
-  section.classList.toggle('collapsed', isCollapsing);
-  localStorage.setItem('sidebar-collapsed-' + id, isCollapsing);
-}
-
-// Search function (global scope for onclick)
-async function doSearch() {
-  const q = document.getElementById('search-input').value.trim();
-  const el = document.getElementById('search-results');
-  if (!q) { el.innerHTML = '<div style="color:var(--text2);padding:20px;text-align:center;">Type something to search</div>'; return; }
-  el.innerHTML = '<div style="color:var(--text2);padding:20px;text-align:center;">Searching...</div>';
-  try {
-    const urlParams = new URLSearchParams(window.location.search);
-    const room = urlParams.get('room') || 'mesh01';
-    const r = await fetch('/api/search?room=' + encodeURIComponent(room) + '&q=' + encodeURIComponent(q));
-    const d = await r.json();
-    if (!d.ok || !d.results || d.results.length === 0) {
-      el.innerHTML = '<div style="color:var(--text2);padding:20px;text-align:center;">No results found</div>';
-      return;
-    }
-    el.innerHTML = d.results.map(function(m) {
-      var time = new Date(m.ts || m.timestamp).toLocaleString();
-      var sender = (m.from || m.sender || 'unknown');
-      var content = (m.content || m.message || '');
-      var eSender = document.createElement('span'); eSender.textContent = sender;
-      var eContent = document.createElement('span'); eContent.textContent = content;
-      return '<div style="padding:12px 16px;background:var(--surface2);border-radius:8px;margin-bottom:8px;border:1px solid var(--border);">' +
-        '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">' +
-          '<span style="font-weight:600;font-size:13px;color:var(--accent2);">' + eSender.innerHTML + '</span>' +
-          '<span style="font-size:10px;color:var(--text2);">' + time + '</span>' +
-        '</div>' +
-        '<div style="font-size:14px;line-height:1.5;white-space:pre-wrap;">' + eContent.innerHTML + '</div>' +
-      '</div>';
-    }).join('');
-  } catch (e) {
-    el.innerHTML = '<div style="color:var(--red);padding:20px;text-align:center;">Search failed: ' + e.message + '</div>';
-  }
-}
-
-// === Kanban Task Board ===
-async function fetchTasks() {
-  try {
-    var urlParams = new URLSearchParams(window.location.search);
-    var room = urlParams.get('room') || 'mesh01';
-    var r = await fetch('/tasks/room/' + encodeURIComponent(room));
-    var d = await r.json();
-    var tasks = d.tasks || [];
-    // Index in-progress tasks by agent for sidebar display
-    agentTaskMap = {};
-    tasks.filter(t => t.status === 'in_progress').forEach(t => {
-      agentTaskMap[t.agent_name] = t.task_title;
-    });
-    renderKanban(tasks);
-    renderAgents(); // refresh sidebar with task info
-  } catch (e) {}
-}
-
-function renderKanban(tasks) {
-  var cols = { pending: [], in_progress: [], blocked: [], done: [] };
-  tasks.forEach(function(t) {
-    var s = t.status || 'pending';
-    if (s === 'blocked') s = 'pending';
-    if (!cols[s]) cols[s] = [];
-    cols[s].push(t);
-  });
-
-  ['pending', 'in_progress', 'done'].forEach(function(status) {
-    var el = document.getElementById('cards-' + status);
-    if (!el) return;
-    if (!cols[status] || cols[status].length === 0) {
-      el.innerHTML = '<div style="color:var(--text3);font-size:12px;text-align:center;padding:20px;">No tasks</div>';
-      return;
-    }
-    var escDiv = document.createElement('div');
-    el.innerHTML = cols[status].map(function(t) {
-      escDiv.textContent = t.agent_name || '';
-      var agentHtml = escDiv.innerHTML;
-      escDiv.textContent = t.task_title || '';
-      var titleHtml = escDiv.innerHTML;
-      escDiv.textContent = t.task_id || '';
-      var idHtml = escDiv.innerHTML;
-      var ago = t.assigned_at ? timeSince(t.assigned_at) : '';
-      var actions = '';
-      if (status === 'pending') {
-        actions = '<div class="kc-actions"><button onclick="moveTask(\'' + idHtml + '\',\'' + agentHtml + '\',\'in_progress\')">Start</button></div>';
-      } else if (status === 'in_progress') {
-        actions = '<div class="kc-actions"><button onclick="moveTask(\'' + idHtml + '\',\'' + agentHtml + '\',\'done\')">Done</button><button onclick="moveTask(\'' + idHtml + '\',\'' + agentHtml + '\',\'blocked\')">Blocked</button></div>';
+  // === Admin actions ===
+  window.adminAction = async function(msgId, mode) {
+    if (!isAdmin) return;
+    if (mode === 'delete' && !confirm('Delete this message?')) return;
+    try {
+      const res = await fetch('/api/messages/' + msgId + '?room=' + encodeURIComponent(ROOM) + '&mode=' + mode + '&token=' + encodeURIComponent(adminToken), {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (data.ok) {
+        messages = messages.filter(m => m.id !== msgId);
+        renderMessages();
       }
-      // Pixel bot for task card
-      var bHash = 0;
-      for (var bi = 0; bi < (t.agent_name||'').length; bi++) bHash = (t.agent_name||'').charCodeAt(bi) + ((bHash << 5) - bHash);
-      var bIdx = Math.abs(bHash) % 8;
-      var agentColor = getAgentColor(agentHtml);
+    } catch {}
+  };
 
-      return '<div class="kanban-card" style="border-left:3px solid ' + agentColor + ';">' +
-        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">' +
-          '<div style="width:24px;height:24px;border-radius:4px;background:' + agentColor + '12;position:relative;overflow:hidden;flex-shrink:0;">' +
-            '<div class="pixel-bot bot-' + bIdx + '" style="transform:scale(0.8);top:2px;left:2px;"></div>' +
-          '</div>' +
-          '<div class="kc-agent" style="color:' + agentColor + ';margin:0;">' + agentHtml + '</div>' +
-        '</div>' +
-        '<div class="kc-title">' + titleHtml + '</div>' +
-        '<div class="kc-meta"><span class="kc-id">' + idHtml + '</span><span>' + ago + '</span></div>' +
-        actions +
-      '</div>';
-    }).join('');
-  });
-}
-
-function getAgentColor(name) {
-  var colors = ['#6c5ce7','#00b894','#fdcb6e','#ff7675','#74b9ff','#a29bfe','#55efc4','#fab1a0'];
-  var hash = 0;
-  for (var i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return colors[Math.abs(hash) % colors.length];
-}
-
-function timeSince(ts) {
-  var s = Math.floor((Date.now() - ts) / 1000);
-  if (s < 60) return s + 's ago';
-  if (s < 3600) return Math.floor(s / 60) + 'm ago';
-  if (s < 86400) return Math.floor(s / 3600) + 'h ago';
-  return Math.floor(s / 86400) + 'd ago';
-}
-
-async function moveTask(taskId, agentName, newStatus) {
-  var urlParams = new URLSearchParams(window.location.search);
-  var room = urlParams.get('room') || 'mesh01';
-  try {
-    await fetch('/tasks/status', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ room_code: room, agent_name: agentName, task_id: taskId, status: newStatus })
-    });
-    fetchTasks();
-  } catch (e) {}
-}
-
-function showAssignTaskModal() {
-  var existing = document.getElementById('assign-modal');
-  if (existing) { existing.remove(); return; }
-  var modal = document.createElement('div');
-  modal.id = 'assign-modal';
-  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
-  modal.onclick = function(e) { if (e.target === modal) modal.remove(); };
-  modal.innerHTML =
-    '<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:32px;max-width:420px;width:90%;">' +
-      '<h2 style="font-size:18px;margin-bottom:16px;">Assign Task</h2>' +
-      '<input id="at-agent" placeholder="Agent name" style="width:100%;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;margin-bottom:10px;outline:none;font-family:inherit;" />' +
-      '<input id="at-id" placeholder="Task ID (e.g. TASK-001)" style="width:100%;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;margin-bottom:10px;outline:none;font-family:inherit;" />' +
-      '<input id="at-title" placeholder="Task description" style="width:100%;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;margin-bottom:16px;outline:none;font-family:inherit;" />' +
-      '<button onclick="submitTask()" style="width:100%;padding:10px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">Assign</button>' +
-      '<button onclick="this.closest(\'#assign-modal\').remove()" style="width:100%;padding:10px;margin-top:8px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:14px;cursor:pointer;">Cancel</button>' +
-    '</div>';
-  document.body.appendChild(modal);
-}
-
-async function submitTask() {
-  var urlParams = new URLSearchParams(window.location.search);
-  var room = urlParams.get('room') || 'mesh01';
-  var agent = document.getElementById('at-agent').value.trim();
-  var taskId = document.getElementById('at-id').value.trim();
-  var title = document.getElementById('at-title').value.trim();
-  if (!agent || !taskId || !title) return;
-  try {
-    await fetch('/tasks/assign', {
+  window.adminWhitelist = async function() {
+    const name = $('whitelist-input').value.trim();
+    if (!name || !isAdmin) return;
+    await api('/api/admin/whitelist?room=' + encodeURIComponent(ROOM) + '&token=' + encodeURIComponent(adminToken), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ room_code: room, agent_name: agent, task_id: taskId, task_title: title })
+      body: JSON.stringify({ agent_name: name }),
     });
-    var modal = document.getElementById('assign-modal');
-    if (modal) modal.remove();
-    fetchTasks();
-  } catch (e) {}
-}
+    $('whitelist-input').value = '';
+  };
 
-// Fetch tasks on load and every 5 seconds
-fetchTasks();
-setInterval(fetchTasks, 5000);
-
-// Connect Agent modal
-function showConnectModal() {
-  var existing = document.getElementById('connect-modal');
-  if (existing) { existing.remove(); return; }
-  var urlParams = new URLSearchParams(window.location.search);
-  var room = urlParams.get('room') || 'mesh01';
-  var baseUrl = window.location.origin;
-  var configJson = JSON.stringify({
-    "mcpServers": {
-      "mesh": {
-        "url": baseUrl + "/mcp?room=" + room + "&name=YOUR_AGENT_NAME"
-      }
-    }
-  }, null, 2);
-
-  var modal = document.createElement('div');
-  modal.id = 'connect-modal';
-  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
-  modal.onclick = function(e) { if (e.target === modal) modal.remove(); };
-  modal.innerHTML =
-    '<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:32px;max-width:520px;width:90%;max-height:80vh;overflow-y:auto;">' +
-      '<h2 style="font-size:20px;margin-bottom:4px;">Connect an Agent</h2>' +
-      '<p style="color:var(--text2);font-size:14px;margin-bottom:20px;">Add this to your AI tool\'s MCP config (Claude Code, Cursor, Windsurf, etc.):</p>' +
-      '<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:16px;position:relative;">' +
-        '<pre id="connect-config" style="font-family:monospace;font-size:13px;color:var(--green,#34d399);white-space:pre-wrap;word-break:break-all;">' + configJson.replace(/</g,'&lt;') + '</pre>' +
-        '<button onclick="navigator.clipboard.writeText(document.getElementById(\'connect-config\').textContent).then(function(){this.textContent=\'Copied!\';var b=this;setTimeout(function(){b.textContent=\'Copy\'},2000)}.bind(this))" style="position:absolute;top:8px;right:8px;background:var(--accent);color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;font-weight:600;">Copy</button>' +
-      '</div>' +
-      '<p style="color:var(--text2);font-size:13px;margin-top:16px;">Replace <code style="color:var(--accent2);">YOUR_AGENT_NAME</code> with your agent\'s name, then restart your AI tool. It will auto-connect.</p>' +
-      '<p style="color:var(--text3);font-size:12px;margin-top:12px;">Workspace: <strong>' + room + '</strong> &middot; Agents auto-get 17 collaboration tools</p>' +
-      '<button onclick="this.closest(\'#connect-modal\').remove()" style="margin-top:20px;width:100%;padding:10px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:14px;cursor:pointer;">Close</button>' +
-    '</div>';
-  document.body.appendChild(modal);
-}
-
-// ── Executive Summary (tab-based, built from already-fetched messages) ─────
-function buildSummary() {
-  var el = document.getElementById('summary-tab-content');
-  if (!el) return;
-  var now = Date.now();
-  var hourAgo = now - 3600000;
-  var recent = allMessages.filter(function(m) { return m.ts >= hourAgo; });
-  var skip = ['GitHub','system','office-viewer','demo-viewer','team-viewer','Viewer'];
-  var agentMsgs = recent.filter(function(m) { return skip.indexOf(m.from) === -1 && m.type !== 'SYSTEM'; });
-  var deploys = recent.filter(function(m) { return m.from === 'GitHub'; });
-  var agents = [];
-  agentMsgs.forEach(function(m) { if (agents.indexOf(m.from) === -1) agents.push(m.from); });
-
-  var shipped = agentMsgs.filter(function(m) {
-    var c = m.content.toLowerCase();
-    return c.indexOf('shipped') >= 0 || c.indexOf('done') >= 0 || c.indexOf('deployed') >= 0 || c.indexOf('live at') >= 0 || c.indexOf('completed') >= 0;
-  });
-  var decisions = agentMsgs.filter(function(m) {
-    var c = m.content.toLowerCase();
-    return c.indexOf('@can') >= 0 || c.indexOf('needs decision') >= 0 || c.indexOf('blocked') >= 0 || c.indexOf('waiting on can') >= 0;
-  });
-  var inProgress = agentMsgs.filter(function(m) {
-    var c = m.content.toLowerCase();
-    return (c.indexOf('taking') >= 0 || c.indexOf('working on') >= 0 || c.indexOf('picking up') >= 0 || c.indexOf('building') >= 0) && c.indexOf('shipped') < 0 && c.indexOf('done') < 0;
-  });
-
-  var html = '';
-  // Stats row
-  html += '<div style="display:flex;gap:16px;margin-bottom:20px;">';
-  html += '<div><span style="font-size:20px;font-weight:500;color:var(--text);">' + agentMsgs.length + '</span> <span style="font-size:11px;color:var(--text3);">messages</span></div>';
-  html += '<div><span style="font-size:20px;font-weight:500;color:var(--text);">' + deploys.length + '</span> <span style="font-size:11px;color:var(--text3);">deploys</span></div>';
-  html += '<div><span style="font-size:20px;font-weight:500;color:var(--text);">' + agents.length + '</span> <span style="font-size:11px;color:var(--text3);">agents</span></div>';
-  html += '</div>';
-
-  // Decisions
-  if (decisions.length > 0) {
-    html += '<div style="font-size:11px;font-weight:500;color:var(--orange);letter-spacing:.5px;margin-bottom:6px;">NEEDS YOUR DECISION</div>';
-    decisions.slice(0, 5).forEach(function(m) {
-      html += '<div style="background:var(--orange-dim);border-radius:6px;padding:8px 10px;margin-bottom:5px;font-size:12px;"><strong>' + esc(m.from) + '</strong> ' + esc(m.content.slice(0, 150)) + '</div>';
+  window.adminBan = async function() {
+    const name = $('ban-input').value.trim();
+    if (!name || !isAdmin) return;
+    await api('/api/admin/ban?room=' + encodeURIComponent(ROOM) + '&token=' + encodeURIComponent(adminToken), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agent_name: name }),
     });
-    html += '<div style="height:10px;"></div>';
+    $('ban-input').value = '';
+  };
+
+  window.adminReadOnly = async function(checked) {
+    if (!isAdmin) return;
+    await api('/api/admin/readonly?room=' + encodeURIComponent(ROOM) + '&token=' + encodeURIComponent(adminToken), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ read_only: checked }),
+    });
+  };
+
+  // === Polling ===
+  function fetchAll() {
+    fetchMessages();
+    fetchPresence();
+    fetchHealth();
+    sendHeartbeat();
   }
 
-  // Shipped
-  if (shipped.length > 0) {
-    html += '<div style="font-size:11px;font-weight:500;color:var(--green);letter-spacing:.5px;margin-bottom:6px;">SHIPPED</div>';
-    shipped.slice(0, 8).forEach(function(m) {
-      html += '<div style="border-left:2px solid var(--green);padding:3px 10px;margin-bottom:4px;font-size:12px;"><strong>' + esc(m.from) + '</strong> ' + esc(m.content.slice(0, 120)) + '</div>';
-    });
-    html += '<div style="height:10px;"></div>';
-  }
+  // Initial load
+  fetchAll();
 
-  // In progress
-  if (inProgress.length > 0) {
-    html += '<div style="font-size:11px;font-weight:500;color:var(--blue);letter-spacing:.5px;margin-bottom:6px;">IN PROGRESS</div>';
-    inProgress.slice(0, 6).forEach(function(m) {
-      html += '<div style="border-left:2px solid var(--blue);padding:3px 10px;margin-bottom:4px;font-size:12px;"><strong>' + esc(m.from) + '</strong> ' + esc(m.content.slice(0, 120)) + '</div>';
-    });
-  }
+  // 4 polling intervals only
+  setInterval(fetchMessages, 3000);   // Messages: 3s
+  setInterval(fetchPresence, 5000);   // Presence: 5s
+  setInterval(fetchHealth, 15000);    // Health: 15s
+  setInterval(sendHeartbeat, 15000);  // Heartbeat: 15s
 
-  if (!shipped.length && !inProgress.length && !decisions.length) {
-    html += '<div style="color:var(--text3);text-align:center;padding:30px 0;">No key activity in the last hour.</div>';
-  }
-
-  html += '<div style="margin-top:16px;font-size:10px;color:var(--text3);">Last hour. Updates when you switch to this tab.</div>';
-  el.innerHTML = html;
-}
+})();
 </script>
-<script src="/shared-theme.js"></script>
 </body>
 </html>

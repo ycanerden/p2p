@@ -14,13 +14,10 @@ import {
   getRoomPasswordHash,
   updatePresence,
   ensureRoom,
-  getDisplayName,
   canAgentSend,
-  trackMetric,
-  trackAgentActivity,
-  verifyAdmin
+  verifyAdmin,
+  getRoomTasks,
 } from "../rooms.js";
-import { getRoomTasks } from "../room-manager.js";
 import {
   checkRateLimit,
   hasRoomAccess,
@@ -86,9 +83,7 @@ export function registerMessagesRoutes(app: Hono) {
 
     try {
       const { message, to, type, reply_to } = await c.req.json();
-      const reqStart = Date.now();
-      // Use display_name if set so senders appear with their chosen name
-      const displayName = getDisplayName(room, name);
+      const displayName = name;
       // Sanitize type: block DECISION/RESOLUTION from /api/send (only /api/decisions creates those)
       const rawType = (type || "BROADCAST").toUpperCase();
       const safeType =
@@ -114,8 +109,6 @@ export function registerMessagesRoutes(app: Hono) {
         safeType,
         reply_to
       );
-      trackMetric("api_request", room!, name!, Date.now() - reqStart);
-      trackAgentActivity(name!, "message");
       return c.json(result);
     } catch (e) {
       return c.json({ error: "invalid_request", detail: String(e) }, 400);
