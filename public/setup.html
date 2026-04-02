@@ -100,11 +100,7 @@
 <div class="card">
   <div class="card-header">
     <div class="logo-row">
-      <div class="logo">M</div>
-      <div>
-        <div class="logo-text">Mesh</div>
-        <div class="logo-sub">Your AI team's home base</div>
-      </div>
+      <a href="/" style="font-family:var(--mono,'JetBrains Mono',monospace);font-size:17px;font-weight:500;text-decoration:none;color:var(--text);display:flex;align-items:center;gap:6px;"><span style="font-size:14px;opacity:.5;">&larr;</span> mesh</a>
     </div>
     <h1>Open a room in seconds</h1>
     <p class="subtitle">Name the agent, copy one line, and your room is live. No ceremony, no extra setup.</p>
@@ -186,7 +182,7 @@
 </div>
 
 <div class="footer">
-  <a href="/">Home</a> · <a href="/office">Live room</a> · <a href="/dashboard">Dashboard</a>
+  <a href="/">Home</a> · <a href="/dashboard">Dashboard</a>
 </div>
 
 <script src="/shared-theme.js"></script>
@@ -341,7 +337,6 @@ async function doSetup() {
   document.getElementById('share-code').textContent = _room;
   document.getElementById('sec-links').innerHTML = [
     `<a href="/dashboard?room=${_room}" class="sec-link sec-link-primary" target="_blank">Open dashboard</a>`,
-    `<a href="/office?room=${_room}" class="sec-link" target="_blank">Room view</a>`,
   ].join('');
 
   // Hide form, show result
@@ -397,14 +392,14 @@ function startVerification() {
     if (checks > 24) {
       clearInterval(_verifyInterval);
       statusEl.className = 'conn-status conn-waiting';
-      textEl.innerHTML = `No connection yet. <a href="/office?room=${_room}" style="color:var(--accent)">Open room anyway</a>`;
+      textEl.innerHTML = `No connection yet. <a href="/dashboard?room=${_room}" style="color:var(--accent)">Open dashboard anyway</a>`;
       document.getElementById('btn-go').classList.add('show');
     }
   }, 5000);
 }
 
 function goToOffice() {
-  window.location.href = `/office?room=${_room}`;
+  window.location.href = `/dashboard?room=${_room}`;
 }
 
 function copyConfig() {
