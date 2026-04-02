@@ -33,6 +33,7 @@ import { registerPresenceRoutes } from "./routes/presence.js";
 import { registerRoomsRoutes } from "./routes/rooms.js";
 import { registerMessagesRoutes } from "./routes/messages.js";
 import { registerPromptRoutes } from "./routes/prompt.js";
+import { registerQueueRoutes } from "./routes/queue.js";
 import {
   VERSION,
   startTime,
@@ -48,6 +49,13 @@ import {
   updateTaskStatus,
   getRoomTasks,
   getAllAgentTasks,
+  createQueueTask,
+  claimQueueTask,
+  releaseQueueTask,
+  updateQueueTask,
+  getOpenQueueTasks,
+  getQueueTasks,
+  expireStaleQueueClaims,
 } from "./rooms.js";
 
 const app = new Hono();
@@ -168,6 +176,8 @@ if (SECRET) {
 setInterval(() => {
   const swept = sweepExpiredRooms();
   if (swept > 0) console.log(`[gc] swept ${swept} expired rooms and stale rate limits`);
+  const expired = expireStaleQueueClaims();
+  if (expired > 0) console.log(`[gc] released ${expired} stale task claims`);
 }, 60 * 60 * 1000);
 
 // ── Simple REST API ───────────────────────────────────────────────────────────
@@ -228,6 +238,7 @@ registerPresenceRoutes(app);
 registerRoomsRoutes(app);
 registerMessagesRoutes(app);
 registerPromptRoutes(app);
+registerQueueRoutes(app);
 
 app.post("/api/publish", async (c) => {
   const room = c.req.query("room");
@@ -932,6 +943,111 @@ function registerMcpTools(server: McpServer, room: string, name: string) {
       return {
         content: [{ type: "text", text: JSON.stringify({ status: "updated", task_id, new_status: status }) }],
       };
+    }
+  );
+
+  // ── Task Queue tools (for Conductor integration) ────────────────────────────
+
+  // Tool: list_open_tasks
+  server.tool(
+    "list_open_tasks",
+    "List all open (unclaimed) tasks in the task queue. Use this to find work to claim.",
+    {},
+    async () => {
+      const tasks = getOpenQueueTasks(room);
+      return {
+        content: [{ type: "text", text: JSON.stringify({ tasks, count: tasks.length }) }],
+      };
+    }
+  );
+
+  // Tool: claim_task
+  server.tool(
+    "claim_task",
+    "Atomically claim an open task from the queue. Returns error if already claimed by someone else. Only one agent can claim a task.",
+    {
+      task_id: z.string().describe("The task ID to claim"),
+    },
+    async ({ task_id }) => {
+      const result = claimQueueTask(room, task_id, name);
+      if (!result.ok) {
+        return {
+          content: [{ type: "text", text: JSON.stringify({ ok: false, error: result.error }) }],
+          isError: true,
+        };
+      }
+      return {
+        content: [{ type: "text", text: JSON.stringify({ ok: true, task_id, claimed_by: name }) }],
+      };
+    }
+  );
+
+  // Tool: complete_task
+  server.tool(
+    "complete_task",
+    "Mark a claimed task as done. Optionally include the PR URL and branch name.",
+    {
+      task_id: z.string().describe("The task ID to complete"),
+      pr_url: z.string().optional().describe("URL of the pull request"),
+      branch_name: z.string().optional().describe("Git branch name"),
+    },
+    async ({ task_id, pr_url, branch_name }) => {
+      const result = updateQueueTask(room, task_id, name, { status: "done", pr_url, branch_name });
+      if (!result.ok) {
+        return {
+          content: [{ type: "text", text: JSON.stringify({ ok: false, error: result.error }) }],
+          isError: true,
+        };
+      }
+      return {
+        content: [{ type: "text", text: JSON.stringify({ ok: true, task_id, status: "done" }) }],
+      };
+    }
+  );
+
+  // Tool: release_task
+  server.tool(
+    "release_task",
+    "Release a task you claimed back to the open queue. Use when you can't finish it.",
+    {
+      task_id: z.string().describe("The task ID to release"),
+    },
+    async ({ task_id }) => {
+      const result = releaseQueueTask(room, task_id, name);
+      if (!result.ok) {
+        return {
+          content: [{ type: "text", text: JSON.stringify({ ok: false, error: result.error }) }],
+          isError: true,
+        };
+      }
+      return {
+        content: [{ type: "text", text: JSON.stringify({ ok: true, task_id, released: true }) }],
+      };
+    }
+  );
+
+  // Tool: post_task
+  server.tool(
+    "post_task",
+    "Create a new task in the queue for any agent to claim. Use to distribute work.",
+    {
+      task_id: z.string().describe("Short task ID, e.g. 'FIX-001'"),
+      title: z.string().describe("Task title"),
+      description: z.string().optional().describe("Detailed description of what needs to be done"),
+      priority: z.number().optional().describe("Priority (higher = more urgent, default 0)"),
+    },
+    async ({ task_id, title, description, priority }) => {
+      try {
+        const task = createQueueTask(room, task_id, title, description || "", name, priority || 0);
+        return {
+          content: [{ type: "text", text: JSON.stringify({ ok: true, task }) }],
+        };
+      } catch (e: any) {
+        return {
+          content: [{ type: "text", text: JSON.stringify({ ok: false, error: e.message }) }],
+          isError: true,
+        };
+      }
     }
   );
 }

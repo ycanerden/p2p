@@ -1044,6 +1044,28 @@ db.run(`CREATE TABLE IF NOT EXISTS room_assignments (
   PRIMARY KEY(room_code, agent_name, task_id)
 );`);
 
+// ── Task Queue (claimable tasks for Conductor integration) ──────────────────
+db.run(`CREATE TABLE IF NOT EXISTS task_queue (
+  room_code TEXT NOT NULL,
+  task_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT DEFAULT '',
+  status TEXT DEFAULT 'open',
+  priority INTEGER DEFAULT 0,
+  claimed_by TEXT DEFAULT NULL,
+  claimed_at INTEGER DEFAULT NULL,
+  created_by TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  branch_name TEXT DEFAULT NULL,
+  pr_url TEXT DEFAULT NULL,
+  metadata TEXT DEFAULT '{}',
+  PRIMARY KEY (room_code, task_id)
+);`);
+
+// Event emitter for task queue changes (SSE)
+export const taskEvents = new EventEmitter();
+
 export function assignTask(
   roomCode: string,
   agentName: string,
@@ -1083,6 +1105,109 @@ export function getRoomTasks(roomCode: string) {
 
 export function getAllAgentTasks(agentName: string) {
   return db.prepare(`SELECT * FROM room_assignments WHERE agent_name = ? ORDER BY assigned_at`).all(agentName);
+}
+
+// ── Task Queue Functions ─────────────────────────────────────────────────────
+
+export function createQueueTask(
+  roomCode: string,
+  taskId: string,
+  title: string,
+  description: string,
+  createdBy: string,
+  priority: number = 0
+) {
+  const now = Date.now();
+  db.prepare(
+    `INSERT INTO task_queue (room_code, task_id, title, description, status, priority, created_by, created_at, updated_at)
+     VALUES (?, ?, ?, ?, 'open', ?, ?, ?, ?)`
+  ).run(roomCode, taskId, title, description, priority, createdBy, now, now);
+  const task = { room_code: roomCode, task_id: taskId, title, description, status: "open", priority, created_by: createdBy, created_at: now, updated_at: now };
+  taskEvents.emit("task", { type: "created", room_code: roomCode, task });
+  return task;
+}
+
+export function claimQueueTask(
+  roomCode: string,
+  taskId: string,
+  agentName: string
+): { ok: true } | { ok: false; error: string } {
+  const now = Date.now();
+  const result = db.prepare(
+    `UPDATE task_queue SET claimed_by = ?, claimed_at = ?, status = 'claimed', updated_at = ?
+     WHERE room_code = ? AND task_id = ? AND status = 'open'`
+  ).run(agentName, now, now, roomCode, taskId);
+  if (result.changes === 0) {
+    return { ok: false, error: "task_not_available" };
+  }
+  taskEvents.emit("task", { type: "claimed", room_code: roomCode, task_id: taskId, claimed_by: agentName });
+  return { ok: true };
+}
+
+export function releaseQueueTask(
+  roomCode: string,
+  taskId: string,
+  agentName: string
+): { ok: true } | { ok: false; error: string } {
+  const now = Date.now();
+  const result = db.prepare(
+    `UPDATE task_queue SET claimed_by = NULL, claimed_at = NULL, status = 'open', updated_at = ?
+     WHERE room_code = ? AND task_id = ? AND claimed_by = ?`
+  ).run(now, roomCode, taskId, agentName);
+  if (result.changes === 0) {
+    return { ok: false, error: "not_your_task" };
+  }
+  taskEvents.emit("task", { type: "released", room_code: roomCode, task_id: taskId, released_by: agentName });
+  return { ok: true };
+}
+
+export function updateQueueTask(
+  roomCode: string,
+  taskId: string,
+  agentName: string,
+  updates: { status?: string; branch_name?: string; pr_url?: string; metadata?: string }
+): { ok: true } | { ok: false; error: string } {
+  // Only the claiming agent can update
+  const task = db.prepare(
+    `SELECT claimed_by FROM task_queue WHERE room_code = ? AND task_id = ?`
+  ).get(roomCode, taskId) as any;
+  if (!task) return { ok: false, error: "task_not_found" };
+  if (task.claimed_by !== agentName) return { ok: false, error: "not_your_task" };
+
+  const now = Date.now();
+  const sets: string[] = ["updated_at = ?"];
+  const vals: any[] = [now];
+  if (updates.status) { sets.push("status = ?"); vals.push(updates.status); }
+  if (updates.branch_name) { sets.push("branch_name = ?"); vals.push(updates.branch_name); }
+  if (updates.pr_url) { sets.push("pr_url = ?"); vals.push(updates.pr_url); }
+  if (updates.metadata) { sets.push("metadata = ?"); vals.push(updates.metadata); }
+
+  vals.push(roomCode, taskId);
+  db.prepare(`UPDATE task_queue SET ${sets.join(", ")} WHERE room_code = ? AND task_id = ?`).run(...vals);
+  taskEvents.emit("task", { type: "updated", room_code: roomCode, task_id: taskId, updates });
+  return { ok: true };
+}
+
+export function getOpenQueueTasks(roomCode: string) {
+  return db.prepare(
+    `SELECT * FROM task_queue WHERE room_code = ? AND status = 'open' ORDER BY priority DESC, created_at ASC`
+  ).all(roomCode);
+}
+
+export function getQueueTasks(roomCode: string, status?: string) {
+  if (status) {
+    return db.prepare(`SELECT * FROM task_queue WHERE room_code = ? AND status = ? ORDER BY created_at DESC`).all(roomCode, status);
+  }
+  return db.prepare(`SELECT * FROM task_queue WHERE room_code = ? ORDER BY created_at DESC`).all(roomCode);
+}
+
+export function expireStaleQueueClaims(maxAgeMs: number = 10 * 60 * 1000) {
+  const cutoff = Date.now() - maxAgeMs;
+  const result = db.prepare(
+    `UPDATE task_queue SET claimed_by = NULL, claimed_at = NULL, status = 'open', updated_at = ?
+     WHERE status IN ('claimed', 'in_progress') AND claimed_at < ?`
+  ).run(Date.now(), cutoff);
+  return result.changes;
 }
 
 // ── Run seeds after all tables are created ───────────────────────────────────

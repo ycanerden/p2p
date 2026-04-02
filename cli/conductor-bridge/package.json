@@ -1,0 +1,14 @@
+{
+  "name": "mesh-conductor",
+  "version": "0.1.0",
+  "description": "Bridge between Conductor workspaces and Mesh task queue. Connects multiple Conductor instances to coordinate work autonomously.",
+  "bin": {
+    "mesh-conductor": "./index.ts"
+  },
+  "scripts": {
+    "start": "bun run index.ts",
+    "dev": "bun run --watch index.ts"
+  },
+  "author": "Can Erden",
+  "license": "MIT"
+}
