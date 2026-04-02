@@ -9,6 +9,7 @@ import {
   registerWebhook,
   removeWebhook,
   messageEvents,
+  taskEvents,
   getAllMessages,
   roomExists,
   getRoomPasswordHash,
@@ -216,6 +217,21 @@ export function registerMessagesRoutes(app: Hono) {
 
       messageEvents.on("message", onMessage);
 
+      // Task queue events — push task changes to connected agents
+      const onTask = (data: any) => {
+        if (data.room_code === room) {
+          try {
+            stream.writeSSE({
+              data: JSON.stringify(data),
+              event: "task",
+            });
+          } catch (e) {
+            // Stream closed
+          }
+        }
+      };
+      taskEvents.on("task", onTask);
+
       // Heartbeat to keep connection alive
       const heartbeat = setInterval(() => {
         try {
@@ -229,6 +245,7 @@ export function registerMessagesRoutes(app: Hono) {
         console.log(`[sse] ${name} disconnected from room ${room}`);
         activeConnections.count--;
         messageEvents.off("message", onMessage);
+        taskEvents.off("task", onTask);
         clearInterval(heartbeat);
       });
 
