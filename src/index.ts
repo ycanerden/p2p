@@ -34,6 +34,7 @@ import { registerRoomsRoutes } from "./routes/rooms.js";
 import { registerMessagesRoutes } from "./routes/messages.js";
 import { registerPromptRoutes } from "./routes/prompt.js";
 import { registerQueueRoutes } from "./routes/queue.js";
+import { registerInboxRoutes } from "./routes/inbox.js";
 import {
   VERSION,
   startTime,
@@ -56,6 +57,14 @@ import {
   getOpenQueueTasks,
   getQueueTasks,
   expireStaleQueueClaims,
+  verifyAgentSecret,
+  getAgent,
+  sendInboxMessage,
+  getInboxMessages,
+  getInboxStats,
+  markAllInboxRead,
+  searchAgents as searchAgentsDb,
+  listAllPublicAgents,
 } from "./rooms.js";
 
 const app = new Hono();
@@ -239,6 +248,7 @@ registerRoomsRoutes(app);
 registerMessagesRoutes(app);
 registerPromptRoutes(app);
 registerQueueRoutes(app);
+registerInboxRoutes(app);
 
 app.post("/api/publish", async (c) => {
   const room = c.req.query("room");
@@ -518,6 +528,20 @@ app.get("/dashboard", async (c) => {
   }
 });
 
+app.get("/agents", async (c) => {
+  try {
+    const html = injectAnalytics(await Bun.file("./public/agents.html").text());
+    return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" } });
+  } catch {
+    return c.redirect("/");
+  }
+});
+
+// Expose Google Client ID to frontend (public, not secret)
+app.get("/api/auth/config", (c) => {
+  return c.json({ google_client_id: process.env.GOOGLE_CLIENT_ID || null });
+});
+
 app.get("/settings", async (c) => {
   try {
     const html = injectAnalytics(await Bun.file("./public/settings.html").text());
@@ -634,7 +658,7 @@ app.get("/download/mac", (c) => {
 });
 
 // ── MCP shared tool registration ──────────────────────────────────────────────
-function registerMcpTools(server: McpServer, room: string, name: string) {
+function registerMcpTools(server: McpServer, room: string, name: string, agentId?: string) {
   // Tool: send_to_partner
   server.tool(
     "send_to_partner",
@@ -1050,6 +1074,133 @@ function registerMcpTools(server: McpServer, room: string, name: string) {
       }
     }
   );
+
+  // ── Inbox MCP Tools (require agent_id) ──────────────────────────────────
+
+  if (agentId) {
+    // Tool: check_inbox
+    server.tool(
+      "check_inbox",
+      "Check your global inbox for direct messages from other agents. Returns unread count and recent messages. Works across rooms — any agent with your ID can message you.",
+      {
+        unread_only: z.boolean().optional().describe("Only show unread messages (default: true)"),
+        limit: z.number().optional().describe("Max messages to return (default: 20)"),
+      },
+      async ({ unread_only, limit }) => {
+        const stats = getInboxStats(agentId);
+        const messages = getInboxMessages(agentId, {
+          unreadOnly: unread_only !== false,
+          limit: limit || 20,
+        });
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({
+              agent_id: agentId,
+              unread: stats.unread,
+              total: stats.total,
+              messages: messages.map(m => ({
+                id: m.id,
+                from: m.from_agent,
+                content: m.content,
+                sent_at: m.sent_at,
+                read: !!m.read_at,
+                thread_id: m.thread_id,
+              })),
+            }),
+          }],
+        };
+      }
+    );
+
+    // Tool: send_dm
+    server.tool(
+      "send_dm",
+      "Send a direct message to any agent by their Mesh ID (e.g. jarvis@vincent). The message goes to their inbox — they'll see it even if they're offline. No MCP or email needed.",
+      {
+        to: z.string().describe("Recipient agent ID (e.g. jarvis@vincent)"),
+        message: z.string().describe("The message content"),
+        thread_id: z.string().optional().describe("Optional thread ID to reply in a thread"),
+      },
+      async ({ to, message, thread_id }) => {
+        try {
+          const result = sendInboxMessage(agentId, to, message, { threadId: thread_id });
+          return {
+            content: [{ type: "text", text: JSON.stringify({ ok: true, message_id: result.id, to, thread_id: result.thread_id }) }],
+          };
+        } catch (e: any) {
+          return {
+            content: [{ type: "text", text: JSON.stringify({ error: e.message }) }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    // Tool: reply_dm
+    server.tool(
+      "reply_dm",
+      "Reply to a specific inbox message. Sends your reply back to the original sender.",
+      {
+        reply_to: z.string().describe("The message ID you're replying to"),
+        to: z.string().describe("The agent ID to reply to (the original sender)"),
+        message: z.string().describe("Your reply"),
+      },
+      async ({ reply_to, to, message }) => {
+        try {
+          const result = sendInboxMessage(agentId, to, message, { replyTo: reply_to });
+          return {
+            content: [{ type: "text", text: JSON.stringify({ ok: true, message_id: result.id, to }) }],
+          };
+        } catch (e: any) {
+          return {
+            content: [{ type: "text", text: JSON.stringify({ error: e.message }) }],
+            isError: true,
+          };
+        }
+      }
+    );
+
+    // Tool: list_agents
+    server.tool(
+      "list_agents",
+      "Search the Mesh agent directory. Find other agents by name or owner to message them.",
+      {
+        query: z.string().optional().describe("Search query — matches agent ID and display name"),
+        limit: z.number().optional().describe("Max results (default: 20)"),
+      },
+      async ({ query, limit }) => {
+        const agents = query
+          ? searchAgentsDb(query, limit || 20)
+          : listAllPublicAgents(limit || 20);
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(agents.map(a => ({
+              agent_id: a.agent_id,
+              display_name: a.display_name,
+              owner: a.owner,
+              status: a.status,
+              last_seen: a.last_seen,
+            }))),
+          }],
+        };
+      }
+    );
+
+    // Tool: mark_inbox_read
+    server.tool(
+      "mark_inbox_read",
+      "Mark all inbox messages as read. Call after you've processed your inbox.",
+      {},
+      async () => {
+        markAllInboxRead(agentId);
+        return {
+          content: [{ type: "text", text: JSON.stringify({ ok: true, agent_id: agentId }) }],
+        };
+      }
+    );
+  }
 }
 
 // ── MCP endpoint ──────────────────────────────────────────────────────────────
@@ -1076,7 +1227,8 @@ app.all("/mcp", async (c) => {
     version: "1.0.0",
   });
 
-  registerMcpTools(server, room, name);
+  const agentId = c.req.query("agent_id");
+  registerMcpTools(server, room, name, agentId || undefined);
 
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,

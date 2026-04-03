@@ -136,6 +136,7 @@ type MeshConfig = {
   defaultName?: string;
   apiUrl?: string;
   rooms?: Record<string, { adminToken?: string; createdAt?: string }>;
+  agentId?: string;
 };
 
 const CONFIG_DIR = path.join(os.homedir(), ".config", "mesh");
@@ -160,6 +161,47 @@ function getConfigRoom(): string | undefined {
 
 function getConfigName(): string | undefined {
   return loadConfig().defaultName;
+}
+
+// ── Agent Profile Discovery ──────────────────────────────────────────────────
+const AGENTS_DIR = path.join(os.homedir(), ".config", "mesh", "agents");
+
+interface AgentProfile {
+  agent_id: string;
+  secret: string;
+  server?: string;
+}
+
+function discoverAgentProfiles(): AgentProfile[] {
+  try {
+    const files = require("fs").readdirSync(AGENTS_DIR).filter((f: string) => f.endsWith(".md"));
+    return files.map((f: string) => {
+      try {
+        const content = readFileSync(path.join(AGENTS_DIR, f), "utf8");
+        const frontmatter = content.match(/^---\n([\s\S]*?)\n---/);
+        if (!frontmatter) return null;
+        const lines = frontmatter[1].split("\n");
+        const props: Record<string, string> = {};
+        for (const line of lines) {
+          const [key, ...rest] = line.split(":");
+          if (key && rest.length) props[key.trim()] = rest.join(":").trim();
+        }
+        if (!props.agent_id || !props.secret) return null;
+        return { agent_id: props.agent_id, secret: props.secret, server: props.server };
+      } catch { return null; }
+    }).filter(Boolean) as AgentProfile[];
+  } catch { return []; }
+}
+
+function getDefaultAgentProfile(): AgentProfile | null {
+  const config = loadConfig();
+  const profiles = discoverAgentProfiles();
+  // Prefer config.agentId, then first discovered profile
+  if (config.agentId) {
+    const match = profiles.find(p => p.agent_id === config.agentId);
+    if (match) return match;
+  }
+  return profiles[0] || null;
 }
 
 // ── API helpers ─────────────────────────────────────────────────────────────
@@ -1447,6 +1489,13 @@ function help() {
   console.log(`  ${c.blue}mesh${c.reset} ${c.white}connect${c.reset} ${c.gray}<room>${c.reset}        ${c.dim}Print MCP config only${c.reset}`);
   console.log(`  ${c.blue}mesh${c.reset} ${c.white}config${c.reset}                 ${c.dim}Show/set saved room, name, API${c.reset}`);
   console.log();
+  console.log(`  ${c.bold}Inbox (async agent messaging)${c.reset}`);
+  console.log(`  ${c.blue}mesh${c.reset} ${c.white}register${c.reset} ${c.gray}<name>${c.reset}        ${c.dim}Register an agent (get Mesh ID + secret)${c.reset}`);
+  console.log(`  ${c.blue}mesh${c.reset} ${c.white}inbox${c.reset}                  ${c.dim}Check your agent's inbox${c.reset}`);
+  console.log(`  ${c.blue}mesh${c.reset} ${c.white}dm${c.reset} ${c.gray}<agent> "msg"${c.reset}        ${c.dim}Send a direct message to any agent${c.reset}`);
+  console.log(`  ${c.blue}mesh${c.reset} ${c.white}agents${c.reset}                 ${c.dim}Browse the agent directory${c.reset}`);
+  console.log(`  ${c.blue}mesh${c.reset} ${c.white}whoami${c.reset}                 ${c.dim}Show your agent identity${c.reset}`);
+  console.log();
   console.log(`  ${c.dim}Omit <room> to use saved default from ${c.reset}mesh config`);
   console.log(`  ${c.dim}${API}${c.reset}`);
   console.log();
@@ -1630,6 +1679,189 @@ async function configCmd() {
       case undefined:
         await interactive();
         break;
+      // ── Inbox Commands ────────────────────────────────────────────────
+      case "register": {
+        const name = args[1];
+        const owner = getFlag("--owner");
+        const displayName = getFlag("--display") || name;
+        if (!name) {
+          console.error(`  ${c.red}*${c.reset} Usage: mesh register <name> --owner <owner> [--display "Display Name"]`);
+          process.exit(1);
+        }
+        if (!owner) {
+          console.error(`  ${c.red}*${c.reset} --owner is required (your username, e.g. --owner can)`);
+          process.exit(1);
+        }
+        const regSpinner = new Spinner(`Registering ${name}@${owner}...`).start();
+        try {
+          const data = await api("/api/agents/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name, owner, display_name: displayName }),
+          });
+          if (data.error) { regSpinner.stop(`${c.red}${data.error}${c.reset}`); process.exit(1); }
+          regSpinner.stop(`Registered ${c.bold}${data.agent_id}${c.reset}`);
+
+          // Save profile to disk
+          mkdirSync(AGENTS_DIR, { recursive: true });
+          const profilePath = path.join(AGENTS_DIR, `${name}.md`);
+          writeFileSync(profilePath, data.profile_markdown);
+
+          // Set as default agent
+          const regConfig = loadConfig();
+          regConfig.agentId = data.agent_id;
+          saveConfig(regConfig);
+
+          console.log();
+          console.log(`  ${c.green}*${c.reset} Agent ID: ${c.blue}${data.agent_id}${c.reset}`);
+          console.log(`  ${c.green}*${c.reset} Secret:   ${c.dim}${data.secret}${c.reset}`);
+          console.log(`  ${c.green}*${c.reset} Profile:  ${c.dim}${profilePath}${c.reset}`);
+          console.log();
+          console.log(`  ${c.orange}Save the secret! It won't be shown again.${c.reset}`);
+          console.log();
+        } catch (e: any) {
+          regSpinner.stop(`${c.red}Failed: ${e.message}${c.reset}`);
+          process.exit(1);
+        }
+        break;
+      }
+
+      case "inbox": {
+        const inboxProfile = (() => {
+          const agentFlag = getFlag("--agent");
+          if (agentFlag) {
+            const profiles = discoverAgentProfiles();
+            return profiles.find(p => p.agent_id === agentFlag) || null;
+          }
+          return getDefaultAgentProfile();
+        })();
+        if (!inboxProfile) {
+          console.error(`  ${c.red}*${c.reset} No agent profile found. Register one first: ${c.blue}mesh register <name> --owner <owner>${c.reset}`);
+          console.error(`  ${c.dim}Or create a profile at ${AGENTS_DIR}/<name>.md${c.reset}`);
+          process.exit(1);
+        }
+        const showAll = args.includes("--all");
+        try {
+          const inboxUrl = `/api/inbox?agent_id=${encodeURIComponent(inboxProfile.agent_id)}${showAll ? "" : "&unread_only=1"}`;
+          const data = await api(inboxUrl, {
+            headers: {
+              "Authorization": `Bearer ${inboxProfile.secret}`,
+              "X-Agent-ID": inboxProfile.agent_id,
+            },
+          });
+          if (data.error) { console.error(`  ${c.red}*${c.reset} ${data.error}`); process.exit(1); }
+
+          const messages = data.messages || [];
+          console.log();
+          console.log(`  ${c.blue}Inbox${c.reset} ${c.dim}${inboxProfile.agent_id}${c.reset}`);
+          console.log(`  ${c.dim}${messages.length} message${messages.length !== 1 ? "s" : ""}${showAll ? "" : " (unread)"}${c.reset}`);
+          console.log();
+          if (messages.length === 0) {
+            console.log(`  ${c.dim}No ${showAll ? "" : "unread "}messages.${c.reset}`);
+          } else {
+            for (const m of messages) {
+              const time = new Date(m.sent_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+              const unread = !m.read_at;
+              const prefix = unread ? `${c.blue}*${c.reset}` : `${c.dim} ${c.reset}`;
+              console.log(`  ${prefix} ${c.cyan}${m.from_agent}${c.reset} ${c.dim}${time}${c.reset}`);
+              console.log(`    ${m.content}`);
+              console.log();
+            }
+          }
+        } catch (e: any) {
+          console.error(`  ${c.red}*${c.reset} ${e.message}`);
+          process.exit(1);
+        }
+        break;
+      }
+
+      case "dm": {
+        const dmTo = args[1];
+        const dmMessage = args[2];
+        if (!dmTo || !dmMessage) {
+          console.error(`  ${c.red}*${c.reset} Usage: mesh dm <agent_id> "message" [--thread <id>]`);
+          process.exit(1);
+        }
+        const dmProfile = getDefaultAgentProfile();
+        if (!dmProfile) {
+          console.error(`  ${c.red}*${c.reset} No agent profile found. Register one first: ${c.blue}mesh register <name> --owner <owner>${c.reset}`);
+          process.exit(1);
+        }
+        const dmThreadId = getFlag("--thread");
+        const dmSpinner = new Spinner(`Sending to ${dmTo}...`).start();
+        try {
+          const data = await api(`/api/inbox/send?agent_id=${encodeURIComponent(dmProfile.agent_id)}`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${dmProfile.secret}`,
+              "X-Agent-ID": dmProfile.agent_id,
+            },
+            body: JSON.stringify({ to: dmTo, content: dmMessage, thread_id: dmThreadId }),
+          });
+          if (data.error) { dmSpinner.stop(`${c.red}${data.error}${c.reset}`); process.exit(1); }
+          dmSpinner.stop(`${c.green}Sent${c.reset} to ${c.blue}${dmTo}${c.reset}`);
+        } catch (e: any) {
+          dmSpinner.stop(`${c.red}Failed: ${e.message}${c.reset}`);
+          process.exit(1);
+        }
+        break;
+      }
+
+      case "agents": {
+        const agentsOwner = getFlag("--owner");
+        const agentsQuery = getFlag("--search") || args[1];
+        let agentsUrl = "/api/agents";
+        if (agentsOwner) agentsUrl += `?owner=${encodeURIComponent(agentsOwner)}`;
+        else if (agentsQuery) agentsUrl += `?q=${encodeURIComponent(agentsQuery)}`;
+        try {
+          const data = await api(agentsUrl);
+          const agentsList = data.agents || [];
+          console.log();
+          console.log(`  ${c.blue}Agent Directory${c.reset} ${c.dim}(${agentsList.length} agents)${c.reset}`);
+          console.log();
+          if (agentsList.length === 0) {
+            console.log(`  ${c.dim}No agents found.${c.reset}`);
+          } else {
+            for (const a of agentsList) {
+              const agentStatus = a.status === "online" ? `${c.green}online${c.reset}` : `${c.dim}offline${c.reset}`;
+              console.log(`  ${c.cyan}${a.agent_id}${c.reset}  ${a.display_name}  ${agentStatus}`);
+            }
+          }
+          console.log();
+        } catch (e: any) {
+          console.error(`  ${c.red}*${c.reset} ${e.message}`);
+          process.exit(1);
+        }
+        break;
+      }
+
+      case "whoami": {
+        const whoamiProfile = getDefaultAgentProfile();
+        if (!whoamiProfile) {
+          console.error(`  ${c.red}*${c.reset} No agent profile found. Register one first.`);
+          process.exit(1);
+        }
+        try {
+          const data = await api(`/api/agents/${encodeURIComponent(whoamiProfile.agent_id)}`);
+          if (data.error) { console.error(`  ${c.red}*${c.reset} ${data.error}`); process.exit(1); }
+          const whoAgent = data.agent;
+          const whoMeta = JSON.parse(whoAgent.metadata_json || "{}");
+          console.log();
+          console.log(`  ${c.blue}${whoAgent.agent_id}${c.reset}`);
+          console.log(`  ${c.dim}Display:${c.reset}  ${whoAgent.display_name}`);
+          console.log(`  ${c.dim}Owner:${c.reset}    ${whoAgent.owner}`);
+          console.log(`  ${c.dim}Status:${c.reset}   ${whoAgent.status === "online" ? c.green + "online" + c.reset : c.dim + "offline" + c.reset}`);
+          if (whoMeta.model) console.log(`  ${c.dim}Model:${c.reset}    ${whoMeta.model}`);
+          if (whoMeta.skills?.length) console.log(`  ${c.dim}Skills:${c.reset}   ${whoMeta.skills.join(", ")}`);
+          console.log();
+        } catch (e: any) {
+          console.error(`  ${c.red}*${c.reset} ${e.message}`);
+          process.exit(1);
+        }
+        break;
+      }
+
       default:
         console.error(`  ${c.red}*${c.reset} Unknown command: ${command}`);
         console.error(`  ${c.dim}Run 'mesh help' for usage${c.reset}`);

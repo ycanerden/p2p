@@ -1210,6 +1210,352 @@ export function expireStaleQueueClaims(maxAgeMs: number = 10 * 60 * 1000) {
   return result.changes;
 }
 
+// ── Inbox System: Global Agent Registry & Async Messaging ────────────────────
+
+// Owner accounts (maps Google auth to owner namespace)
+db.run(`CREATE TABLE IF NOT EXISTS owners (
+  username TEXT PRIMARY KEY,
+  email TEXT UNIQUE NOT NULL,
+  display_name TEXT,
+  created_at INTEGER NOT NULL
+);`);
+
+// Global agent registry
+db.run(`CREATE TABLE IF NOT EXISTS agents (
+  agent_id TEXT PRIMARY KEY,
+  owner TEXT NOT NULL,
+  owner_email TEXT,
+  display_name TEXT NOT NULL,
+  agent_secret TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  metadata_json TEXT DEFAULT '{}',
+  status TEXT DEFAULT 'offline',
+  last_seen INTEGER DEFAULT 0,
+  wake_webhook TEXT DEFAULT NULL,
+  is_public INTEGER DEFAULT 1,
+  FOREIGN KEY(owner) REFERENCES owners(username)
+);`);
+
+// Inbox messages (agent-to-agent, not room-scoped)
+db.run(`CREATE TABLE IF NOT EXISTS inbox (
+  id TEXT PRIMARY KEY,
+  from_agent TEXT NOT NULL,
+  to_agent TEXT NOT NULL,
+  content TEXT NOT NULL,
+  sent_at INTEGER NOT NULL,
+  read_at INTEGER DEFAULT NULL,
+  thread_id TEXT DEFAULT NULL,
+  reply_to TEXT DEFAULT NULL,
+  msg_type TEXT DEFAULT 'DIRECT',
+  metadata_json TEXT DEFAULT '{}'
+);`);
+db.run("CREATE INDEX IF NOT EXISTS idx_inbox_to ON inbox(to_agent, read_at);");
+db.run("CREATE INDEX IF NOT EXISTS idx_inbox_thread ON inbox(thread_id);");
+db.run("CREATE INDEX IF NOT EXISTS idx_inbox_from ON inbox(from_agent);");
+
+// Agent permissions (who can message/wake whom)
+db.run(`CREATE TABLE IF NOT EXISTS agent_permissions (
+  agent_id TEXT NOT NULL,
+  rule_type TEXT NOT NULL,
+  target TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY(agent_id, rule_type, target)
+);`);
+
+// ── Inbox Types ──────────────────────────────────────────────────────────────
+
+export interface Owner {
+  username: string;
+  email: string;
+  display_name: string | null;
+  created_at: number;
+}
+
+export interface Agent {
+  agent_id: string;
+  owner: string;
+  owner_email: string | null;
+  display_name: string;
+  created_at: number;
+  metadata_json: string;
+  status: string;
+  last_seen: number;
+  wake_webhook: string | null;
+  is_public: number;
+}
+
+export interface InboxMessage {
+  id: string;
+  from_agent: string;
+  to_agent: string;
+  content: string;
+  sent_at: number;
+  read_at: number | null;
+  thread_id: string | null;
+  reply_to: string | null;
+  msg_type: string;
+  metadata_json: string;
+}
+
+// ── Owner Functions ──────────────────────────────────────────────────────────
+
+export function createOwner(username: string, email: string, displayName?: string): Owner {
+  const now = Date.now();
+  db.prepare("INSERT INTO owners (username, email, display_name, created_at) VALUES (?, ?, ?, ?)")
+    .run(username, email, displayName || username, now);
+  return { username, email, display_name: displayName || username, created_at: now };
+}
+
+export function getOwnerByEmail(email: string): Owner | null {
+  return db.prepare("SELECT * FROM owners WHERE email = ?").get(email) as Owner | null;
+}
+
+export function getOwnerByUsername(username: string): Owner | null {
+  return db.prepare("SELECT * FROM owners WHERE username = ?").get(username) as Owner | null;
+}
+
+export function isUsernameAvailable(username: string): boolean {
+  return !db.prepare("SELECT 1 FROM owners WHERE username = ?").get(username);
+}
+
+// ── Agent Registry Functions ─────────────────────────────────────────────────
+
+const AGENT_ID_REGEX = /^[a-z0-9_-]{2,24}@[a-z0-9_-]{2,24}$/;
+
+export function validateAgentId(agentId: string): boolean {
+  return AGENT_ID_REGEX.test(agentId);
+}
+
+export function registerAgent(
+  name: string,
+  owner: string,
+  displayName: string,
+  ownerEmail?: string,
+  metadata?: Record<string, any>
+): { agent_id: string; secret: string } {
+  const agentId = `${name}@${owner}`;
+  if (!validateAgentId(agentId)) {
+    throw new Error(`Invalid agent ID format: ${agentId}. Must match ${AGENT_ID_REGEX}`);
+  }
+
+  const existing = db.prepare("SELECT 1 FROM agents WHERE agent_id = ?").get(agentId);
+  if (existing) {
+    throw new Error(`Agent ${agentId} already exists`);
+  }
+
+  const secret = `mesh_sk_${generateSecureToken()}`;
+  const now = Date.now();
+
+  db.prepare(`INSERT INTO agents (agent_id, owner, owner_email, display_name, agent_secret, created_at, metadata_json)
+    VALUES (?, ?, ?, ?, ?, ?, ?)`).run(
+    agentId, owner, ownerEmail || null, displayName, secret, now, JSON.stringify(metadata || {})
+  );
+
+  return { agent_id: agentId, secret };
+}
+
+export function getAgent(agentId: string): Agent | null {
+  return db.prepare("SELECT * FROM agents WHERE agent_id = ?").get(agentId) as Agent | null;
+}
+
+export function verifyAgentSecret(agentId: string, secret: string): boolean {
+  const agent = db.prepare("SELECT agent_secret FROM agents WHERE agent_id = ?").get(agentId) as { agent_secret: string } | undefined;
+  return agent?.agent_secret === secret;
+}
+
+export function updateAgentStatus(agentId: string, status: string): void {
+  db.prepare("UPDATE agents SET status = ?, last_seen = ? WHERE agent_id = ?").run(status, Date.now(), agentId);
+}
+
+export function updateAgentMetadata(agentId: string, updates: { display_name?: string; metadata_json?: string; wake_webhook?: string | null; is_public?: number }): void {
+  const sets: string[] = [];
+  const vals: any[] = [];
+  if (updates.display_name !== undefined) { sets.push("display_name = ?"); vals.push(updates.display_name); }
+  if (updates.metadata_json !== undefined) { sets.push("metadata_json = ?"); vals.push(updates.metadata_json); }
+  if (updates.wake_webhook !== undefined) { sets.push("wake_webhook = ?"); vals.push(updates.wake_webhook); }
+  if (updates.is_public !== undefined) { sets.push("is_public = ?"); vals.push(updates.is_public); }
+  if (sets.length === 0) return;
+  vals.push(agentId);
+  db.prepare(`UPDATE agents SET ${sets.join(", ")} WHERE agent_id = ?`).run(...vals);
+}
+
+export function deleteAgent(agentId: string): boolean {
+  const result = db.prepare("DELETE FROM agents WHERE agent_id = ?").run(agentId);
+  // Clean up inbox messages and permissions
+  db.prepare("DELETE FROM agent_permissions WHERE agent_id = ?").run(agentId);
+  return result.changes > 0;
+}
+
+export function listAgentsByOwner(owner: string): Agent[] {
+  return db.prepare("SELECT * FROM agents WHERE owner = ? ORDER BY created_at").all(owner) as Agent[];
+}
+
+export function searchAgents(query: string, limit: number = 50): Agent[] {
+  const pattern = `%${query.toLowerCase()}%`;
+  return db.prepare(`SELECT * FROM agents WHERE is_public = 1 AND (LOWER(agent_id) LIKE ? OR LOWER(display_name) LIKE ?) ORDER BY last_seen DESC LIMIT ?`)
+    .all(pattern, pattern, limit) as Agent[];
+}
+
+export function listAllPublicAgents(limit: number = 100): Agent[] {
+  return db.prepare("SELECT * FROM agents WHERE is_public = 1 ORDER BY last_seen DESC LIMIT ?").all(limit) as Agent[];
+}
+
+// ── Inbox Functions ──────────────────────────────────────────────────────────
+
+export function sendInboxMessage(
+  fromAgent: string,
+  toAgent: string,
+  content: string,
+  opts?: { threadId?: string; replyTo?: string; msgType?: string; metadata?: Record<string, any> }
+): { id: string; thread_id: string | null } {
+  // Verify recipient exists
+  const recipient = getAgent(toAgent);
+  if (!recipient) throw new Error(`Agent ${toAgent} not found`);
+
+  const id = crypto.randomUUID();
+  const threadId = opts?.threadId || null;
+  const now = Date.now();
+
+  // Compress content
+  let storedContent: string;
+  try {
+    const compressed = LZString.compressToEncodedURIComponent(content);
+    const verified = LZString.decompressFromEncodedURIComponent(compressed);
+    storedContent = verified === content ? `lz:${compressed}` : content;
+  } catch {
+    storedContent = content;
+  }
+
+  db.prepare(`INSERT INTO inbox (id, from_agent, to_agent, content, sent_at, thread_id, reply_to, msg_type, metadata_json)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+    id, fromAgent, toAgent, storedContent, now,
+    threadId, opts?.replyTo || null, opts?.msgType || "DIRECT",
+    JSON.stringify(opts?.metadata || {})
+  );
+
+  // Emit event for real-time listeners
+  messageEvents.emit("inbox", {
+    id, from_agent: fromAgent, to_agent: toAgent,
+    content, sent_at: now, thread_id: threadId,
+    msg_type: opts?.msgType || "DIRECT",
+  });
+
+  // Fire wake webhook if recipient is offline
+  if (recipient.status === "offline" && recipient.wake_webhook) {
+    const body = JSON.stringify({
+      event: "inbox_message",
+      from: fromAgent,
+      to: toAgent,
+      preview: content.slice(0, 200),
+      message_id: id,
+      thread_id: threadId,
+      ts: now,
+    });
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
+      fetch(recipient.wake_webhook, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+        signal: controller.signal,
+      }).then(() => clearTimeout(timeout)).catch(() => clearTimeout(timeout));
+    } catch { /* fail soft */ }
+  }
+
+  return { id, thread_id: threadId };
+}
+
+function decompressInboxContent(content: string): string {
+  if (content.startsWith("lz:")) {
+    return LZString.decompressFromEncodedURIComponent(content.slice(3)) || content;
+  }
+  return content;
+}
+
+export function getInboxMessages(
+  agentId: string,
+  opts?: { unreadOnly?: boolean; from?: string; limit?: number; before?: number }
+): InboxMessage[] {
+  const conditions: string[] = ["to_agent = ?"];
+  const params: any[] = [agentId];
+
+  if (opts?.unreadOnly) {
+    conditions.push("read_at IS NULL");
+  }
+  if (opts?.from) {
+    conditions.push("from_agent = ?");
+    params.push(opts.from);
+  }
+  if (opts?.before) {
+    conditions.push("sent_at < ?");
+    params.push(opts.before);
+  }
+
+  const limit = opts?.limit || 50;
+  params.push(limit);
+
+  const rows = db.prepare(
+    `SELECT * FROM inbox WHERE ${conditions.join(" AND ")} ORDER BY sent_at DESC LIMIT ?`
+  ).all(...params) as InboxMessage[];
+
+  return rows.map(m => ({
+    ...m,
+    content: decompressInboxContent(m.content),
+  }));
+}
+
+export function getInboxStats(agentId: string): { unread: number; total: number } {
+  const unread = (db.prepare("SELECT COUNT(*) as n FROM inbox WHERE to_agent = ? AND read_at IS NULL").get(agentId) as any)?.n || 0;
+  const total = (db.prepare("SELECT COUNT(*) as n FROM inbox WHERE to_agent = ?").get(agentId) as any)?.n || 0;
+  return { unread, total };
+}
+
+export function markInboxRead(agentId: string, messageId: string): void {
+  db.prepare("UPDATE inbox SET read_at = ? WHERE id = ? AND to_agent = ?").run(Date.now(), messageId, agentId);
+}
+
+export function markAllInboxRead(agentId: string, threadId?: string): void {
+  if (threadId) {
+    db.prepare("UPDATE inbox SET read_at = ? WHERE to_agent = ? AND thread_id = ? AND read_at IS NULL").run(Date.now(), agentId, threadId);
+  } else {
+    db.prepare("UPDATE inbox SET read_at = ? WHERE to_agent = ? AND read_at IS NULL").run(Date.now(), agentId);
+  }
+}
+
+export function getInboxThread(threadId: string): InboxMessage[] {
+  const rows = db.prepare("SELECT * FROM inbox WHERE thread_id = ? ORDER BY sent_at ASC").all(threadId) as InboxMessage[];
+  return rows.map(m => ({ ...m, content: decompressInboxContent(m.content) }));
+}
+
+export function deleteInboxMessage(agentId: string, messageId: string): boolean {
+  const result = db.prepare("DELETE FROM inbox WHERE id = ? AND to_agent = ?").run(messageId, agentId);
+  return result.changes > 0;
+}
+
+export function getSentInboxMessages(agentId: string, limit: number = 50): InboxMessage[] {
+  const rows = db.prepare("SELECT * FROM inbox WHERE from_agent = ? ORDER BY sent_at DESC LIMIT ?").all(agentId, limit) as InboxMessage[];
+  return rows.map(m => ({ ...m, content: decompressInboxContent(m.content) }));
+}
+
+// ── Agent Profile Markdown Generation ────────────────────────────────────────
+
+export function generateAgentProfileMarkdown(agent: Agent, secret: string): string {
+  const metadata = JSON.parse(agent.metadata_json || "{}");
+  const skills = metadata.skills ? metadata.skills.join(", ") : "";
+  const model = metadata.model || "";
+  const description = metadata.description || "";
+
+  let md = `---\nagent_id: ${agent.agent_id}\nsecret: ${secret}\nserver: ${process.env.PUBLIC_URL || "https://trymesh.chat"}\nregistered: ${new Date(agent.created_at).toISOString().split("T")[0]}\n`;
+  if (agent.wake_webhook) md += `wake_webhook: ${agent.wake_webhook}\n`;
+  md += `---\n\n# ${agent.display_name}\n`;
+  if (description) md += `${description}\n`;
+  if (skills) md += `Skills: ${skills}\n`;
+  if (model) md += `Model: ${model}\n`;
+
+  return md;
+}
+
 // ── Run seeds after all tables are created ───────────────────────────────────
 seedDefaultRooms();
 
